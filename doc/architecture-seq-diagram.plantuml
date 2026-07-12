@@ -1,0 +1,33 @@
+@startuml
+skinparam actorStyle awesome
+skinparam defaultTextAlignment center
+skinparam maxMessageSize 150
+
+actor User
+participant "Polragion\nWeb Frontend" as Frontend
+participant "Polragion\nBackend" as Backend
+participant "GitHub" as Github
+participant "GitHub\nCopilot App" as Copilot
+database "Redis" as Database
+database "Qdrant" as VectorDatabase
+
+User -> Frontend: Login Request to GitHub
+Frontend -> Backend: Login Request to GitHub
+Backend -> Github: Login Request
+'https://docs.github.com/en/copilot/how-tos/copilot-sdk/setup/github-oauth#how-it-works
+
+Backend <-- Github: Access Token
+Backend  -> Database: Store Github Access Token with other user credentials
+
+User -> Frontend: Polarion Question Request
+Frontend -> Backend: Send combined Polarion Question Request
+
+Backend -> VectorDatabase: Send new Polarion Question Request
+Backend <-- VectorDatabase: Receive relevant Polarion information
+
+Backend -> Database: GitHub user information request
+Backend <-- Database: GitHub user information
+Backend -> Copilot: Send Prompt + GitHub user information
+Backend <-- Copilot: AI-Model output
+Frontend <-- Backend: Copilot: AI-Model output
+@enduml
