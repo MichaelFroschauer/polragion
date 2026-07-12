@@ -1,8 +1,8 @@
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, Any, Self
 from pydantic import BaseModel, ConfigDict, Field
 
-from model.IngestModel import IngestModel
+from model.QdrantModel import IngestModel
 
 WorkItemType = Literal[
     "requirement",
@@ -65,6 +65,12 @@ class PolarionWorkItem(BaseModel):
         """JSON-Compatible Qdrant-Payload."""
         return self.model_dump(mode="json")
 
+    @classmethod
+    def from_dictionary(cls, data: dict[str, Any]) -> Self:
+        """Convert generic dictionary to PolarionWorkItem."""
+        return cls.model_validate(data, extra="ignore")
+
     def to_ingest_model(self) -> IngestModel:
+        """Convert PolarionWorkItem to IngestModel for VectorDB."""
         model = IngestModel(id=self.workitem_id, text=self.embedding_text, payload=self.to_dictionary())
         return model

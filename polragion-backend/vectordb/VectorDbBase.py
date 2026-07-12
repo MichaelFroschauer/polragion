@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from model.IngestModel import IngestModel
+from typing import Any
+
+from model.QdrantModel import IngestModel
 
 class VectorDbBase(ABC):
 
@@ -8,5 +10,5 @@ class VectorDbBase(ABC):
         pass
 
     @abstractmethod
-    def search(self):
+    def search(self, text: str) -> list[dict[str, Any]]:
         pass

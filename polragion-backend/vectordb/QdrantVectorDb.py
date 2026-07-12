@@ -1,9 +1,9 @@
 import logging
 import uuid
-from typing import List
+from typing import List, Any
 
 from qdrant_client import QdrantClient, models
-from model.IngestModel import IngestModel
+from model.QdrantModel import IngestModel
 from config import VectorDBConfig, QdrantConfig
 from vectordb.VectorDbBase import VectorDbBase
 
@@ -86,13 +86,13 @@ class QdrantVectorDb(VectorDbBase):
             ids=ids,
         )
 
-    def search(self): # -> list[models.ScoredPoint]:
+    def search(self, text: str, limit: int = 5) -> list[dict[str, Any]]:
         response = self.client.query_points(
             collection_name=self.collection_name,
-            query=models.Document(
-                text="Which integration is best for agents?",
-                model=self.model_name,
-            ),
-            limit=5,
+            query=models.Document(text=text, model=self.model_name),
+            limit=limit,
+            with_payload=True,
         )
-        print(response.points)
+        found_points = [point.payload for point in response.points]
+
+        return found_points
