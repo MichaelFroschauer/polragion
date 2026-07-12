@@ -2,8 +2,6 @@ import logging
 from typing import Any
 
 from fastapi import FastAPI
-
-from model.QdrantModel import IngestModel
 from model.WorkItem import PolarionWorkItem
 from vectordb.QdrantVectorDb import QdrantVectorDb
 
@@ -19,29 +17,22 @@ print("""
 """)
 
 app = FastAPI()
-
 db = QdrantVectorDb()
 logger = logging.getLogger(__name__)
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
-
 @app.post("/v1/ingest/work_item")
-async def ingest_work_item(data: PolarionWorkItem):
+async def ingest_work_item(data: list[PolarionWorkItem]):
     try:
-        db.ingest(data.to_ingest_model())
+        #db.ingest(data.to_ingest_model())
+        for work_item in data:
+            db.ingest(work_item.to_ingest_model())
         return {"status": "ok"}
     except Exception:
-        logger.exception("Qdrant ingest failed")
+        logger.exception("Vector database ingest failed")
         raise
 
 @app.get("/v1/search/work_item")
-async def search(prompt: str) -> PolarionWorkItem:
+async def search(prompt: str) -> list[PolarionWorkItem]:
     try:
         payloads: list[dict[str, Any]] = db.search(prompt)
         work_items = [
@@ -49,7 +40,7 @@ async def search(prompt: str) -> PolarionWorkItem:
             for payload in payloads
             if payload is not None
         ]
-        return work_items[0]
+        return work_items
     except Exception:
-        logger.exception("Qdrant search failed")
+        logger.exception("Vector database search failed")
         raise

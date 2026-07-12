@@ -37,6 +37,7 @@ class QdrantVectorDb(VectorDbBase):
             ),
         )
 
+
     def ingest(self, data: IngestModel) -> None:
         vector_id: str = _qdrant_point_id(data.id)
         document: str = data.text
@@ -56,6 +57,7 @@ class QdrantVectorDb(VectorDbBase):
 
 
     def ingest_many(self, data: List[IngestModel]) -> None:
+        """TODO: Currently a test method"""
         docs = [
             "Qdrant has a LangChain integration for chatbots.",
             "Qdrant has a LlamaIndex integration for agents.",
@@ -93,6 +95,5 @@ class QdrantVectorDb(VectorDbBase):
             limit=limit,
             with_payload=True,
         )
-        found_points = [point.payload for point in response.points]
-
+        found_points = [point.payload for point in response.points if point.payload is not None]
         return found_points
