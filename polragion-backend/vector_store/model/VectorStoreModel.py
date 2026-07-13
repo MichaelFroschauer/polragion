@@ -3,7 +3,7 @@ from typing import Self, Any
 
 from pydantic import BaseModel
 
-from model.QdrantModel import IngestModel
+from vector_store.model.QdrantModel import IngestModel
 
 
 class VectorStoreModel(BaseModel, ABC):

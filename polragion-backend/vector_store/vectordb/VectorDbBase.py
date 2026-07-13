@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from model.QdrantModel import IngestModel
+from vector_store.model.QdrantModel import IngestModel
 
 class VectorDbBase(ABC):
 

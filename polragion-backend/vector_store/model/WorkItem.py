@@ -1,9 +1,9 @@
 from datetime import date, datetime
-from typing import Literal, Any, Self
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
-from model.QdrantModel import IngestModel
-from model.VectorStoreModel import VectorStoreModel
+from vector_store.model.QdrantModel import IngestModel
+from vector_store.model.VectorStoreModel import VectorStoreModel
 
 WorkItemType = Literal[
     "requirement",

@@ -6,9 +6,9 @@ from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from starlette import status
 
-from model.WorkItem import PolarionWorkItem
-from vectordb.QdrantVectorDb import QdrantVectorDb
-from restapi.ErrorMiddleware import ErrorHandlingMiddleware
+from vector_store.model.WorkItem import PolarionWorkItem
+from vector_store.vectordb.QdrantVectorDb import QdrantVectorDb
+from vector_store.restapi.ErrorMiddleware import ErrorHandlingMiddleware
 
 print("""
 ░█████████             ░██ ░█████████     ░███      ░██████  ░██                      

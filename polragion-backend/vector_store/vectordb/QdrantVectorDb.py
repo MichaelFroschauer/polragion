@@ -3,9 +3,9 @@ import uuid
 from typing import Any
 
 from qdrant_client import QdrantClient, models
-from model.QdrantModel import IngestModel
-from config import VectorDBConfig
-from vectordb.VectorDbBase import VectorDbBase
+from vector_store.model.QdrantModel import IngestModel
+from vector_store.config import VectorDBConfig
+from vector_store.vectordb.VectorDbBase import VectorDbBase
 
 
 logger = logging.getLogger(__name__)
