@@ -1,9 +1,14 @@
 import logging
+from time import perf_counter
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
+from pydantic import BaseModel
+from starlette import status
+
 from model.WorkItem import PolarionWorkItem
 from vectordb.QdrantVectorDb import QdrantVectorDb
+from restapi.ErrorMiddleware import ErrorHandlingMiddleware
 
 print("""
 ░█████████             ░██ ░█████████     ░███      ░██████  ░██                      
@@ -16,31 +21,56 @@ print("""
 © Michael Froschauer - 2026
 """)
 
-app = FastAPI()
-db = QdrantVectorDb()
+logging.basicConfig(
+    level=logging.INFO,
+    #level=logging.DEBUG,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
 logger = logging.getLogger(__name__)
 
-@app.post("/v1/ingest/work_item")
-async def ingest_work_item(data: list[PolarionWorkItem]):
-    try:
-        #db.ingest(data.to_ingest_model())
-        for work_item in data:
-            db.ingest(work_item.to_ingest_model())
-        return {"status": "ok"}
-    except Exception:
-        logger.exception("Vector database ingest failed")
-        raise
+app = FastAPI()
+app.add_middleware(ErrorHandlingMiddleware)
 
-@app.get("/v1/search/work_item")
-async def search(prompt: str) -> list[PolarionWorkItem]:
-    try:
-        payloads: list[dict[str, Any]] = db.search(prompt)
-        work_items = [
-            PolarionWorkItem.from_dictionary(payload)
-            for payload in payloads
-            if payload is not None
-        ]
-        return work_items
-    except Exception:
-        logger.exception("Vector database search failed")
-        raise
+db = QdrantVectorDb()
+
+class IngestResponse(BaseModel):
+    status: str
+    ingested_items: int
+
+@app.post(
+    "/v1/ingest/work-item",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items(data: list[PolarionWorkItem]) -> IngestResponse:
+    item_count = len(data)
+
+    if item_count == 0:
+        return IngestResponse(status="ok", ingested_items=0)
+
+    start_time = perf_counter()
+
+    ingest_models = [item.to_ingest_model() for item in data]
+    db.ingest(ingest_models)
+
+    duration = perf_counter() - start_time
+    logger.info("Ingested %d work items in %.3f seconds", item_count, duration)
+
+    return IngestResponse(status="ok", ingested_items=item_count)
+
+
+
+@app.get(
+    "/v1/search/work-item",
+    response_model=list[PolarionWorkItem],
+)
+def search_work_items(prompt: str = Query(min_length=1), limit: int = Query(default=5, ge=1, le=100)) -> list[PolarionWorkItem]:
+    start_time = perf_counter()
+
+    payloads: list[dict[str, Any]] = db.search(text=prompt, limit=limit)
+    work_items = [PolarionWorkItem.from_dictionary(payload) for payload in payloads]
+
+    duration = perf_counter() - start_time
+    logger.info("Work-item search returned %d results in %.3f seconds", len(work_items), duration)
+
+    return work_items

@@ -6,7 +6,7 @@ from model.QdrantModel import IngestModel
 class VectorDbBase(ABC):
 
     @abstractmethod
-    def ingest(self, data: IngestModel) -> None:
+    def ingest(self, data: list[IngestModel]) -> None:
         pass
 
     @abstractmethod
