@@ -9,14 +9,20 @@ from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
+from polragion.domain.data_fetcher import DataFetcher
+from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
 from polragion.infrastructure.errors import VectorStoreUnavailableError
+from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
+from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
 from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
 VectorStoreFactory = Callable[[Settings], VectorStore]
+DataFetcherFactory = Callable[[Settings], DataFetcher]
+DataWorkerFactory = Callable[[Settings, WorkItemService], DataWorker]
 
 
 def _configure_logging(settings: Settings) -> None:
@@ -29,7 +35,9 @@ def _configure_logging(settings: Settings) -> None:
 def create_app(
     *,
     settings: Settings | None = None,
-    vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
+    vector_store_factory: VectorStoreFactory = QdrantVectorStore,
+    data_fetcher_factory: DataFetcherFactory = JsonDataFetcher,
+    data_worker_factory: DataWorkerFactory = QdrantDataWorker,
 ) -> FastAPI:
     app_settings = settings or Settings()
     _configure_logging(app_settings)
@@ -45,6 +53,8 @@ def create_app(
             vector_store=vector_store,
             mapper=WorkItemIndexMapper(),
         )
+        app.state.data_fetcher = data_fetcher_factory(app_settings)
+        app.state.data_worker = data_worker_factory(app_settings, app.state.work_item_service)
 
         try:
             yield

@@ -1,5 +1,6 @@
 import re
 from functools import cached_property
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,7 +23,8 @@ class Settings(BaseSettings):
     qdrant_batch_size: int = Field(default=256, ge=1, le=10_000)
     qdrant_parallel: int = Field(default=4, ge=1, le=64)
 
-    fastembed_dense_model: str = "BAAI/bge-large-en-v1.5"
+    fastembed_dense_model: str = "BAAI/bge-small-en-v1.5"
+    #fastembed_dense_model: str = "BAAI/bge-large-en-v1.5"
     fastembed_sparse_model: str = "prithvida/Splade_PP_en_v1"
     fastembed_reranker_model: str = "BAAI/bge-reranker-base"
     qdrant_hybrid_candidate_limit: int = 50
@@ -33,6 +35,8 @@ class Settings(BaseSettings):
     search_score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
 
     max_ingest_batch_size: int = Field(default=2500, ge=1, le=50_000)
+
+    json_data_source: str | Path = "/home/michael/gitclones/Polragion/testset/polarion_workitems_testset_2000_en/polarion_workitems_testset_2000_en.json"
 
     @cached_property
     def qdrant_collection_name(self) -> str:

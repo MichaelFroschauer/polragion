@@ -4,9 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
-from polragion.api.dependencies import get_settings, get_work_item_service
+from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker
 from polragion.api.schemas import IngestResponse, WorkItemSearchHitResponse
 from polragion.application.work_item_service import WorkItemService
+from polragion.domain.data_fetcher import DataFetcher
+from polragion.domain.data_worker import DataWorker
 from polragion.domain.work_item import PolarionWorkItem
 from polragion.settings import Settings
 
@@ -44,6 +46,21 @@ def ingest_work_items(
         count,
         perf_counter() - started_at,
     )
+    return IngestResponse(status="ok", ingested_items=count)
+
+
+@router.post(
+    "/import-json",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items_from_data_source(
+    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
+    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
+    limit: Annotated[int | None, Query(ge=1)] = None,
+) -> IngestResponse:
+
+    count = data_worker.work(data_fetcher.fetch_data(limit))
     return IngestResponse(status="ok", ingested_items=count)
 
 
