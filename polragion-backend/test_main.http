@@ -1,21 +1,32 @@
-# Test your FastAPI endpoints
-
-GET http://127.0.0.1:8000/
+### Liveness
+GET http://127.0.0.1:8000/health/live
 Accept: application/json
 
-###
-
-GET http://127.0.0.1:8000/hello/User
+### Readiness
+GET http://127.0.0.1:8000/health/ready
 Accept: application/json
 
-###
-
-POST http://localhost:8000/v1/ingest
+### Ingest one work item
+POST http://127.0.0.1:8000/v1/work-items
 Content-Type: application/json
 
-{
-  "id": {{$random.uuid}},
-  "price": {{$random.integer()}},
-  "ts": {{$timestamp}},
-  "value": "content"
-}
+[
+  {
+    "project_id": "DEMO",
+    "workitem_id": "REQ-123",
+    "title": "The system shall authenticate users",
+    "text": "Users must authenticate before accessing protected resources.",
+    "revision": 1,
+    "status": "open",
+    "linked_workitems": [],
+    "custom_fields": {
+      "workitem_type": "requirement",
+      "priority": "high",
+      "tags": ["security"]
+    }
+  }
+]
+
+### Semantic search, restricted to one project
+GET http://127.0.0.1:8000/v1/work-items/search?prompt=authentication&project_id=DEMO&limit=5
+Accept: application/json
