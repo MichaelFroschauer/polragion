@@ -11,6 +11,7 @@ from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.vector_store import VectorStore
 from polragion.infrastructure.errors import VectorStoreUnavailableError
+from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
 from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
 from polragion.settings import Settings
 
@@ -28,7 +29,7 @@ def _configure_logging(settings: Settings) -> None:
 def create_app(
     *,
     settings: Settings | None = None,
-    vector_store_factory: VectorStoreFactory = QdrantVectorStore,
+    vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
 ) -> FastAPI:
     app_settings = settings or Settings()
     _configure_logging(app_settings)

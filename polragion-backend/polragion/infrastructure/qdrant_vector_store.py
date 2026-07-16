@@ -1,5 +1,4 @@
 import logging
-import uuid
 from collections.abc import Mapping, Iterable
 from typing import Any
 
@@ -15,32 +14,18 @@ from polragion.infrastructure.errors import (
     VectorStoreConfigurationError,
     VectorStoreUnavailableError,
 )
+from polragion.infrastructure.qdrant_utils import _DOCUMENT_ID_PAYLOAD_KEY, _INDEX_MODEL_PAYLOAD_KEY, \
+    _INDEX_SCHEMA_PAYLOAD_KEY, qdrant_point_id, _RESERVED_PAYLOAD_KEYS
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
-
-_POINT_NAMESPACE = uuid.UUID("8604873a-0779-49ef-81c4-840c4567d718")
-_DOCUMENT_ID_PAYLOAD_KEY = "_polragion_document_id"
-_INDEX_MODEL_PAYLOAD_KEY = "_polragion_embedding_model"
-_INDEX_SCHEMA_PAYLOAD_KEY = "_polragion_schema_version"
-_RESERVED_PAYLOAD_KEYS = {
-    _DOCUMENT_ID_PAYLOAD_KEY,
-    _INDEX_MODEL_PAYLOAD_KEY,
-    _INDEX_SCHEMA_PAYLOAD_KEY,
-}
-
-
-def qdrant_point_id(logical_id: str) -> str:
-    """Create a deterministic UUID accepted by Qdrant."""
-
-    return str(uuid.uuid5(_POINT_NAMESPACE, logical_id))
 
 
 class QdrantVectorStore:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._collection_name = settings.qdrant_collection_name
-        self._model_name = settings.fastembed_model
+        self._model_name = settings.fastembed_dense_model
         self._client = QdrantClient(url=settings.qdrant_url)
 
     def initialize(self) -> None:

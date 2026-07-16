@@ -56,7 +56,8 @@ See `test_main.http` for complete request examples.
 The Qdrant collection name is derived from:
 
 - `QDRANT_COLLECTION_PREFIX`
-- `FASTEMBED_MODEL`
+- `FASTEMBED_DENSE_MODEL`
+- `FASTEMBED_SPARSE_MODEL`
 - `INDEX_SCHEMA_VERSION`
 
 This prevents vectors produced by different embedding models or schema versions from being mixed. Increment `INDEX_SCHEMA_VERSION` whenever the embedding text strategy changes incompatibly.
