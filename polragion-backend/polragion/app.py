@@ -4,9 +4,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 
 from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
+from polragion.api.github_auth import router as auth_router
+from polragion.application import copilot_service
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.data_fetcher import DataFetcher
@@ -56,18 +59,30 @@ def create_app(
         app.state.data_fetcher = data_fetcher_factory(app_settings)
         app.state.data_worker = data_worker_factory(app_settings, app.state.work_item_service)
 
+        ai_service = copilot_service.CopilotService(app_settings)
+        await ai_service.initialize()
+
         try:
             yield
         finally:
             vector_store.close()
+            await ai_service.shutdown()
 
     app = FastAPI(
         title=app_settings.app_name,
         version="0.2.0",
         lifespan=lifespan,
     )
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=app_settings.github_session_secret,
+        same_site="lax",
+        https_only=False,
+    )
+
     app.include_router(health_router)
     app.include_router(work_item_router)
+    app.include_router(auth_router)
 
     @app.exception_handler(VectorStoreUnavailableError)
     async def handle_vector_store_unavailable(

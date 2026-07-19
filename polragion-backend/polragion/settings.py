@@ -38,6 +38,13 @@ class Settings(BaseSettings):
 
     json_data_source: str | Path = "/home/michael/gitclones/Polragion/testset/polarion_workitems_testset_2000_en/polarion_workitems_testset_2000_en.json"
 
+
+    github_session_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_fine_grained_token: str = ""
+    github_redirect_uri: str = ""
+
     @cached_property
     def qdrant_collection_name(self) -> str:
         """Return a model- and schema-versioned collection name.
