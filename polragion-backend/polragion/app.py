@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.api.auth import router as auth_router
-from polragion.application import copilot_service
+from polragion.application.ai_service import AiMessageEventT
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
@@ -18,6 +18,7 @@ from polragion.database.memory_repository import InMemorySessionRepository, InMe
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
+from polragion.infrastructure.copilot_service import CopilotService
 from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
@@ -69,15 +70,20 @@ def create_app(
         app.state.github_credentials_repository = github_credentials_repository
 
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
+        app.state.ai_service = CopilotService(app_settings, github_credentials_repository, runtime_url="localhost:4321")
 
-        #ai_service = copilot_service.CopilotService(app_settings)
-        #await ai_service.initialize()
+        def ai_message_event(event: AiMessageEventT) -> None:
+            print("****** NEW AI MESSAGE ******")
+            print(f"user_id: {str(event.user_id)}")
+            print(f"message: {event.message.text}")
+
+        unsubscribe = app.state.ai_service.add_message_response_handler(ai_message_event)
 
         try:
             yield
         finally:
             vector_store.close()
-            #await ai_service.shutdown()
+            unsubscribe()
 
     app = FastAPI(
         title=app_settings.app_name,

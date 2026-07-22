@@ -1,5 +1,6 @@
 from fastapi import Request
 
+from polragion.application.ai_service import AiService
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_service import WorkItemService
 from polragion.database.repository import UserRepository, GitHubCredentialsRepository
@@ -39,3 +40,6 @@ def get_github_credentials_repository(request: Request) -> GitHubCredentialsRepo
 
 def get_session_service(request: Request) -> SessionService:
     return request.app.state.session_service
+
+def get_ai_service(request: Request) -> AiService:
+    return request.app.state.ai_service

@@ -69,7 +69,7 @@ async def _exchange_code_for_token(code: str, settings: Settings) -> tuple[OAuth
             OAuthToken(value=refresh_token, expires_at=refresh_token_expiration_time))
 
 
-async def _get_current_user(
+async def get_current_user(
         request: Request,
         user_repository: Annotated[UserRepository, Depends(get_user_repository)],
         session_service: Annotated[SessionService, Depends(get_session_service)],
@@ -209,7 +209,7 @@ async def logout(
     status_code=status.HTTP_200_OK
 )
 async def me(
-        current_user: Annotated[User, Depends(_get_current_user)]
+        current_user: Annotated[User, Depends(get_current_user)]
 ):
     return {
         "id": str(current_user.id),
