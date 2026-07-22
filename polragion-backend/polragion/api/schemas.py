@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 class IngestResponse(BaseModel):

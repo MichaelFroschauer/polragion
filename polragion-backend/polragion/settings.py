@@ -17,6 +17,9 @@ class Settings(BaseSettings):
 
     app_name: str = "Polragion Backend"
     log_level: str = "INFO"
+    debug: bool = False
+
+    frontend_url: str = "http://localhost:8080"
 
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection_prefix: str = "polragion"
@@ -38,8 +41,8 @@ class Settings(BaseSettings):
 
     json_data_source: str | Path = "/home/michael/gitclones/Polragion/testset/polarion_workitems_testset_2000_en/polarion_workitems_testset_2000_en.json"
 
-
-    github_session_secret: str = ""
+    session_secret: str = ""
+    encryption_secret: str = ""
     github_client_id: str = ""
     github_client_secret: str = ""
     github_fine_grained_token: str = ""

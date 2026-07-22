@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from polragion.application.work_item_service import WorkItemService
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 from polragion.settings import Settings
 
 

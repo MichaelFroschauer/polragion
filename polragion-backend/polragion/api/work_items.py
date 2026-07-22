@@ -2,14 +2,14 @@ import logging
 from time import perf_counter
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Request
 
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker
 from polragion.api.schemas import IngestResponse, WorkItemSearchHitResponse
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,7 @@ def ingest_work_items_from_data_source(
     response_model=list[WorkItemSearchHitResponse],
 )
 def search_work_items(
+    request: Request,
     prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
     service: Annotated[WorkItemService, Depends(get_work_item_service)],
     settings: Annotated[Settings, Depends(get_settings)],
@@ -76,6 +77,10 @@ def search_work_items(
     limit: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
 ) -> list[WorkItemSearchHitResponse]:
+
+    print(request.session)
+
+
     effective_limit = limit or settings.search_default_limit
     if effective_limit > settings.search_max_limit:
         raise HTTPException(

@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 class PolarionDataFetcher:

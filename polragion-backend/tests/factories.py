@@ -1,4 +1,4 @@
-from polragion.domain.work_item import CustomFields, PolarionWorkItem
+from polragion.models.work_item import CustomFields, PolarionWorkItem
 
 
 def make_work_item(

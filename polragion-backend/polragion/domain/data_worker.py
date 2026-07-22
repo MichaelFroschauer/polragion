@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 from typing import Protocol
 
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 class DataWorker(Protocol):

@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 from polragion.settings import Settings
 
 

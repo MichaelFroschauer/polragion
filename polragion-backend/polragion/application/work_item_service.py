@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.domain.vector_store import VectorStore
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,5 +1,5 @@
 from polragion.domain.vector_store import VectorDocument
-from polragion.domain.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 class WorkItemIndexMapper:
