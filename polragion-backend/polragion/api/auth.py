@@ -1,8 +1,8 @@
 import logging
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import Annotated
+from uuid import UUID
 
-import httpx
 from fastapi import APIRouter, Query, HTTPException, Depends
 
 import secrets
@@ -10,10 +10,12 @@ from urllib.parse import urlencode
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, ConfigDict, Field
 from starlette import status
 
 from polragion.api.dependencies import get_settings, get_user_repository, get_github_credentials_repository, \
     get_session_service
+from polragion.api.github_api_utils import get_github_user, get_github_access_token, get_github_available_models
 from polragion.application.session_service import SessionService
 from polragion.database.repository import UserRepository, GitHubCredentialsRepository
 from polragion.models.user import OAuthToken, GitHubCredentials, User, UserSession
@@ -27,27 +29,8 @@ router = APIRouter(prefix="/auth/github", tags=["GitHub authentication"])
 
 
 async def _exchange_code_for_token(code: str, settings: Settings) -> tuple[OAuthToken, OAuthToken]:
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        response = await client.post(
-            "https://github.com/login/oauth/access_token",
-            headers={
-                "Accept": "application/json",
-            },
-            data={
-                "client_id": settings.github_client_id,
-                "client_secret": settings.github_client_secret,
-                "code": code,
-                "redirect_uri": settings.github_redirect_uri,
-            },
-        )
 
-        response.raise_for_status()
-        data = response.json()
-
-    if error := data.get("error"):
-        description = data.get("error_description", "Unknown GitHub-OAuth-Error")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"{error}: {description}")
-
+    data = await get_github_access_token(code, settings)
     access_token = data.get("access_token")
     access_token_expires_in = data.get("expires_in")
 
@@ -147,23 +130,7 @@ async def github_callback(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="GitHub did not respond with an authorization code")
 
     access_token, refresh_token = await _exchange_code_for_token(code, settings)
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        github_response = await client.get(
-            "https://api.github.com/user",
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {access_token.value.get_secret_value()}",
-                "X-GitHub-Api-Version": "2026-03-10",
-                "User-Agent": "polragion",
-            },
-        )
-
-    if github_response.status_code != status.HTTP_200_OK:
-        logger.error("GitHub /user failed: status=%s body=%s", github_response.status_code, github_response.text)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="GitHub user information could not be retrieved")
-
-    github_data = github_response.json()
+    github_data = await get_github_user(access_token)
     user = await user_repository.upsert_from_github(
         github_user_id=str(github_data["id"]),
         username=github_data["login"],
@@ -216,3 +183,56 @@ async def me(
         "github_user_id": current_user.github_user_id,
         "username": current_user.username,
     }
+
+
+
+class GitHubAiModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str
+    publisher: str
+    registry: str | None = None
+    summary: str | None = None
+    html_url: str | None = None
+    version: str | None = None
+    rate_limit_tier: str
+
+    capabilities: list[str] = Field(default_factory=list)
+    supported_input_modalities: list[str] = Field(default_factory=list)
+    supported_output_modalities: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+
+    #max_input_tokens: int
+    #max_output_tokens: int
+
+class UserGitHubModels(BaseModel):
+    user_id: UUID
+    models: list[GitHubAiModel]
+    last_refresh: datetime
+
+user_models: dict[UUID, UserGitHubModels] = {}
+
+
+@router.get("/models")
+async def get_user_models(
+        current_user: Annotated[User, Depends(get_current_user)],
+        settings: Annotated[Settings, Depends(get_settings)],
+        credentials_repository: Annotated[GitHubCredentialsRepository, Depends(get_github_credentials_repository)],
+) -> list[GitHubAiModel]:
+
+    user_model = user_models.get(current_user.id)
+    if (user_model is not None and user_model.last_refresh is not None
+            and user_model.last_refresh > utc_now() + timedelta(hours=24)):
+        return user_model.models
+
+    credentials = await credentials_repository.get_by_id(current_user.id)
+    if credentials is None:
+        return []
+
+    github_models: list[dict] = await get_github_available_models(settings, credentials)
+    models = [GitHubAiModel.model_validate(model) for model in github_models]
+
+    user_models[current_user.id] = UserGitHubModels(user_id=current_user.id, models=models, last_refresh=utc_now())
+
+    return models
