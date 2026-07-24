@@ -4,9 +4,11 @@ from datetime import datetime
 from typing import Iterator
 from uuid import UUID
 
-from polragion.database.repository import UserRepository
-from polragion.models.user import User
+from polragion.database.repository import UserRepository, GitHubCredentialsRepository
+from polragion.models.user import User, GitHubCredentials
 from polragion.settings import Settings
+from polragion.utils.general import utc_now
+
 
 class SQLiteDatabase:
 
@@ -91,7 +93,7 @@ class SqliteUserRepository(UserRepository):
         with self.db.transaction() as conn:
             row = conn.execute(
                 "SELECT * FROM users WHERE github_user_id = ?",
-                (github_user_id,),
+                (github_user_id,)
             ).fetchone()
 
         return self._row_to_user(row)
@@ -114,3 +116,108 @@ class SqliteUserRepository(UserRepository):
 
         return await self.create(new_user)
 
+
+class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
+
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        self.db = SQLiteDatabase(self.settings)
+        self._create_schema()
+
+    def _create_schema(self) -> None:
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS github_credentials(
+                    user_id TEXT PRIMARY KEY,
+                    access_token_encrypted TEXT NOT NULL,
+                    access_token_expires_at TEXT NOT NULL,
+                    refresh_token_encrypted TEXT NOT NULL,
+                    refresh_token_expires_at TEXT NOT NULL,
+                    updated_at TEXT
+                )
+                """
+            )
+
+    @staticmethod
+    def _row_to_github_credentials(row: sqlite3.Row | None) -> GitHubCredentials | None:
+        if row is None:
+            return None
+
+        return GitHubCredentials(
+            user_id=UUID(row["user_id"]),
+            access_token_encrypted=row["access_token_encrypted"],
+            access_token_expires_at=datetime.fromisoformat(row["access_token_expires_at"]),
+            refresh_token_encrypted=row["refresh_token_encrypted"],
+            refresh_token_expires_at=datetime.fromisoformat(row["refresh_token_expires_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+        )
+
+    async def create(self, credentials: GitHubCredentials) -> GitHubCredentials:
+        try:
+            with self.db.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO github_credentials (user_id, access_token_encrypted, access_token_expires_at, refresh_token_encrypted, refresh_token_expires_at, updated_at)"
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        str(credentials.user_id),
+                        credentials.access_token_encrypted,
+                        credentials.access_token_expires_at.isoformat(),
+                        credentials.refresh_token_encrypted,
+                        credentials.refresh_token_expires_at.isoformat(),
+                        credentials.updated_at.isoformat(),
+                    )
+                )
+        except sqlite3.Error as exc:
+            raise ValueError(f"GitHub credentials could not be created: {exc}") from exc
+
+        return credentials
+
+    async def get_by_id(self, user_id: UUID) -> GitHubCredentials | None:
+        with self.db.transaction() as conn:
+            row = conn.execute(
+                "SELECT * FROM github_credentials WHERE user_id = ?",
+                (str(user_id),)
+            ).fetchone()
+
+        return self._row_to_github_credentials(row)
+
+
+    async def upsert(self, credentials: GitHubCredentials) -> GitHubCredentials:
+        existing_credentials = await self.get_by_id(credentials.user_id)
+
+        if existing_credentials is None:
+            return await self.create(credentials)
+
+        updated_credentials = existing_credentials.model_copy(
+            update={
+                "access_token_encrypted": credentials.access_token_encrypted,
+                "access_token_expires_at": credentials.access_token_expires_at,
+                "refresh_token_encrypted": credentials.refresh_token_encrypted,
+                "refresh_token_expires_at": credentials.refresh_token_expires_at,
+                "updated_at": utc_now()
+            }
+        )
+
+        with self.db.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE github_credentials 
+                SET access_token_encrypted = ?,
+                    access_token_expires_at = ?,
+                    refresh_token_encrypted = ?,
+                    refresh_token_expires_at = ?,
+                    updated_at = ?
+                WHERE user_id = ?
+                """,
+                (
+                    updated_credentials.access_token_encrypted,
+                    updated_credentials.access_token_expires_at.isoformat(),
+                    updated_credentials.refresh_token_encrypted,
+                    updated_credentials.refresh_token_expires_at.isoformat(),
+                    updated_credentials.updated_at.isoformat(),
+                    str(updated_credentials.user_id),
+                ),
+            )
+
+        return updated_credentials
