@@ -15,6 +15,7 @@ from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
 from polragion.database.memory_repository import InMemorySessionRepository, InMemoryUserRepository, \
     InMemoryGitHubCredentialsRepository
+from polragion.database.sqlite_repository import SqliteUserRepository
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
@@ -62,7 +63,8 @@ def create_app(
         app.state.data_worker = data_worker_factory(app_settings, app.state.work_item_service)
 
         session_repository = InMemorySessionRepository()
-        user_repository = InMemoryUserRepository()
+        #user_repository = InMemoryUserRepository()
+        user_repository = SqliteUserRepository(settings=app_settings)
         github_credentials_repository = InMemoryGitHubCredentialsRepository()
 
         app.state.session_repository = session_repository

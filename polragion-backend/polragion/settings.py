@@ -21,6 +21,8 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:8080"
 
+    sqlite_file_path: str = "/home/michael/gitclones/Polragion/polragion.db"
+
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection_prefix: str = "polragion"
     qdrant_batch_size: int = Field(default=256, ge=1, le=10_000)
