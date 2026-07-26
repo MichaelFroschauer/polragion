@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import httpx
-from copilot import CopilotClient, RuntimeConnection
+from copilot import CopilotClient, RuntimeConnection, define_tool
 from copilot.generated.session_events import UserMessageData
 from copilot.session import CopilotSession, PermissionHandler
 from copilot.session_events import (
@@ -84,6 +84,13 @@ class CopilotRequestError(AiServiceError):
 #
 # print("Main program continues running...")
 # time.sleep(10)
+
+# class WorkItemSearchParams(BaseModel):
+#     project_id: str = Field(description="Issue identifier")
+#
+# @define_tool(name="work_item_search", description="Search work items from the vector database.", skip_permission=True)
+# async def safe_lookup(params: WorkItemSearchParams) -> str:
+#
 
 class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, CopilotMessageEvent]):
     TOKEN_EXPIRY_SKEW = timedelta(minutes=5)

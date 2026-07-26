@@ -24,7 +24,7 @@ router = APIRouter(prefix="/v1/work-items", tags=["work-items"])
 
 
 @router.post(
-    "",
+    "/ingest",
     response_model=IngestResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -57,7 +57,7 @@ def ingest_work_items(
 
 
 @router.post(
-    "/import-json",
+    "/ingest/import-json",
     response_model=IngestResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -312,7 +312,7 @@ async def ask_work_item(
 
 
 @router.get(
-    "/history",
+    "/ask/history",
     response_model=list[ChatHistoryMessage],
     status_code=status.HTTP_200_OK,
 )
