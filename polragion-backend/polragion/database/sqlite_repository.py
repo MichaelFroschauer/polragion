@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Iterator
 from uuid import UUID
 
-from polragion.database.repository import UserRepository, GitHubCredentialsRepository
-from polragion.models.user import User, GitHubCredentials
+from polragion.database.repository import UserRepository, GitHubCredentialsRepository, SessionRepository
+from polragion.models.user import User, GitHubCredentials, UserSession
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
 
@@ -13,12 +13,55 @@ from polragion.utils.general import utc_now
 class SQLiteDatabase:
 
     def __init__(self, settings: Settings):
-        self.settings = settings
+        self._settings = settings
+        self._create_schema()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.settings.sqlite_file_path)
+        conn = sqlite3.connect(self._settings.sqlite_file_path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         return conn
+
+    def _create_schema(self) -> None:
+        commands = """
+            CREATE TABLE IF NOT EXISTS users (
+                id             TEXT PRIMARY KEY,
+                github_user_id TEXT NOT NULL UNIQUE,
+                username       TEXT NOT NULL,
+                created_at     TEXT NOT NULL
+            )
+                
+            CREATE TABLE IF NOT EXISTS github_credentials(
+                user_id TEXT PRIMARY KEY,
+                access_token_encrypted TEXT NOT NULL,
+                access_token_expires_at TEXT NOT NULL,
+                refresh_token_encrypted TEXT NOT NULL,
+                refresh_token_expires_at TEXT NOT NULL,
+                updated_at TEXT,
+                
+                FOREIGN KEY (user_id) REFERENCES users (id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+            )
+                
+            CREATE TABLE IF NOT EXISTS user_sessions (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+                revoked_at TEXT,
+                
+                FOREIGN KEY (user_id) REFERENCES users (id)
+                ON DELETE CASCADE
+                ON UPDATE CASCADE
+            )
+                
+            CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id
+            ON user_sessions (user_id)
+        """
+        with self.transaction() as conn:
+            conn.executescript(commands)
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
@@ -30,25 +73,11 @@ class SQLiteDatabase:
         finally:
             conn.close()
 
+
 class SqliteUserRepository(UserRepository):
 
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-        self.db = SQLiteDatabase(self.settings)
-        self._create_schema()
-
-    def _create_schema(self) -> None:
-        with self.db.transaction() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id             TEXT PRIMARY KEY,
-                    github_user_id TEXT NOT NULL UNIQUE,
-                    username       TEXT NOT NULL,
-                    created_at     TEXT NOT NULL
-                )
-                """
-            )
+    def __init__(self, db: SQLiteDatabase) -> None:
+        self._db = db
 
     @staticmethod
     def _row_to_user(row: sqlite3.Row | None) -> User | None:
@@ -64,7 +93,7 @@ class SqliteUserRepository(UserRepository):
 
     async def create(self, user: User) -> User:
         try:
-            with self.db.transaction() as conn:
+            with self._db.transaction() as conn:
                 conn.execute(
                     "INSERT INTO users (id, github_user_id, username, created_at) "
                     "VALUES (?, ?, ?, ?)",
@@ -81,7 +110,7 @@ class SqliteUserRepository(UserRepository):
         return user
 
     async def get_by_id(self, user_id: UUID) -> User | None:
-        with self.db.transaction() as conn:
+        with self._db.transaction() as conn:
             row = conn.execute(
                 "SELECT * FROM users WHERE id = ?",
                 (str(user_id),),
@@ -90,7 +119,7 @@ class SqliteUserRepository(UserRepository):
         return self._row_to_user(row)
 
     async def get_by_github_user_id(self, github_user_id: str) -> User | None:
-        with self.db.transaction() as conn:
+        with self._db.transaction() as conn:
             row = conn.execute(
                 "SELECT * FROM users WHERE github_user_id = ?",
                 (github_user_id,)
@@ -104,7 +133,7 @@ class SqliteUserRepository(UserRepository):
         if existing_user is not None:
             updated_user = existing_user.model_copy(update={"username": username})
 
-            with self.db.transaction() as conn:
+            with self._db.transaction() as conn:
                 conn.execute(
                     "UPDATE users SET username = ? WHERE github_user_id = ?",
                     (username, github_user_id),
@@ -119,25 +148,8 @@ class SqliteUserRepository(UserRepository):
 
 class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
 
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-        self.db = SQLiteDatabase(self.settings)
-        self._create_schema()
-
-    def _create_schema(self) -> None:
-        with self.db.transaction() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS github_credentials(
-                    user_id TEXT PRIMARY KEY,
-                    access_token_encrypted TEXT NOT NULL,
-                    access_token_expires_at TEXT NOT NULL,
-                    refresh_token_encrypted TEXT NOT NULL,
-                    refresh_token_expires_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-                """
-            )
+    def __init__(self, db: SQLiteDatabase) -> None:
+        self._db = db
 
     @staticmethod
     def _row_to_github_credentials(row: sqlite3.Row | None) -> GitHubCredentials | None:
@@ -155,7 +167,7 @@ class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
 
     async def create(self, credentials: GitHubCredentials) -> GitHubCredentials:
         try:
-            with self.db.transaction() as conn:
+            with self._db.transaction() as conn:
                 conn.execute(
                     "INSERT INTO github_credentials (user_id, access_token_encrypted, access_token_expires_at, refresh_token_encrypted, refresh_token_expires_at, updated_at)"
                     "VALUES (?, ?, ?, ?, ?, ?)",
@@ -174,7 +186,7 @@ class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
         return credentials
 
     async def get_by_id(self, user_id: UUID) -> GitHubCredentials | None:
-        with self.db.transaction() as conn:
+        with self._db.transaction() as conn:
             row = conn.execute(
                 "SELECT * FROM github_credentials WHERE user_id = ?",
                 (str(user_id),)
@@ -199,7 +211,7 @@ class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
             }
         )
 
-        with self.db.transaction() as conn:
+        with self._db.transaction() as conn:
             conn.execute(
                 """
                 UPDATE github_credentials 
@@ -221,3 +233,75 @@ class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
             )
 
         return updated_credentials
+
+
+class SqliteSessionRepository(SessionRepository):
+
+    def __init__(self, db: SQLiteDatabase) -> None:
+        self._db = db
+
+    @staticmethod
+    def _row_to_user_session(row: sqlite3.Row) -> UserSession | None:
+        if row is None:
+            return None
+
+        return UserSession(
+            id = UUID(row["id"]),
+            user_id = UUID(row["user_id"]),
+            token_hash = row["token_hash"],
+            created_at = datetime.fromisoformat(row["created_at"]),
+            expires_at = datetime.fromisoformat(row["expires_at"]),
+            revoked_at = datetime.fromisoformat(row["revoked_at"]),
+        )
+
+    async def create(self, session: UserSession) -> UserSession:
+        try:
+            with self._db.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO user_sessions (id, user_id, token_hash, created_at, expires_at, revoked_at)"
+                    "VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        str(session.id),
+                        str(session.user_id),
+                        session.token_hash,
+                        session.created_at.isoformat(),
+                        session.expires_at.isoformat(),
+                        None
+                    )
+                )
+        except sqlite3.Error as exc:
+            raise ValueError(f"User session could not be created: {exc}") from exc
+
+        return session
+
+    async def get_by_id(self, session_id: UUID) -> UserSession | None:
+        with self._db.transaction() as conn:
+            user_session_row = conn.execute(
+                "SELECT * FROM user_sessions WHERE id = ?", (str(session_id),)
+            ).fetchone()
+        return self._row_to_user_session(user_session_row)
+
+    async def get_by_token_hash(self, token_hash: str) -> UserSession | None:
+        with self._db.transaction() as conn:
+            user_session_row = conn.execute(
+                "SELECT * FROM user_sessions WHERE token_hash = ?", (token_hash,)
+            ).fetchone()
+        return self._row_to_user_session(user_session_row)
+
+    async def revoke(self, session_id: UUID) -> None:
+        user_session = await self.get_by_id(session_id)
+        if user_session is None:
+            return
+
+        with self._db.transaction() as conn:
+            conn.execute(
+                """
+                UPDATE user_sessions
+                SET revoked_at = ?
+                WHERE id = ?
+                """,
+                (
+                    utc_now().isoformat(),
+                    str(session_id)
+                )
+            )
