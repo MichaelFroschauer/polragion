@@ -20,7 +20,7 @@ from polragion.utils.general import utc_now
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/auth/github", tags=["GitHub Models"])
+router = APIRouter(prefix="/ai/github", tags=["GitHub Models"])
 
 
 class GitHubAiModel(BaseModel):

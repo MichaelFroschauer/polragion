@@ -10,7 +10,7 @@ from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
     get_ai_service
 from polragion.api.schemas import IngestResponse, WorkItemSearchHitResponse
-from polragion.application.ai_service import AiService, AiResponseMessageT, AiSendMessageT
+from polragion.application.ai_service import AiService, AiResponseMessageT, AiSendMessageT, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService, WorkItemSearchResult
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
@@ -301,7 +301,23 @@ async def ask_work_item(
     ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=hits)
 
     response: CopilotResponseMessage = await ai_service.send_message(
-        CopilotSendMessage(user_id=current_user.id, text=ai_prompt)
+        CopilotSendMessage(
+            user_id=current_user.id,
+            text=ai_prompt,
+            display_text=prompt,
+        )
     )
 
     return response.text
+
+
+@router.get(
+    "/history",
+    response_model=list[ChatHistoryMessage],
+    status_code=status.HTTP_200_OK,
+)
+async def get_chat_history(
+    current_user: Annotated[User, Depends(get_current_user)],
+    ai_service: Annotated[AiService, Depends(get_ai_service)],
+) -> list[ChatHistoryMessage]:
+    return await ai_service.get_chat_history(current_user.id)

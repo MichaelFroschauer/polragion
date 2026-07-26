@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Literal
 from uuid import UUID
+
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,10 @@ MessageResponseHandler = Callable[[AiMessageEventT], None | Awaitable[None]]
 class AiServiceError(RuntimeError):
     """Base exception for failures in an AI service."""
 
+class ChatHistoryMessage(BaseModel):
+    role: Literal["user", "ai"]
+    content: str
+    message_id: str | None = None
 
 class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT]):
     @abstractmethod
@@ -50,4 +56,8 @@ class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT
 
     @property
     def default_model_id(self) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_chat_history(self, user_id: UUID) -> list[ChatHistoryMessage]:
         raise NotImplementedError

@@ -6,6 +6,7 @@ from polragion.utils.general import StrictModel
 class CopilotSendMessage(StrictModel):
     user_id: UUID
     text: str
+    display_text: str | None = None
 
 class CopilotResponseMessage(StrictModel):
     text: str

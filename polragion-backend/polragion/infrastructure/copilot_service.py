@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from copilot import CopilotClient, RuntimeConnection
+from copilot.generated.session_events import UserMessageData
 from copilot.session import CopilotSession, PermissionHandler
 from copilot.session_events import (
     AssistantMessageData,
@@ -18,7 +19,7 @@ from copilot.session_events import (
 )
 from cryptography.fernet import InvalidToken
 
-from polragion.application.ai_service import AiServiceError, AiService, MessageResponseHandler
+from polragion.application.ai_service import AiServiceError, AiService, MessageResponseHandler, ChatHistoryMessage
 from polragion.database.repository import GitHubCredentialsRepository
 from polragion.models.ai_message import (
     CopilotMessageEvent,
@@ -45,6 +46,44 @@ class GitHubTokenRefreshError(AiServiceError):
 
 class CopilotRequestError(AiServiceError):
     """A request to the Copilot runtime failed."""
+
+
+# TODO: Create Tool that queries the vector database for more information
+# class LookupIssueParams(BaseModel):
+#     id: str = Field(description="Issue identifier")
+#
+# @define_tool(description="Fetch issue details from our tracker")
+# async def lookup_issue(params: LookupIssueParams) -> str:
+#     issue = await fetch_issue(params.id)
+#     return issue.summary
+#
+# Set skip_permission=True on a tool definition to allow it to execute without triggering a permission prompt:
+# @define_tool(name="safe_lookup", description="A read-only lookup that needs no confirmation", skip_permission=True)
+# async def safe_lookup(params: LookupParams) -> str:
+#     # your logic
+#
+# async with await client.create_session(
+#     on_permission_request=PermissionHandler.approve_all,
+#     model="gpt-5",
+#     tools=[lookup_issue],
+# ) as session:
+#     ...
+
+# TODO: Schedule session cleanup every x minutes like in
+# https://python.plainenglish.io/mastering-background-jobs-in-python-41730daf8c74
+# import threading
+# import time
+#
+# def background_task():
+#     while True:
+#         print("Background task running...")
+#         time.sleep(2)
+#
+# thread = threading.Thread(target=background_task, daemon=True)
+# thread.start()
+#
+# print("Main program continues running...")
+# time.sleep(10)
 
 class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, CopilotMessageEvent]):
     TOKEN_EXPIRY_SKEW = timedelta(minutes=5)
@@ -203,11 +242,11 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         try:
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
-                model=self.get_model_of_session(user_id),
+                model= await self.get_model_of_session(user_id),
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
                 available_tools=["custom:*"],
-                streaming=True,
+                streaming=False,
             )
         except Exception as exc:
             raise CopilotRequestError(f"Could not create a Copilot session for user {user_id}") from exc
@@ -236,12 +275,13 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                         ),
                     )
                 case SessionErrorData() as data:
-                    logger.error("Copilot session error for user %s: type=%s code=%s message=%s",
-                                 user_id,
-                                 data.error_type,
-                                 data.error_code,
-                                 data.message,
-                                 )
+                    logger.error(
+                    "Copilot session error for user %s: type=%s code=%s message=%s",
+                         user_id,
+                         data.error_type,
+                         data.error_code,
+                         data.message,
+                    )
 
             if message_event is None:
                 return
@@ -321,7 +361,11 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 session = await self._create_user_session(message.user_id)
 
             try:
-                response_event = await session.send_and_wait(message.text, timeout=self.REQUEST_TIMEOUT_SECONDS)
+                response_event = await session.send_and_wait(
+                    prompt=message.text,
+                    display_prompt=message.display_text,
+                    timeout=self.REQUEST_TIMEOUT_SECONDS
+                )
             except TimeoutError as exc:
                 await self._disconnect_user_session(message.user_id)
                 raise CopilotRequestError("Copilot did not finish the response before the timeout") from exc
@@ -392,3 +436,32 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     @property
     def default_model_id(self) -> str:
         return "openai/gpt-5"
+
+    async def get_chat_history(self, user_id: UUID) -> list[ChatHistoryMessage]:
+        lock = self._user_locks.setdefault(user_id, asyncio.Lock())
+
+        async with lock:
+            session = await self._get_user_session(user_id)
+            if session is None:
+                return []
+
+            try:
+                events = await session.get_events()
+            except Exception as exc:
+                raise CopilotRequestError(f"Could not retrieve Copilot history for user {user_id}") from exc
+
+        messages: list[ChatHistoryMessage] = []
+
+        for event in events:
+            match event.data:
+                case UserMessageData() as data:
+                    messages.append(
+                        ChatHistoryMessage(role="user", content=data.content)
+                    )
+
+                case AssistantMessageData() as data:
+                    messages.append(
+                        ChatHistoryMessage(role="ai", content=data.content, message_id=data.message_id)
+                    )
+
+        return messages
