@@ -37,13 +37,9 @@ class SessionService:
         token_hash = self._hash_token(raw_token)
         session = await self._repository.get_by_token_hash(token_hash)
 
-        if session is None:
-            return None
-
-        if session.revoked_at is not None:
-            return None
-
-        if session.expires_at <= utc_now():
+        if (session is None
+            or session.revoked_at is not None
+            or (session.expires_at is None or session.expires_at <= utc_now())):
             return None
 
         return session

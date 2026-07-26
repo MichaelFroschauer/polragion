@@ -29,7 +29,7 @@ class SQLiteDatabase:
                 github_user_id TEXT NOT NULL UNIQUE,
                 username       TEXT NOT NULL,
                 created_at     TEXT NOT NULL
-            )
+            );
                 
             CREATE TABLE IF NOT EXISTS github_credentials(
                 user_id TEXT PRIMARY KEY,
@@ -37,12 +37,12 @@ class SQLiteDatabase:
                 access_token_expires_at TEXT NOT NULL,
                 refresh_token_encrypted TEXT NOT NULL,
                 refresh_token_expires_at TEXT NOT NULL,
-                updated_at TEXT,
+                updated_at TEXT NOT NULL,
                 
                 FOREIGN KEY (user_id) REFERENCES users (id)
                 ON UPDATE CASCADE
                 ON DELETE CASCADE
-            )
+            );
                 
             CREATE TABLE IF NOT EXISTS user_sessions (
                 id TEXT PRIMARY KEY,
@@ -55,10 +55,10 @@ class SQLiteDatabase:
                 FOREIGN KEY (user_id) REFERENCES users (id)
                 ON DELETE CASCADE
                 ON UPDATE CASCADE
-            )
+            );
                 
             CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id
-            ON user_sessions (user_id)
+            ON user_sessions (user_id);
         """
         with self.transaction() as conn:
             conn.executescript(commands)
@@ -169,7 +169,7 @@ class SqliteGitHubCredentialsRepository(GitHubCredentialsRepository):
         try:
             with self._db.transaction() as conn:
                 conn.execute(
-                    "INSERT INTO github_credentials (user_id, access_token_encrypted, access_token_expires_at, refresh_token_encrypted, refresh_token_expires_at, updated_at)"
+                    "INSERT INTO github_credentials (user_id, access_token_encrypted, access_token_expires_at, refresh_token_encrypted, refresh_token_expires_at, updated_at) "
                     "VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         str(credentials.user_id),
@@ -250,22 +250,22 @@ class SqliteSessionRepository(SessionRepository):
             user_id = UUID(row["user_id"]),
             token_hash = row["token_hash"],
             created_at = datetime.fromisoformat(row["created_at"]),
-            expires_at = datetime.fromisoformat(row["expires_at"]),
-            revoked_at = datetime.fromisoformat(row["revoked_at"]),
+            expires_at = datetime.fromisoformat(row["expires_at"]) if row["expires_at"] else None,
+            revoked_at = datetime.fromisoformat(row["revoked_at"]) if row["revoked_at"] else None,
         )
 
     async def create(self, session: UserSession) -> UserSession:
         try:
             with self._db.transaction() as conn:
                 conn.execute(
-                    "INSERT INTO user_sessions (id, user_id, token_hash, created_at, expires_at, revoked_at)"
+                    "INSERT INTO user_sessions (id, user_id, token_hash, created_at, expires_at, revoked_at) "
                     "VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         str(session.id),
                         str(session.user_id),
                         session.token_hash,
                         session.created_at.isoformat(),
-                        session.expires_at.isoformat(),
+                        session.expires_at.isoformat() if session.expires_at is not None else None,
                         None
                     )
                 )

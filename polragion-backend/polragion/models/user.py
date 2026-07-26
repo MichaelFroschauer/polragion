@@ -37,5 +37,5 @@ class UserSession(StrictModel):
     token_hash: str # Only the SHA-256-Hash is saved on the server
 
     created_at: datetime = Field(default_factory=utc_now)
-    expires_at: datetime
+    expires_at: datetime | None = None
     revoked_at: datetime | None = None
