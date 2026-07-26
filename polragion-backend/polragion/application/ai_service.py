@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from typing import Generic, TypeVar
-
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
@@ -38,4 +38,16 @@ class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT
 
     @abstractmethod
     def add_message_response_handler(self, handler: MessageResponseHandler) -> Callable[[], None]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def set_model_for_session(self, user_id: UUID, model_id: str) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_model_of_session(self, user_id: UUID) -> str:
+        raise NotImplementedError
+
+    @property
+    def default_model_id(self) -> str:
         raise NotImplementedError

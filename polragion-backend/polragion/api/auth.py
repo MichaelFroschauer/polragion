@@ -10,7 +10,6 @@ from urllib.parse import urlencode
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, ConfigDict, Field
 from starlette import status
 
 from polragion.api.dependencies import get_settings, get_user_repository, get_github_credentials_repository, \
@@ -186,53 +185,3 @@ async def me(
 
 
 
-class GitHubAiModel(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    name: str
-    publisher: str
-    registry: str | None = None
-    summary: str | None = None
-    html_url: str | None = None
-    version: str | None = None
-    rate_limit_tier: str
-
-    capabilities: list[str] = Field(default_factory=list)
-    supported_input_modalities: list[str] = Field(default_factory=list)
-    supported_output_modalities: list[str] = Field(default_factory=list)
-    tags: list[str] = Field(default_factory=list)
-
-    #max_input_tokens: int
-    #max_output_tokens: int
-
-class UserGitHubModels(BaseModel):
-    user_id: UUID
-    models: list[GitHubAiModel]
-    last_refresh: datetime
-
-user_models: dict[UUID, UserGitHubModels] = {}
-
-
-@router.get("/models")
-async def get_user_models(
-        current_user: Annotated[User, Depends(get_current_user)],
-        settings: Annotated[Settings, Depends(get_settings)],
-        credentials_repository: Annotated[GitHubCredentialsRepository, Depends(get_github_credentials_repository)],
-) -> list[GitHubAiModel]:
-
-    user_model = user_models.get(current_user.id)
-    if (user_model is not None and user_model.last_refresh is not None
-            and user_model.last_refresh > utc_now() + timedelta(hours=24)):
-        return user_model.models
-
-    credentials = await credentials_repository.get_by_id(current_user.id)
-    if credentials is None:
-        return []
-
-    github_models: list[dict] = await get_github_available_models(settings, credentials)
-    models = [GitHubAiModel.model_validate(model) for model in github_models]
-
-    user_models[current_user.id] = UserGitHubModels(user_id=current_user.id, models=models, last_refresh=utc_now())
-
-    return models

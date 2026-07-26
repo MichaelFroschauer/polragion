@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.api.auth import router as auth_router
+from polragion.api.ai_models import router as ai_models_router
 from polragion.application.ai_service import AiMessageEventT
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
@@ -121,6 +122,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(work_item_router)
     app.include_router(auth_router)
+    app.include_router(ai_models_router)
 
     return app
 

@@ -57,11 +57,11 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             *,
             runtime_url: str = "localhost:4321",
             runtime_connection_token: str | None = None,
-            model: str = "gpt-5.4",
     ) -> None:
         self.settings = settings
         self.credentials_repository = github_credentials_repository
-        self.model = model
+
+        self._user_models: dict[UUID, str] = {}
 
         self.user_sessions: dict[UUID, CopilotSession] = {}
         self._session_token_expirations: dict[UUID, datetime | None] = {}
@@ -203,7 +203,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         try:
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
-                model=self.model,
+                model=self.get_model_of_session(user_id),
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
                 available_tools=["custom:*"],
@@ -286,6 +286,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             await session.disconnect()
         except Exception:
             logger.exception("Could not disconnect Copilot session for user %s", user_id)
+
 
     async def _get_user_session(self, user_id: UUID) -> CopilotSession | None:
         session = self.user_sessions.get(user_id)
@@ -377,3 +378,17 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 self._initialized = False
 
             logger.info("Copilot client stopped")
+
+
+    async def set_model_for_session(self, user_id: UUID, model_id: str) -> None:
+        self._user_models[user_id] = model_id
+        user_session = await self._get_user_session(user_id)
+        if user_session is not None:
+            await user_session.set_model(model_id)
+
+    async def get_model_of_session(self, user_id: UUID) -> str:
+        return self._user_models.get(user_id) or self.default_model_id
+
+    @property
+    def default_model_id(self) -> str:
+        return "openai/gpt-5"
