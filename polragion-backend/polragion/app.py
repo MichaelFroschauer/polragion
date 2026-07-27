@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 
 from fastapi import FastAPI
+from fastapi.routing import APIRoute
+from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from polragion.api.health import router as health_router
@@ -39,6 +41,8 @@ def _configure_logging(settings: Settings) -> None:
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
 
+def custom_generate_unique_id(route: APIRoute) -> str:
+    return route.name  # uses the function name as operationId
 
 def create_app(
     *,
@@ -96,6 +100,7 @@ def create_app(
         title=app_settings.app_name,
         version="1.0.0",
         lifespan=lifespan,
+        generate_unique_id_function=custom_generate_unique_id,
     )
 
     app.add_middleware(
@@ -107,17 +112,18 @@ def create_app(
         https_only=not app_settings.debug,
     )
 
-    # origins = [
-    #     "http://localhost",
-    #     "http://localhost:8080",
-    # ]
-    # app.add_middleware(
-    #     CORSMiddleware,
-    #     allow_origins=origins,
-    #     allow_credentials=True,
-    #     allow_methods=["*"],
-    #     allow_headers=["*"],
-    # )
+    origins = [
+        "http://localhost",
+        "http://localhost:8080",
+        "http://localhost:5173",
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     app.include_router(health_router)
     app.include_router(work_item_router)

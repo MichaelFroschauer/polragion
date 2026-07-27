@@ -28,6 +28,11 @@ docker compose ps
 docker compose  -f docker-compose.yaml down
 ```
 
+### Check the used system ressources of the docker containers
+```bash
+docker stats
+```
+
 
 
 # Single Docker Commands
