@@ -18,36 +18,18 @@ services:
   copilot-cli:
     image: copilot-cli:latest
     build:
-      context: ..
-      dockerfile: docker/copilot.Dockerfile
+      context: .
+      dockerfile: ./copilot.Dockerfile
     restart: unless-stopped
     command: ["--headless", "--host", "0.0.0.0", "--port", "4321"]
     expose:
       - "4321"
 
-  # db:
-  #   image: postgres:16
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER:-user}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-  #     POSTGRES_DB: ${POSTGRES_DB:-polragionDB}
-  #   volumes:
-  #     - ./postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "127.0.0.1:5432:5432"
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-polragionDB}"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #     start_period: 80s
-
   polragion-backend:
     image: polragion-backend:latest
     build:
       context: ../polragion-backend
-      dockerfile: ./polragion-backend.Dockerfile
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -57,11 +39,11 @@ services:
       - DEBUG=False
       - QDRANT_URL=http://vector-db:6333
       - COPILOT_URL=http://copilot-cli:4321
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-polragionDB}
       - GITHUB_REDIRECT_URI=http://127.0.0.1:8000/auth/github/callback
+      - SQLITE_FILE_PATH=/app/data/polragion.db
+    volumes:
+      - ./backend-data:/app/data:Z
     depends_on:
-      # db:
-      #   condition: service_healthy
       vector-db:
         condition: service_healthy
       copilot-cli:
@@ -77,7 +59,7 @@ services:
     image: polragion-frontend:latest
     build:
       context: ../polragion-frontend
-      dockerfile: ./polragion-frontend.Dockerfile
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-80}:80"

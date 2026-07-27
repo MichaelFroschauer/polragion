@@ -1,0 +1,38 @@
+# ── Secrets: MUST NEVER be included in the image ──────────────────
+keys/
+**/keys/
+secrets
+**/secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+
+# ── Virtual environments & caches ─────────────────────────────────
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── IDE / VCS / Tooling ───────────────────────────────────────────
+.git/
+.gitignore
+.idea/
+.vscode/
+
+# ── Not needed during runtime ─────────────────────────────────────
+tests/
+test_main.http
+*.md
+!README.md
+
+# ── Docker ────────────────────────────────────────────────────────
+Dockerfile*
+.dockerignore

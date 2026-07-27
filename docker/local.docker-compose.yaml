@@ -17,9 +17,9 @@ services:
 
   copilot-cli:
     image: copilot-cli:latest
-    # build:
-    #   context: ..
-    #   dockerfile: docker/copilot.Dockerfile
+    build:
+      context: .
+      dockerfile: ./copilot.Dockerfile
     restart: unless-stopped
     command: ["--headless", "--host", "0.0.0.0", "--port", "4321"]
     ports:
