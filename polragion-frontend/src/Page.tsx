@@ -13,10 +13,13 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar"
-import {HelloString} from "@/components/art/animated-calligraphy.tsx";
+import type {ReactNode} from "react";
 
+interface PageProps {
+    children: ReactNode
+}
 
-export default function Page() {
+export default function Page({children}: PageProps) {
     return (
         <SidebarProvider>
             <AppSidebar />
@@ -45,13 +48,9 @@ export default function Page() {
                 </header>
 
                 <section id="center">
-                    {/*<div className="ticks"></div>*/}
-                    {/*<section id="spacer"></section>*/}
-                    <HelloString fullScreen={false} textCol={"black"} />
+                    {children}
                 </section>
 
-
-                {/*</div>*/}
             </SidebarInset>
         </SidebarProvider>
     )

@@ -18,7 +18,7 @@ type Props = ComponentPropsWithoutRef<typeof motion.svg> & {
     onAnimationComplete?: () => void
 }
 
-export function AppleHelloEnglishEffect({ className, speed = 0.8, onAnimationComplete, ...props }: Props) {
+export function AppleHelloEnglishEffect({ className, speed = 0.6, onAnimationComplete, ...props }: Props) {
     const calc = (x: number) => x * speed
 
     return (
@@ -59,7 +59,7 @@ export function AppleHelloEnglishEffect({ className, speed = 0.8, onAnimationCom
                 transition={{
                     duration: calc(2.8),
                     ease: "easeInOut",
-                    delay: calc(0.7),
+                    delay: calc(0.2),
                     opacity: { duration: 0.7, delay: calc(0.7) },
                 }}
             />
@@ -160,47 +160,51 @@ export function ApplePolRAGionEffect({className, speed = 2.0, onAnimationComplet
     )
 }
 
+
+type HelloStringProps = {
+    textCol: "black" | "white"
+    fullScreen?: boolean
+    className?: string
+    onComplete?: () => void
+}
+
 export function HelloString({
     textCol,
     fullScreen = false,
     className,
-}: {
-    textCol: "black" | "white"
-    fullScreen?: boolean
-    className?: string
-}) {
-    const [calligraphyWriting, setCalligraphyWriting] = useState<"hello" | "polragion" | "standard">("hello")
+    onComplete,
+}: HelloStringProps) {
+    const [calligraphyWriting, setCalligraphyWriting] = useState<"hello" | "polragion">("hello")
 
-    const colText = `text-${textCol}`
-    const colBackground = `bg-${textCol === "white" ? "black" : "white"}`
+    const colText = textCol === "white" ? "text-white" : "text-black"
+    const colBackground = textCol === "white" ? "bg-black" : "bg-white"
 
     return (
         <div
             className={cn(
                 fullScreen
-                    //? "fixed inset-0 flex flex-col items-center justify-center gap-8"
-                    ? "fixed inset-0 flex flex-col items-center justify-center gap-8 "
+                    ? "fixed inset-0 z-50 flex flex-col items-center justify-center gap-8"
                     : "inline-flex flex-col items-center justify-center gap-8",
                 colBackground,
                 className
             )}
         >
             {calligraphyWriting === "hello" ? (
-                <AppleHelloEnglishEffect
-                    className={`${colText} h-24 sm:h-12`}
-                    onAnimationComplete={() => setTimeout(() => setCalligraphyWriting("polragion"), 1000)}
+                <AppleHelloEnglishEffect className={`${colText} h-24 sm:h-12`}
+                    onAnimationComplete={() => {
+                        setTimeout(() => {
+                            setCalligraphyWriting("polragion")
+                        }, 500)
+                    }}
                 />
             ) : (
-
-                calligraphyWriting === "polragion" ? (
-                        <ApplePolRAGionEffect
-                            className={`${colText} h-24 sm:h-12`}
-                            onAnimationComplete={() => setTimeout(() => setCalligraphyWriting("standard"), 1000)}
-                        />
-                    ) : (
-                        // TODO: Replace with real page
-                        <div>OKKKKK</div>
-                    )
+                <ApplePolRAGionEffect className={`${colText} h-24 sm:h-12`}
+                    onAnimationComplete={() => {
+                        setTimeout(() => {
+                            onComplete?.()
+                        }, 200)
+                    }}
+                />
             )}
         </div>
     )
