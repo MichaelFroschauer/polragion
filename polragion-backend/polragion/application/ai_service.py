@@ -48,11 +48,15 @@ class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT
         raise NotImplementedError
 
     @abstractmethod
-    async def set_model_for_session(self, user_id: UUID, model_id: str) -> None:
+    async def set_model_for_session(self, user_id: UUID, model_id: str, reasoning_effort: str | None = None) -> None:
         raise NotImplementedError
 
     @abstractmethod
     async def get_model_of_session(self, user_id: UUID) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_reasoning_effort_of_session(self, user_id: UUID) -> str | None:
         raise NotImplementedError
 
     @abstractmethod

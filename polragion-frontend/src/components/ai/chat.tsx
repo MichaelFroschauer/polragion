@@ -19,7 +19,6 @@ import {
 import type { PromptInputMessage } from "@/components/ai/prompt-input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TooltipProvider } from "@/components/ui/tooltip"
 import { useGitHubAuth } from "@/hooks/use-github-auth"
 
 type ChatMode = "ask" | "search"
@@ -132,7 +131,6 @@ export function Chat() {
   )
 
   return (
-    <TooltipProvider>
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
@@ -201,6 +199,5 @@ export function Chat() {
           </div>
         </div>
       </div>
-    </TooltipProvider>
   )
 }

@@ -109,6 +109,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         self.credentials_repository = github_credentials_repository
 
         self._user_models: dict[UUID, str] = {}
+        self._user_reasoning_efforts: dict[UUID, str | None] = {}
 
         self.user_sessions: dict[UUID, CopilotSession] = {}
         self._session_token_expirations: dict[UUID, datetime | None] = {}
@@ -250,8 +251,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         try:
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
-                # model= await self.get_model_of_session(user_id),
-                model="gpt-5.4",
+                model=self._user_models.get(user_id, self.default_model_id),
+                reasoning_effort=self._user_reasoning_efforts.get(user_id),
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
                 available_tools=["custom:*"],
@@ -433,14 +434,18 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             logger.info("Copilot client stopped")
 
 
-    async def set_model_for_session(self, user_id: UUID, model_id: str) -> None:
+    async def set_model_for_session(self, user_id: UUID, model_id: str, reasoning_effort: str | None = None) -> None:
         self._user_models[user_id] = model_id
+        self._user_reasoning_efforts[user_id] = reasoning_effort
         user_session = await self._get_user_session(user_id)
         if user_session is not None:
-            await user_session.set_model(model_id)
+            await user_session.set_model(model_id, reasoning_effort=reasoning_effort)
 
     async def get_model_of_session(self, user_id: UUID) -> str:
         return self._user_models.get(user_id) or self.default_model_id
+
+    async def get_reasoning_effort_of_session(self, user_id: UUID) -> str | None:
+        return self._user_reasoning_efforts.get(user_id)
 
     async def get_available_models(self, user_id: UUID) -> list[CopilotModel]:
         access_token, access_token_expires_at = (await self._get_valid_access_token(user_id))

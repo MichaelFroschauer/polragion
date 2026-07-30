@@ -1,5 +1,6 @@
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { BrainIcon, CheckIcon, ChevronsUpDownIcon, EyeIcon, LockIcon } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import type { CopilotModel, CopilotModelSelection } from "@/api"
 import { gitHubModelsApi } from "@/api/client"
 import {
   ModelSelector,
@@ -9,26 +10,102 @@ import {
   ModelSelectorInput,
   ModelSelectorItem,
   ModelSelectorList,
-  ModelSelectorLogo,
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai/model-selector"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useGitHubAuth } from "@/hooks/use-github-auth"
-import type {CopilotModel} from "@/api";
+import * as React from "react";
 
-const providerSlug = (publisher: string) => publisher.toLowerCase().replace(/\s+/g, "-")
+const CATEGORY_ORDER = ["powerful", "versatile", "lightweight"] as const
+
+const CATEGORY_LABELS: Record<string, string> = {
+  powerful: "Powerful",
+  versatile: "Versatile",
+  lightweight: "Lightweight",
+}
+
+const PRICE_LABELS: Record<string, string> = {
+  low: "$",
+  medium: "$$",
+  high: "$$$",
+  very_high: "$$$$",
+}
+
+const EFFORT_LABELS: Record<string, string> = {
+  none: "None",
+  minimal: "Minimal",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  xhigh: "Extra high",
+  max: "Max",
+}
+
+function formatTokens(tokens?: number | null) {
+  if (!tokens) {
+    return null
+  }
+  if (tokens >= 1_000_000) {
+    return `${Number((tokens / 1_000_000).toFixed(1))}M`
+  }
+  if (tokens >= 1_000) {
+    return `${Math.round(tokens / 1_000)}K`
+  }
+  return String(tokens)
+}
+
+function effortLabel(effort: string) {
+  return EFFORT_LABELS[effort] ?? effort
+}
+
+function isBlockedByPolicy(model: CopilotModel) {
+  return model.policyState != null && model.policyState !== "enabled"
+}
+
+function groupLabel(model: CopilotModel) {
+  if (model.isAuto) {
+    return "Automatic"
+  }
+  return CATEGORY_LABELS[model.category ?? ""] ?? "Other"
+}
+
+/** Compact capability summary shown underneath the model name. */
+function ModelSpecs({ model }: { model: CopilotModel }) {
+  const context = formatTokens(model.maxContextTokens)
+  const output = formatTokens(model.maxOutputTokens)
+
+  const specs = [
+    context ? `${context} context` : null,
+    output ? `${output} output` : null,
+  ].filter(Boolean)
+
+  if (specs.length === 0) {
+    return null
+  }
+
+  return <span className="text-xs text-muted-foreground">{specs.join(" · ")}</span>
+}
 
 export function ModelPicker() {
   const { isAuthenticated } = useGitHubAuth()
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<CopilotModel[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selection, setSelection] = useState<CopilotModelSelection | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
       setModels([])
-      setSelectedId(null)
+      setSelection(null)
       return
     }
 
@@ -44,7 +121,7 @@ export function ModelPicker() {
           return
         }
         setModels(available)
-        setSelectedId(current?.id ?? available[0]?.id ?? null)
+        setSelection(current ?? (available[0] ? { model: available[0] } : null))
       } catch {
         if (!cancelled) {
           setModels([])
@@ -57,74 +134,177 @@ export function ModelPicker() {
     }
   }, [isAuthenticated])
 
-  const selected = models.find(model => model.id === selectedId)
-  // const publishers = Array.from(new Set(models.map(model => model.publisher)))
-  const publishers = Array.from(new Set(models.map(model => model.name)))
+  const applySelection = useCallback(
+    async (model: CopilotModel, reasoningEffort?: string | null) => {
+      // Optimistic update, the backend response is authoritative.
+      setSelection({ model, reasoningEffort: reasoningEffort ?? model.defaultReasoningEffort })
+      try {
+        setSelection(
+          await gitHubModelsApi.setUserModel({
+            modelId: model.id,
+            reasoningEffort: reasoningEffort ?? undefined,
+          }),
+        )
+      } catch {
+        // Keep the optimistic value when the backend rejects it.
+      }
+    },
+    [],
+  )
 
-  const selectModel = async (model: CopilotModel) => {
-    setSelectedId(model.id)
-    setOpen(false)
-    try {
-      await gitHubModelsApi.setUserModel({ modelId: model.id })
-    } catch {
-      // Selection stays local when the backend rejects it.
-    }
+  const selected = selection?.model
+  const efforts = selected?.supportedReasoningEfforts ?? []
+  const supportsEffort = Boolean(selected?.supportsReasoningEffort) && efforts.length > 0
+
+  const categories = Array.from(new Set(models.map(groupLabel))).sort((a, b) => {
+    const order = ["Automatic", ...CATEGORY_ORDER.map(key => CATEGORY_LABELS[key]), "Other"]
+    return order.indexOf(a) - order.indexOf(b)
+  })
+
+  function CapabilityTooltip({label, children}: { label: React.ReactNode, children: React.ReactNode }) {
+    return (
+        <Tooltip>
+          <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  {children}
+                </span>
+              }
+          />
+          <TooltipContent>{label}</TooltipContent>
+        </Tooltip>
+    )
   }
 
   return (
-    <ModelSelector onOpenChange={setOpen} open={open}>
-      <ModelSelectorTrigger
-        render={
-          <Button
-            className="w-[200px] justify-between"
-            disabled={!isAuthenticated || models.length === 0}
-            size="sm"
-            variant="outline"
-          />
-        }
-      >
-        {selected ? (
-          <>
-            {/*<ModelSelectorLogo provider={providerSlug(selected.publisher)} />*/}
-            <ModelSelectorLogo provider="github-copilot" />
-            <ModelSelectorName>{selected.name}</ModelSelectorName>
-          </>
-        ) : (
+    <div className="flex items-center gap-2">
+      {supportsEffort && (
+        <Select
+          items={efforts.map(effort => ({ label: effortLabel(effort), value: effort }))}
+          onValueChange={value => {
+            if (selected && typeof value === "string") {
+              void applySelection(selected, value)
+            }
+          }}
+          value={selection?.reasoningEffort ?? selected?.defaultReasoningEffort ?? null}
+        >
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <SelectTrigger aria-label="Reasoning effort" size="sm">
+                  <BrainIcon className="size-3.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+              }
+            />
+            <TooltipContent>Reasoning effort</TooltipContent>
+          </Tooltip>
+          <SelectContent align="end" alignItemWithTrigger={false} className="min-w-[9rem]">
+            {efforts.map(effort => (
+              <SelectItem key={effort} value={effort}>
+                {effortLabel(effort)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <ModelSelector onOpenChange={setOpen} open={open}>
+        <ModelSelectorTrigger
+          render={
+            <Button
+              className="w-[210px] justify-between"
+              disabled={!isAuthenticated || models.length === 0}
+              size="sm"
+              variant="outline"
+            />
+          }
+        >
           <ModelSelectorName>
-            {isAuthenticated ? "No model available" : "Sign in to pick a model"}
+            {selected?.name ??
+              (isAuthenticated ? "No model available" : "Sign in to pick a model")}
           </ModelSelectorName>
-        )}
-        <ChevronsUpDownIcon className="size-4 opacity-50" />
-      </ModelSelectorTrigger>
-      <ModelSelectorContent>
-        <ModelSelectorInput placeholder="Search models..." />
-        <ModelSelectorList>
-          <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-          {publishers.map(publisher => (
-            <ModelSelectorGroup heading={publisher} key={publisher}>
-              {models
-                //.filter(model => model.publisher === publisher)
-                .map(model => (
-                  <ModelSelectorItem
-                    key={model.id}
-                    onSelect={() => void selectModel(model)}
-                    value={model.id}
-                  >
-                    {/*<ModelSelectorLogo provider={providerSlug(model.name)} />*/}
-                    {/*<ModelSelectorLogo provider="github-copilot" />*/}
-                    <ModelSelectorLogo provider={model.name} />
-                    <ModelSelectorName>{model.name}</ModelSelectorName>
-                    {selectedId === model.id ? (
-                      <CheckIcon className="ml-auto size-4" />
-                    ) : (
-                      <div className="ml-auto size-4" />
-                    )}
-                  </ModelSelectorItem>
-                ))}
-            </ModelSelectorGroup>
-          ))}
-        </ModelSelectorList>
-      </ModelSelectorContent>
-    </ModelSelector>
+          <ChevronsUpDownIcon className="size-4 opacity-50" />
+        </ModelSelectorTrigger>
+        <ModelSelectorContent className="sm:max-w-xl">
+          <ModelSelectorInput placeholder="Search models..." />
+          <ModelSelectorList className="max-h-[420px]">
+            <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
+            {categories.map(category => (
+              <ModelSelectorGroup heading={category} key={category}>
+                {models
+                  .filter(model => groupLabel(model) === category)
+                  .map(model => {
+                    const blocked = isBlockedByPolicy(model)
+
+                    return (
+                      <ModelSelectorItem
+                          className={`items-start gap-3 py-2 ${
+                              blocked ? "cursor-not-allowed opacity-50" : ""
+                          }`}
+                        key={model.id}
+                        onSelect={() => {
+                          if (blocked) {
+                            return
+                          }
+                          void applySelection(model)
+                          setOpen(false)
+                        }}
+                        value={`${model.name} ${model.id}`}
+                      >
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <ModelSelectorName>{model.name}</ModelSelectorName>
+                            {model.supportsVision && (
+                                <CapabilityTooltip label={"Supports image input"}>
+                                  <EyeIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                                </CapabilityTooltip>
+                            )}
+                            {model.supportsReasoningEffort && (
+                                <CapabilityTooltip
+                                    label={"Reasoning effort: " +
+                                        (model.supportedReasoningEfforts ?? []).map(effortLabel).join(", ")}>
+                                  <BrainIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                                </CapabilityTooltip>
+                            )}
+                            {blocked && (
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <LockIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                                  }
+                                />
+                                <TooltipContent>
+                                  Blocked by your organization policy
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <ModelSpecs model={model} />
+                        </div>
+                        <div className="min-w-13">
+                        {model.priceCategory && (
+                            <CapabilityTooltip label={"Relative cost: " + model.priceCategory.replace("_", " ")}>
+                              <Badge className="shrink-0 font-mono" variant="secondary">
+                                {PRICE_LABELS[model.priceCategory] ?? model.priceCategory}
+                              </Badge>
+                            </CapabilityTooltip>
+                        )}
+                        </div>
+
+                        {selected?.id === model.id ? (
+                          <CheckIcon className="size-4 shrink-0" />
+                        ) : (
+                          <div className="size-4 shrink-0" />
+                        )}
+                      </ModelSelectorItem>
+                    )
+                  })}
+              </ModelSelectorGroup>
+            ))}
+          </ModelSelectorList>
+        </ModelSelectorContent>
+      </ModelSelector>
+    </div>
   )
 }

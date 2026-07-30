@@ -5,6 +5,7 @@ apis/WorkItemsApi.ts
 apis/index.ts
 docs/ChatHistoryMessage.md
 docs/CopilotModel.md
+docs/CopilotModelSelection.md
 docs/CustomFields.md
 docs/GitHubAuthenticationApi.md
 docs/GitHubModelsApi.md
@@ -21,6 +22,7 @@ docs/WorkItemsApi.md
 index.ts
 models/ChatHistoryMessage.ts
 models/CopilotModel.ts
+models/CopilotModelSelection.ts
 models/CustomFields.ts
 models/HTTPValidationError.ts
 models/HealthResponse.ts

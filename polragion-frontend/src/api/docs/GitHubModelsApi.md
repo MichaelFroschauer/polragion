@@ -12,7 +12,7 @@ All URIs are relative to *http://localhost*
 
 ## getModel
 
-> CopilotModel getModel()
+> CopilotModelSelection getModel()
 
 Get Model
 
@@ -47,7 +47,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**CopilotModel**](CopilotModel.md)
+[**CopilotModelSelection**](CopilotModelSelection.md)
 
 ### Authorization
 
@@ -126,7 +126,7 @@ No authorization required
 
 ## setUserModel
 
-> CopilotModel setUserModel(modelId)
+> CopilotModelSelection setUserModel(modelId, reasoningEffort)
 
 Set User Model
 
@@ -146,6 +146,8 @@ async function example() {
   const body = {
     // string
     modelId: modelId_example,
+    // string (optional)
+    reasoningEffort: reasoningEffort_example,
   } satisfies SetUserModelRequest;
 
   try {
@@ -166,10 +168,11 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **modelId** | `string` |  | [Defaults to `undefined`] |
+| **reasoningEffort** | `string` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
-[**CopilotModel**](CopilotModel.md)
+[**CopilotModelSelection**](CopilotModelSelection.md)
 
 ### Authorization
 

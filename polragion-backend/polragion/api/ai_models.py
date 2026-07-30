@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 import logging
 from datetime import timedelta, datetime
@@ -30,6 +30,38 @@ class UserGitHubModels(BaseModel):
 user_models: dict[UUID, UserGitHubModels] = {}
 
 
+class CopilotModelSelection(BaseModel):
+    """The model a user has selected plus the reasoning effort applied to it."""
+
+    model_config = ConfigDict(protected_namespaces=())
+
+    model: CopilotModel
+    reasoning_effort: str | None = None
+
+def _resolve_reasoning_effort(model: CopilotModel, requested_effort: str | None) -> str | None:
+    supported = model.supported_reasoning_efforts or []
+
+    if not model.supports_reasoning_effort or not supported:
+        if requested_effort is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Model {model.id} does not support a reasoning effort",
+            )
+        return None
+
+    if requested_effort is None:
+        return model.default_reasoning_effort
+
+    if requested_effort not in supported:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Reasoning effort '{requested_effort}' is not supported by model {model.id}. "
+                   f"Supported values: {', '.join(supported)}",
+        )
+
+    return requested_effort
+
+
 @router.get(
     "/models",
     status_code=status.HTTP_200_OK,
@@ -59,7 +91,7 @@ async def get_user_models(
 
 @router.get(
     "/model",
-    response_model=CopilotModel,
+    response_model=CopilotModelSelection,
     status_code=status.HTTP_200_OK,
 )
 async def get_model(
@@ -81,12 +113,17 @@ async def get_model(
     if current_model is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Current model with ID {current_model_id} not found")
 
-    return current_model
+    current_reasoning_effort = await ai_service.get_reasoning_effort_of_session(current_user.id)
+
+    return CopilotModelSelection(
+        model=current_model,
+        reasoning_effort=current_reasoning_effort,
+    )
 
 
 @router.put(
     "/model",
-    response_model=CopilotModel,
+    response_model=CopilotModelSelection,
     status_code=status.HTTP_200_OK,
 )
 async def set_user_model(
@@ -94,7 +131,8 @@ async def set_user_model(
         settings: Annotated[Settings, Depends(get_settings)],
         ai_service: Annotated[AiService, Depends(get_ai_service)],
         model_id: str,
-) -> CopilotModel:
+        reasoning_effort: str | None = None,
+) -> CopilotModelSelection:
     available_models: list[CopilotModel] = await get_user_models(current_user, settings, ai_service)
     selected_model = next(
         (
@@ -108,6 +146,8 @@ async def set_user_model(
     if selected_model is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Model with ID {model_id} not found")
 
-    await ai_service.set_model_for_session(current_user.id, model_id)
+    effort = _resolve_reasoning_effort(selected_model, reasoning_effort)
 
-    return selected_model
+    await ai_service.set_model_for_session(current_user.id, model_id, effort)
+
+    return CopilotModelSelection(model=selected_model, reasoning_effort=effort)
