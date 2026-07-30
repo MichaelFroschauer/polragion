@@ -61,28 +61,28 @@ async def get_github_access_token(
     return data
 
 
-async def get_github_available_models(settings: Settings, credentials: GitHubCredentials):
-
-    if credentials is None or not credentials.access_token_encrypted:
-        raise GitHubCredentialsMissingError(f"No GitHub credentials are stored for user {credentials.user_id}")
-
-    token_cipher = TokenCipher(settings.encryption_secret)
-    access_token: str = token_cipher.decrypt(credentials.access_token_encrypted)
-
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        github_response = await client.get(
-            "https://models.github.ai/catalog/models",
-            headers={
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {access_token}",
-                "X-GitHub-Api-Version": "2026-03-10",
-                "User-Agent": "polragion",
-            },
-        )
-
-    if github_response.status_code != status.HTTP_200_OK:
-        logger.error("GitHub /catalog/models failed: status=%s body=%s", github_response.status_code, github_response.text)
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="GitHub available models for user could not be retrieved")
-
-    github_data = github_response.json()
-    return github_data
+# async def get_github_available_models(settings: Settings, credentials: GitHubCredentials):
+#
+#     if credentials is None or not credentials.access_token_encrypted:
+#         raise GitHubCredentialsMissingError(f"No GitHub credentials are stored for user {credentials.user_id}")
+#
+#     token_cipher = TokenCipher(settings.encryption_secret)
+#     access_token: str = token_cipher.decrypt(credentials.access_token_encrypted)
+#
+#     async with httpx.AsyncClient(timeout=15.0) as client:
+#         github_response = await client.get(
+#             "https://models.github.ai/catalog/models",
+#             headers={
+#                 "Accept": "application/vnd.github+json",
+#                 "Authorization": f"Bearer {access_token}",
+#                 "X-GitHub-Api-Version": "2026-03-10",
+#                 "User-Agent": "polragion",
+#             },
+#         )
+#
+#     if github_response.status_code != status.HTTP_200_OK:
+#         logger.error("GitHub /catalog/models failed: status=%s body=%s", github_response.status_code, github_response.text)
+#         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="GitHub available models for user could not be retrieved")
+#
+#     github_data = github_response.json()
+#     return github_data

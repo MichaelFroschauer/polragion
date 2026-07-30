@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     debug: bool = False
 
-    frontend_url: str = "http://localhost:8080"
+    frontend_url: str = "http://localhost:5173/"
 
     sqlite_file_path: str = "/home/michael/gitclones/Polragion/docker/backend-data/polragion.db"
 

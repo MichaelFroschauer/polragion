@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 AiSendMessageT = TypeVar("AiSendMessageT")
 AiResponseMessageT = TypeVar("AiResponseMessageT")
 AiMessageEventT = TypeVar("AiMessageEventT")
+AiModelDescriptionT = TypeVar("AiModelDescriptionT")
 
 MessageResponseHandler = Callable[[AiMessageEventT], None | Awaitable[None]]
 
@@ -25,7 +26,7 @@ class ChatHistoryMessage(BaseModel):
     content: str
     message_id: str | None = None
 
-class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT]):
+class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT, AiModelDescriptionT]):
     @abstractmethod
     async def initialize(self) -> None:
         raise NotImplementedError
@@ -52,6 +53,10 @@ class AiService(ABC, Generic[AiSendMessageT, AiResponseMessageT, AiMessageEventT
 
     @abstractmethod
     async def get_model_of_session(self, user_id: UUID) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def get_available_models(self, user_id: UUID) -> list[AiModelDescriptionT]:
         raise NotImplementedError
 
     @property

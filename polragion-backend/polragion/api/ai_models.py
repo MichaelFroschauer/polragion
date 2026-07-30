@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 import logging
 from datetime import timedelta, datetime
@@ -10,10 +10,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 
 from polragion.api.auth import get_current_user
-from polragion.api.dependencies import get_settings, get_github_credentials_repository, get_ai_service
-from polragion.api.github_api_utils import get_github_available_models
+from polragion.api.dependencies import get_settings, get_ai_service
 from polragion.application.ai_service import AiService
-from polragion.database.repository import GitHubCredentialsRepository
+from polragion.models.ai_message import CopilotModel
 from polragion.models.user import User
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
@@ -23,31 +22,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai/github", tags=["GitHub Models"])
 
 
-class GitHubAiModel(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    name: str
-    publisher: str
-    registry: str | None = None
-    summary: str | None = None
-    html_url: str | None = None
-    version: str | None = None
-    rate_limit_tier: str
-
-    capabilities: list[str] = Field(default_factory=list)
-    supported_input_modalities: list[str] = Field(default_factory=list)
-    supported_output_modalities: list[str] = Field(default_factory=list)
-    tags: list[str] = Field(default_factory=list)
-    # max_input_tokens: int
-    # max_output_tokens: int
-
-
 class UserGitHubModels(BaseModel):
     user_id: UUID
-    models: list[GitHubAiModel]
+    models: list[CopilotModel]
     last_refresh: datetime
-
 
 user_models: dict[UUID, UserGitHubModels] = {}
 
@@ -59,20 +37,21 @@ user_models: dict[UUID, UserGitHubModels] = {}
 async def get_user_models(
         current_user: Annotated[User, Depends(get_current_user)],
         settings: Annotated[Settings, Depends(get_settings)],
-        credentials_repository: Annotated[GitHubCredentialsRepository, Depends(get_github_credentials_repository)],
-) -> list[GitHubAiModel]:
+        ai_service: Annotated[AiService, Depends(get_ai_service)],
+) -> list[CopilotModel]:
+
     user_model = user_models.get(current_user.id)
-    if (user_model is not None and user_model.last_refresh is not None
-            and user_model.last_refresh > utc_now() + timedelta(hours=24)):
+
+    if (
+        user_model is not None
+        and user_model.last_refresh is not None
+        and utc_now() < user_model.last_refresh + timedelta(hours=24)
+    ):
         return user_model.models
 
-    credentials = await credentials_repository.get_by_id(current_user.id)
-    if credentials is None:
-        return []
+    github_models = await ai_service.get_available_models(current_user.id)
 
-    github_models: list[dict] = await get_github_available_models(settings, credentials)
-    models = [GitHubAiModel.model_validate(model) for model in github_models]
-
+    models = [CopilotModel.model_validate(model) for model in github_models]
     user_models[current_user.id] = UserGitHubModels(user_id=current_user.id, models=models, last_refresh=utc_now())
 
     return models
@@ -80,16 +59,15 @@ async def get_user_models(
 
 @router.get(
     "/model",
-    response_model=GitHubAiModel,
+    response_model=CopilotModel,
     status_code=status.HTTP_200_OK,
 )
 async def get_model(
         current_user: Annotated[User, Depends(get_current_user)],
         settings: Annotated[Settings, Depends(get_settings)],
-        credentials_repository: Annotated[GitHubCredentialsRepository, Depends(get_github_credentials_repository)],
         ai_service: Annotated[AiService, Depends(get_ai_service)],
 ):
-    available_models = await get_user_models(current_user, settings, credentials_repository)
+    available_models = await get_user_models(current_user, settings, ai_service)
     current_model_id = await ai_service.get_model_of_session(current_user.id)
     current_model = next(
         (
@@ -108,17 +86,16 @@ async def get_model(
 
 @router.put(
     "/model",
-    response_model=GitHubAiModel,
+    response_model=CopilotModel,
     status_code=status.HTTP_200_OK,
 )
 async def set_user_model(
         current_user: Annotated[User, Depends(get_current_user)],
         settings: Annotated[Settings, Depends(get_settings)],
-        credentials_repository: Annotated[GitHubCredentialsRepository, Depends(get_github_credentials_repository)],
         ai_service: Annotated[AiService, Depends(get_ai_service)],
         model_id: str,
-) -> GitHubAiModel:
-    available_models: list[GitHubAiModel] = await get_user_models(current_user, settings, credentials_repository)
+) -> CopilotModel:
+    available_models: list[CopilotModel] = await get_user_models(current_user, settings, ai_service)
     selected_model = next(
         (
             model

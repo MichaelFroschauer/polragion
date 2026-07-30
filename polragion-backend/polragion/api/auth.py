@@ -14,7 +14,7 @@ from starlette import status
 
 from polragion.api.dependencies import get_settings, get_user_repository, get_github_credentials_repository, \
     get_session_service
-from polragion.api.github_api_utils import get_github_user, get_github_access_token, get_github_available_models
+from polragion.api.github_api_utils import get_github_user, get_github_access_token
 from polragion.application.session_service import SessionService
 from polragion.database.repository import UserRepository, GitHubCredentialsRepository
 from polragion.models.user import OAuthToken, GitHubCredentials, User, UserSession
@@ -79,7 +79,7 @@ async def get_current_user(
 
 @router.get(
     "/login",
-    status_code=status.HTTP_307_TEMPORARY_REDIRECT
+    status_code=status.HTTP_303_SEE_OTHER
 )
 async def github_login(
         request: Request,
@@ -99,7 +99,7 @@ async def github_login(
 
     authorization_url = f"https://github.com/login/oauth/authorize?{query}"
 
-    return RedirectResponse(url=authorization_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    return RedirectResponse(url=authorization_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get(

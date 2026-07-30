@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from copilot import CopilotClient, RuntimeConnection, define_tool
+from copilot.generated.rpc import ModelsListRequest
 from copilot.generated.session_events import UserMessageData
 from copilot.session import CopilotSession, PermissionHandler
 from copilot.session_events import (
@@ -24,7 +25,7 @@ from polragion.database.repository import GitHubCredentialsRepository
 from polragion.models.ai_message import (
     CopilotMessageEvent,
     CopilotResponseMessage,
-    CopilotSendMessage,
+    CopilotSendMessage, CopilotModel,
 )
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
@@ -92,7 +93,7 @@ class CopilotRequestError(AiServiceError):
 # async def safe_lookup(params: WorkItemSearchParams) -> str:
 #
 
-class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, CopilotMessageEvent]):
+class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, CopilotMessageEvent, CopilotModel]):
     TOKEN_EXPIRY_SKEW = timedelta(minutes=5)
     REQUEST_TIMEOUT_SECONDS = 120.0
 
@@ -249,7 +250,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         try:
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
-                model= await self.get_model_of_session(user_id),
+                # model= await self.get_model_of_session(user_id),
+                model="gpt-5.4",
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
                 available_tools=["custom:*"],
@@ -440,9 +442,22 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def get_model_of_session(self, user_id: UUID) -> str:
         return self._user_models.get(user_id) or self.default_model_id
 
+    async def get_available_models(self, user_id: UUID) -> list[CopilotModel]:
+        access_token, access_token_expires_at = (await self._get_valid_access_token(user_id))
+
+        await self.initialize()
+
+        result = await self.client.rpc.models.list(
+            ModelsListRequest(
+                git_hub_token=access_token,
+            )
+        )
+
+        return result.models
+
     @property
     def default_model_id(self) -> str:
-        return "openai/gpt-5"
+        return "auto"
 
     async def get_chat_history(self, user_id: UUID) -> list[ChatHistoryMessage]:
         lock = self._user_locks.setdefault(user_id, asyncio.Lock())
