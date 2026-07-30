@@ -168,7 +168,7 @@ type HelloStringProps = {
     onComplete?: () => void
 }
 
-export function HelloString({
+export function HelloScreen({
     textCol,
     fullScreen = false,
     className,

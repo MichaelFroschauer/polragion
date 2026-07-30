@@ -23,11 +23,10 @@ import {
 import {
   ChevronsUpDownIcon,
   LogOutIcon,
-  LogInIcon
+  LogInIcon, SquarePen
 } from "lucide-react"
 import {useGitHubAuth} from "@/hooks/use-github-auth.tsx";
 import {Skeleton} from "@/components/ui/skeleton.tsx";
-import {Button} from "@/components/ui/button.tsx";
 
 export function NavUser() {
   const { isMobile } = useSidebar()
@@ -40,10 +39,15 @@ export function NavUser() {
 
   if (!user) {
     return (
-        <Button onClick={login} size="sm" variant="outline">
-          <LogInIcon className="size-4" />
-          Sign in with GitHub
-        </Button>
+        // <Button onClick={login} size="sm" variant="outline">
+        //   <LogInIcon className="size-4" />
+        //   Sign in with GitHub
+        // </Button>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={login} size="lg" className="aria-expanded:bg-muted"><LogInIcon className="size-4" />Sign in with GitHub</SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
     )
   }
 
@@ -115,6 +119,10 @@ export function NavUser() {
             {/*    Notifications*/}
             {/*  </DropdownMenuItem>*/}
             {/*</DropdownMenuGroup>*/}
+            <DropdownMenuItem>
+              <SquarePen />
+              New chat
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={logout}>
               <LogOutIcon

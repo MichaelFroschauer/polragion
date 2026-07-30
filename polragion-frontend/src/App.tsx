@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import './App.css'
 import Page from "@/Page.tsx";
-import { HelloString } from "@/components/art/animated-calligraphy.tsx";
+import { HelloScreen } from "@/components/art/animated-calligraphy.tsx";
 import { Chat } from "@/components/ai/chat.tsx";
 import { GitHubAuthProvider } from "@/hooks/use-github-auth.tsx";
 import {TooltipProvider} from "@/components/ui/tooltip.tsx";
 
 function App() {
-    const [showIntro, setShowIntro] = useState(true)
+    const [showIntro, setShowIntro] = useState(() => {
+        const lastShown = localStorage.getItem("showIntroTimestamp")
+        if (!lastShown) {
+            return true;
+        }
+        const oneDay = 24 * 60 * 60 * 1000;
+        return Date.now() - Number(lastShown) >= oneDay;
+    });
 
     return (
         <TooltipProvider>
@@ -20,10 +27,13 @@ function App() {
             {/* Only optical above the main site */}
             {showIntro && (
                 <div>
-                    <HelloString
+                    <HelloScreen
                         fullScreen
                         textCol="black"
-                        onComplete={() => setShowIntro(false)}
+                        onComplete={() => {
+                            setShowIntro(false);
+                            localStorage.setItem("showIntroTimestamp", Date.now().toString());
+                        }}
                     />
                     {/*<MagneticButtonDemo />*/}
                 </div>

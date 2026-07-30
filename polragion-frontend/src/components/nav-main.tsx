@@ -1,79 +1,69 @@
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible.tsx"
-import {
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx"
-import { ChevronRightIcon } from "lucide-react"
+import {BookOpenIcon, Info, Settings2Icon, SquarePen} from "lucide-react"
+import {
+    AlertDialog, AlertDialogAction, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+} from "@/components/ui/alert-dialog.tsx";
+import {useState} from "react";
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string
-    url: string
-    icon: React.ReactNode
-    isActive?: boolean
-    items?: {
-      title: string
-      url: string
-    }[]
-  }[]
-}) {
-  return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible
-            key={item.title}
-            defaultOpen={item.isActive}
-            render={<SidebarMenuItem />}
-          >
-            <SidebarMenuButton
-              tooltip={item.title}
-              render={<a href={item.url} />}
-            >
-              {item.icon}
-              <span>{item.title}</span>
-            </SidebarMenuButton>
-            {item.items?.length ? (
-              <>
-                <CollapsibleTrigger
-                  render={
-                    <SidebarMenuAction className="aria-expanded:rotate-90" />
-                  }
-                >
-                  <ChevronRightIcon
-                  />
-                  <span className="sr-only">Toggle</span>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <SidebarMenuSub>
-                    {item.items?.map((subItem) => (
-                      <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton render={<a href={subItem.url} />}>
-                          <span>{subItem.title}</span>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </>
-            ) : null}
-          </Collapsible>
-        ))}
-      </SidebarMenu>
-    </SidebarGroup>
-  )
+
+export function NavMain() {
+    const [open, setOpen] = useState(false)
+
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>
+                Platform
+            </SidebarGroupLabel>
+
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setOpen(true)}>
+                        <SquarePen />
+                        New chat
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setOpen(true)}>
+                        <BookOpenIcon />
+                        Documentation
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                    <SidebarMenuButton onClick={() => setOpen(true)}>
+                        <Settings2Icon />
+                        Settings
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+
+            <AlertDialog open={open} onOpenChange={setOpen}>
+                <AlertDialogTrigger>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <div className="flex items-center gap-2">
+                            <Info className="size-5 text-blue-500" />
+                            <AlertDialogTitle>Work in Progress...</AlertDialogTitle>
+                        </div>
+                        <AlertDialogDescription>
+                            This action is currently unfinished and will be available in a future release.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setOpen(false)}>Ok</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </SidebarGroup>
+    )
 }
