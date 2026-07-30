@@ -4,8 +4,8 @@ apis/HealthApi.ts
 apis/WorkItemsApi.ts
 apis/index.ts
 docs/ChatHistoryMessage.md
+docs/CopilotModel.md
 docs/CustomFields.md
-docs/GitHubAiModel.md
 docs/GitHubAuthenticationApi.md
 docs/GitHubModelsApi.md
 docs/HTTPValidationError.md
@@ -20,8 +20,8 @@ docs/WorkItemSearchHitResponse.md
 docs/WorkItemsApi.md
 index.ts
 models/ChatHistoryMessage.ts
+models/CopilotModel.ts
 models/CustomFields.ts
-models/GitHubAiModel.ts
 models/HTTPValidationError.ts
 models/HealthResponse.ts
 models/IngestResponse.ts

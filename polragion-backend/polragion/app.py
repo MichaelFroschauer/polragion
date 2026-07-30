@@ -109,7 +109,7 @@ def create_app(
         session_cookie="polragion_session",
         max_age=7 * 24 * 60 * 60,
         same_site="lax",
-        https_only=not app_settings.debug,
+        https_only=app_settings.session_cookie_secure,
     )
 
     origins = [

@@ -39,7 +39,8 @@ services:
       - DEBUG=False
       - QDRANT_URL=http://vector-db:6333
       - COPILOT_URL=http://copilot-cli:4321
-      - GITHUB_REDIRECT_URI=http://127.0.0.1:8000/auth/github/callback
+      - GITHUB_REDIRECT_URI=http://localhost:8000/auth/github/callback
+      - FRONTEND_URL=http://localhost:${FRONTEND_PORT:-80}/
       - SQLITE_FILE_PATH=/app/data/polragion.db
     volumes:
       - ./backend-data:/app/data:Z

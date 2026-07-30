@@ -12,7 +12,7 @@ All URIs are relative to *http://localhost*
 
 ## getModel
 
-> GitHubAiModel getModel()
+> CopilotModel getModel()
 
 Get Model
 
@@ -47,7 +47,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**GitHubAiModel**](GitHubAiModel.md)
+[**CopilotModel**](CopilotModel.md)
 
 ### Authorization
 
@@ -69,7 +69,7 @@ No authorization required
 
 ## getUserModels
 
-> Array&lt;GitHubAiModel&gt; getUserModels()
+> Array&lt;CopilotModel&gt; getUserModels()
 
 Get User Models
 
@@ -104,7 +104,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**Array&lt;GitHubAiModel&gt;**](GitHubAiModel.md)
+[**Array&lt;CopilotModel&gt;**](CopilotModel.md)
 
 ### Authorization
 
@@ -126,7 +126,7 @@ No authorization required
 
 ## setUserModel
 
-> GitHubAiModel setUserModel(modelId)
+> CopilotModel setUserModel(modelId)
 
 Set User Model
 
@@ -169,7 +169,7 @@ example().catch(console.error);
 
 ### Return type
 
-[**GitHubAiModel**](GitHubAiModel.md)
+[**CopilotModel**](CopilotModel.md)
 
 ### Authorization
 

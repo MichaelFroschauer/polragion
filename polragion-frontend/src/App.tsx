@@ -1,35 +1,19 @@
-import { useEffect, useState } from 'react'
-import { healthApi } from './api/client'
+import { useState } from 'react'
 import './App.css'
 import Page from "@/Page.tsx";
-import {HelloString} from "@/components/art/animated-calligraphy.tsx";
-import MessageDemo from "@/components/ai/message.tsx";
-import ModelSelectorDemo from "@/components/ai/model-selector.tsx";
-import PromptInputDemo from "@/components/ai/prompt-input.tsx";
-import {MagneticButtonDemo} from "@/components/ui/magnetic.tsx";
+import { HelloString } from "@/components/art/animated-calligraphy.tsx";
+import { Chat } from "@/components/ai/chat.tsx";
+import { GitHubAuthProvider } from "@/hooks/use-github-auth.tsx";
+import { MagneticButtonDemo } from "@/components/ui/magnetic.tsx";
 
 function App() {
-  // const [count, setCount] = useState(0)
-  // const [health, setHealth] = useState<string>('checking…')
-
-  // useEffect(() => {
-  //   healthApi
-  //     .liveness()
-  //     .then((res) => setHealth(res.status))
-  //     .catch(() => setHealth('unreachable'))
-  // }, [])
-
     const [showIntro, setShowIntro] = useState(true)
 
     return (
-        <>
+        <GitHubAuthProvider>
             {/* Is rendered directly without delay */}
             <Page>
-                <div>
-                    <MessageDemo />
-                    <PromptInputDemo />
-                    {/*<ModelSelectorDemo />*/}
-                </div>
+                <Chat />
             </Page>
 
             {/* Only optical above the main site */}
@@ -43,7 +27,7 @@ function App() {
                     <MagneticButtonDemo />
                 </div>
             )}
-        </>
+        </GitHubAuthProvider>
     )
 }
 

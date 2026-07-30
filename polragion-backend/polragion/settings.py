@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:5173/"
 
+    # The session cookie may only carry the Secure flag when the backend is
+    # actually reachable over HTTPS, otherwise the browser discards it.
+    session_cookie_secure: bool = False
+
     sqlite_file_path: str = "/home/michael/gitclones/Polragion/docker/backend-data/polragion.db"
 
     qdrant_url: str = "http://localhost:6333"

@@ -1,56 +1,32 @@
+import type { ReactNode } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
+import { GitHubAuthButton } from "@/components/ai/github-auth-button"
+import { ModelPicker } from "@/components/ai/model-picker"
 import { Separator } from "@/components/ui/separator"
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar"
-import type {ReactNode} from "react";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
 interface PageProps {
     children: ReactNode
 }
 
-export default function Page({children}: PageProps) {
+export default function Page({ children }: PageProps) {
     return (
-        <SidebarProvider>
+        <SidebarProvider className="h-svh overflow-hidden">
             <AppSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2">
-                    <div className="flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1" />
-                        <Separator
-                            orientation="vertical"
-                            className="mr-2 data-[orientation=vertical]:h-4"
-                        />
-                        <Breadcrumb>
-                            <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbLink href="#">
-                                        Build Your Application
-                                    </BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator className="hidden md:block" />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
+            <SidebarInset className="min-h-0 overflow-hidden">
+                <header className="flex h-14 shrink-0 items-center gap-2 px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator
+                        orientation="vertical"
+                        className="data-[orientation=vertical]:h-4"
+                    />
+                    <div className="ml-auto flex items-center gap-2">
+                        <GitHubAuthButton />
+                        <ModelPicker />
                     </div>
                 </header>
 
-                <section id="center">
-                    {children}
-                </section>
-
+                {children}
             </SidebarInset>
         </SidebarProvider>
     )

@@ -1,8 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './ChatHistoryMessage';
+export * from './CopilotModel';
 export * from './CustomFields';
-export * from './GitHubAiModel';
 export * from './HTTPValidationError';
 export * from './HealthResponse';
 export * from './IngestResponse';

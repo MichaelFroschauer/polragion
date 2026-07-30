@@ -182,6 +182,3 @@ async def me(
         "github_user_id": current_user.github_user_id,
         "username": current_user.username,
     }
-
-
-

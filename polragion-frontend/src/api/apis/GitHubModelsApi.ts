@@ -14,10 +14,10 @@
 
 import * as runtime from '../runtime';
 import {
-    type GitHubAiModel,
-    GitHubAiModelFromJSON,
-    GitHubAiModelToJSON,
-} from '../models/GitHubAiModel';
+    type CopilotModel,
+    CopilotModelFromJSON,
+    CopilotModelToJSON,
+} from '../models/CopilotModel';
 import {
     type HTTPValidationError,
     HTTPValidationErrorFromJSON,
@@ -49,12 +49,12 @@ export interface GitHubModelsApiInterface {
      * @throws {RequiredError}
      * @memberof GitHubModelsApiInterface
      */
-    getModelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GitHubAiModel>>;
+    getModelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CopilotModel>>;
 
     /**
      * Get Model
      */
-    getModel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GitHubAiModel>;
+    getModel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CopilotModel>;
 
     /**
      * Creates request options for getUserModels without sending the request
@@ -70,12 +70,12 @@ export interface GitHubModelsApiInterface {
      * @throws {RequiredError}
      * @memberof GitHubModelsApiInterface
      */
-    getUserModelsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GitHubAiModel>>>;
+    getUserModelsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<CopilotModel>>>;
 
     /**
      * Get User Models
      */
-    getUserModels(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GitHubAiModel>>;
+    getUserModels(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CopilotModel>>;
 
     /**
      * Creates request options for setUserModel without sending the request
@@ -93,12 +93,12 @@ export interface GitHubModelsApiInterface {
      * @throws {RequiredError}
      * @memberof GitHubModelsApiInterface
      */
-    setUserModelRaw(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GitHubAiModel>>;
+    setUserModelRaw(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CopilotModel>>;
 
     /**
      * Set User Model
      */
-    setUserModel(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GitHubAiModel>;
+    setUserModel(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CopilotModel>;
 
 }
 
@@ -129,17 +129,17 @@ export class GitHubModelsApi extends runtime.BaseAPI implements GitHubModelsApiI
     /**
      * Get Model
      */
-    async getModelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GitHubAiModel>> {
+    async getModelRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CopilotModel>> {
         const requestOptions = await this.getModelRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => GitHubAiModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => CopilotModelFromJSON(jsonValue));
     }
 
     /**
      * Get Model
      */
-    async getModel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GitHubAiModel> {
+    async getModel(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CopilotModel> {
         const response = await this.getModelRaw(initOverrides);
         return await response.value();
     }
@@ -166,17 +166,17 @@ export class GitHubModelsApi extends runtime.BaseAPI implements GitHubModelsApiI
     /**
      * Get User Models
      */
-    async getUserModelsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<GitHubAiModel>>> {
+    async getUserModelsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<CopilotModel>>> {
         const requestOptions = await this.getUserModelsRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(GitHubAiModelFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(CopilotModelFromJSON));
     }
 
     /**
      * Get User Models
      */
-    async getUserModels(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<GitHubAiModel>> {
+    async getUserModels(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CopilotModel>> {
         const response = await this.getUserModelsRaw(initOverrides);
         return await response.value();
     }
@@ -214,17 +214,17 @@ export class GitHubModelsApi extends runtime.BaseAPI implements GitHubModelsApiI
     /**
      * Set User Model
      */
-    async setUserModelRaw(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GitHubAiModel>> {
+    async setUserModelRaw(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CopilotModel>> {
         const requestOptions = await this.setUserModelRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => GitHubAiModelFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => CopilotModelFromJSON(jsonValue));
     }
 
     /**
      * Set User Model
      */
-    async setUserModel(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GitHubAiModel> {
+    async setUserModel(requestParameters: SetUserModelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CopilotModel> {
         const response = await this.setUserModelRaw(requestParameters, initOverrides);
         return await response.value();
     }
