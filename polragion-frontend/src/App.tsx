@@ -5,6 +5,7 @@ import { HelloScreen } from "@/components/art/animated-calligraphy.tsx";
 import { Chat } from "@/components/ai/chat.tsx";
 import { GitHubAuthProvider } from "@/hooks/use-github-auth.tsx";
 import {TooltipProvider} from "@/components/ui/tooltip.tsx";
+import {ChatContextProvider} from "@/hooks/use-chat.tsx";
 
 function App() {
     const [showIntro, setShowIntro] = useState(() => {
@@ -12,13 +13,14 @@ function App() {
         if (!lastShown) {
             return true;
         }
-        const oneDay = 24 * 60 * 60 * 1000;
+        const oneDay = 12 * 60 * 60 * 1000;
         return Date.now() - Number(lastShown) >= oneDay;
     });
 
     return (
         <TooltipProvider>
         <GitHubAuthProvider>
+        <ChatContextProvider>
             {/* Is rendered directly without delay */}
             <Page>
                 <Chat />
@@ -38,6 +40,7 @@ function App() {
                     {/*<MagneticButtonDemo />*/}
                 </div>
             )}
+        </ChatContextProvider>
         </GitHubAuthProvider>
         </TooltipProvider>
     )

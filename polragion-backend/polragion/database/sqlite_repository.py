@@ -28,6 +28,8 @@ class SQLiteDatabase:
                 id             TEXT PRIMARY KEY,
                 github_user_id TEXT NOT NULL UNIQUE,
                 username       TEXT NOT NULL,
+                name           TEXT,
+                avatar_url     TEXT,
                 created_at     TEXT NOT NULL
             );
                 
@@ -88,6 +90,8 @@ class SqliteUserRepository(UserRepository):
             id=UUID(row["id"]),
             github_user_id=row["github_user_id"],
             username=row["username"],
+            name=row["name"] if row["name"] else "",
+            avatar_url=row["avatar_url"] if row["avatar_url"] else "",
             created_at=datetime.fromisoformat(row["created_at"]),
         )
 
@@ -95,12 +99,14 @@ class SqliteUserRepository(UserRepository):
         try:
             with self._db.transaction() as conn:
                 conn.execute(
-                    "INSERT INTO users (id, github_user_id, username, created_at) "
-                    "VALUES (?, ?, ?, ?)",
+                    "INSERT INTO users (id, github_user_id, username, name, avatar_url, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         str(user.id),
                         user.github_user_id,
                         user.username,
+                        user.name,
+                        user.avatar_url,
                         user.created_at.isoformat(),
                     ),
                 )
@@ -127,21 +133,21 @@ class SqliteUserRepository(UserRepository):
 
         return self._row_to_user(row)
 
-    async def upsert_from_github(self, github_user_id: str, username: str) -> User:
+    async def upsert_from_github(self, github_user_id: str, username: str, name: str, avatar_url: str) -> User:
         existing_user = await self.get_by_github_user_id(github_user_id)
 
         if existing_user is not None:
-            updated_user = existing_user.model_copy(update={"username": username})
+            updated_user = existing_user.model_copy(update={"username": username, "name": name, "avatar_url": avatar_url})
 
             with self._db.transaction() as conn:
                 conn.execute(
-                    "UPDATE users SET username = ? WHERE github_user_id = ?",
-                    (username, github_user_id),
+                    "UPDATE users SET username = ?, name = ?, avatar_url = ? WHERE github_user_id = ?",
+                    (username, name, avatar_url, github_user_id),
                 )
 
             return updated_user
 
-        new_user = User(github_user_id=github_user_id, username=username)
+        new_user = User(github_user_id=github_user_id, username=username, name=name, avatar_url=avatar_url)
 
         return await self.create(new_user)
 

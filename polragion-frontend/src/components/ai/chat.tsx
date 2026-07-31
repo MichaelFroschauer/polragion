@@ -1,8 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { ChatStatus } from "ai"
+import {useEffect, useRef, useState} from "react"
 import { LogInIcon } from "lucide-react"
-import { workItemsApi } from "@/api/client"
-import type { WorkItemSearchHitResponse } from "@/api"
 import {
   Message,
   MessageContent,
@@ -16,119 +13,69 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai/prompt-input"
-import type { PromptInputMessage } from "@/components/ai/prompt-input"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useGitHubAuth } from "@/hooks/use-github-auth"
+import {type ChatMode, useChat} from "@/hooks/use-chat.tsx";
+import { Marker, MarkerContent } from "@/components/ui/marker.tsx"
 
-type ChatMode = "ask" | "search"
-
-interface ChatEntry {
-  id: string
-  role: "user" | "assistant"
-  content: string
-}
 
 const placeholders: Record<ChatMode, string> = {
   ask: "Ask anything about your work items…",
   search: "Search work items by keyword or description…",
 }
 
-function formatSearchHits(hits: WorkItemSearchHitResponse[]) {
-  if (hits.length === 0) {
-    return "No matching work items found."
-  }
-
-  return hits
-    .map(hit => {
-      const item = hit.workItem
-      const score = Math.round(hit.score * 100)
-      return `**${item.workitemId} — ${item.title}**\n\n${item.status} · ${item.projectId} · ${score}% match\n\n${item.text}`
-    })
-    .join("\n\n---\n\n")
-}
+const loadingQuotes = [
+  "Thinking about what I should cook tonight...",
+  "Doing my paperwork...",
+  "Consulting the office oracle...",
+  "Pretending this is a very difficult question...",
+  "Looking busy...",
+  "Searching under the couch cushions...",
+  "Asking the rubber duck...",
+  "Converting coffee into answers...",
+  "Rearranging some bits...",
+  "Reading the fine print...",
+  "Checking my notes...",
+  "Running around in tiny circles...",
+  "Waiting for inspiration to compile...",
+  "Negotiating with the database...",
+  "Counting backwards from infinity...",
+  "Opening another browser tab...",
+  "Blaming the network...",
+  "Summoning the relevant information...",
+  "Connecting the dots...",
+  "Untangling some work items...",
+  "Trying not to overthink this...",
+  "Making it look professional...",
+  "Consulting Stack Overflow... probably...",
+  "Sharpening my pencils...",
+  "Filling out form 27-B...",
+  "Checking if anyone is watching...",
+  "Putting the pieces together...",
+  "Doing some very serious computing...",
+  "Turning it off and on again...",
+  "Preparing a suspiciously confident answer...",
+]
 
 export function Chat() {
   const { isAuthenticated, isLoading: isAuthLoading, login } = useGitHubAuth()
-  const [mode, setMode] = useState<ChatMode>("ask")
-  const [entries, setEntries] = useState<ChatEntry[]>([])
-  const [status, setStatus] = useState<ChatStatus>("ready")
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const {entries, status, mode, setMode, handleSubmit} = useChat()
+
+  const [loadingQuote, setLoadingQuote] = useState(
+      () => loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)],
+  )
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
   }, [entries, status])
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      setEntries([])
-      return
+    if (status === "submitted") {
+      setLoadingQuote(loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)])
     }
-
-    let cancelled = false
-
-    void (async () => {
-      try {
-        const history = await workItemsApi.getChatHistory()
-        if (cancelled) {
-          return
-        }
-        setEntries(
-          history.map((message, index) => ({
-            id: message.messageId ?? `history-${index}`,
-            role: message.role === "user" ? "user" : "assistant",
-            content: message.content,
-          })),
-        )
-      } catch {
-        // No history available yet.
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isAuthenticated])
-
-  const handleSubmit = useCallback(
-    async (message: PromptInputMessage) => {
-      const prompt = message.text.trim()
-      if (!prompt || !isAuthenticated || status !== "ready") {
-        return
-      }
-
-      setEntries(current => [
-        ...current,
-        { id: `user-${Date.now()}`, role: "user", content: prompt },
-      ])
-      setStatus("submitted")
-
-      try {
-        const answer =
-          mode === "ask"
-            ? await workItemsApi.askWorkItem({ prompt })
-            : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
-
-        setEntries(current => [
-          ...current,
-          { id: `assistant-${Date.now()}`, role: "assistant", content: answer },
-        ])
-        setStatus("ready")
-      } catch {
-        setEntries(current => [
-          ...current,
-          {
-            id: `error-${Date.now()}`,
-            role: "assistant",
-            content: "Something went wrong while contacting the backend. Please try again.",
-          },
-        ])
-        setStatus("error")
-        setTimeout(() => setStatus("ready"), 1500)
-      }
-    },
-    [isAuthenticated, mode, status],
-  )
+  }, [status])
 
   return (
       <div className="flex min-h-0 flex-1 flex-col">
@@ -162,6 +109,11 @@ export function Chat() {
 
         <div className="shrink-0 px-4 pb-2">
           <div className="mx-auto w-full max-w-3xl">
+            {status !== "ready" && (
+                <Marker className="mb-2 ms-2" role="status">
+                  <MarkerContent className="shimmer">{loadingQuote}</MarkerContent>
+                </Marker>
+            )}
             {(!isAuthenticated && mode === "ask") && !isAuthLoading && (
               <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">
                 <span>Sign in with GitHub to enable the chat.</span>

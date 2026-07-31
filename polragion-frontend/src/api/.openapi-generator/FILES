@@ -16,6 +16,7 @@ docs/IngestResponse.md
 docs/LinkedWorkItem.md
 docs/LocationInner.md
 docs/PolarionWorkItem.md
+docs/User.md
 docs/ValidationError.md
 docs/WorkItemSearchHitResponse.md
 docs/WorkItemsApi.md
@@ -30,6 +31,7 @@ models/IngestResponse.ts
 models/LinkedWorkItem.ts
 models/LocationInner.ts
 models/PolarionWorkItem.ts
+models/User.ts
 models/ValidationError.ts
 models/WorkItemSearchHitResponse.ts
 models/index.ts

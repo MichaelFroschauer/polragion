@@ -1,16 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import type { PropsWithChildren } from "react"
 import { apiBasePath, gitHubAuthApi } from "@/api/client"
+import type {User} from "@/api";
 
-export interface GitHubUser {
-  login: string
-  name?: string | null
-  email?: string | null
-  avatarUrl?: string | null
-}
 
 interface GitHubAuthContextValue {
-  user: GitHubUser | null
+  user: User | null
   isAuthenticated: boolean
   isLoading: boolean
   login: () => void
@@ -20,36 +15,14 @@ interface GitHubAuthContextValue {
 
 const GitHubAuthContext = createContext<GitHubAuthContextValue | null>(null)
 
-function normalizeUser(raw: unknown): GitHubUser | null {
-  if (!raw || typeof raw !== "object") {
-    return null
-  }
-  const data = raw as Record<string, unknown>
-  const login = data.login ?? data.username ?? data.user_name
-  if (typeof login !== "string" || login.length === 0) {
-    return null
-  }
-  return {
-    login,
-    name: typeof data.name === "string" ? data.name : null,
-    email: typeof data.email === "string" ? data.email : null,
-    avatarUrl:
-      typeof data.avatar_url === "string"
-        ? data.avatar_url
-        : typeof data.avatarUrl === "string"
-          ? data.avatarUrl
-          : null,
-  }
-}
-
 export function GitHubAuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<GitHubUser | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     setIsLoading(true)
     try {
-      setUser(normalizeUser(await gitHubAuthApi.me()))
+      setUser(await gitHubAuthApi.me())
     } catch {
       setUser(null)
     } finally {

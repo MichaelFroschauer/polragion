@@ -10,5 +10,6 @@ export * from './IngestResponse';
 export * from './LinkedWorkItem';
 export * from './LocationInner';
 export * from './PolarionWorkItem';
+export * from './User';
 export * from './ValidationError';
 export * from './WorkItemSearchHitResponse';

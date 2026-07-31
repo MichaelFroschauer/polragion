@@ -10,7 +10,7 @@ from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
     get_ai_service
 from polragion.api.schemas import IngestResponse, WorkItemSearchHitResponse
-from polragion.application.ai_service import AiService, AiResponseMessageT, AiSendMessageT, ChatHistoryMessage
+from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService, WorkItemSearchResult
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
@@ -321,3 +321,14 @@ async def get_chat_history(
     ai_service: Annotated[AiService, Depends(get_ai_service)],
 ) -> list[ChatHistoryMessage]:
     return await ai_service.get_chat_history(current_user.id)
+
+
+@router.get(
+    "/reset",
+    status_code=status.HTTP_200_OK,
+)
+async def reset_user_session(
+    current_user: Annotated[User, Depends(get_current_user)],
+    ai_service: Annotated[AiService, Depends(get_ai_service)],
+) -> None:
+    await ai_service.close_user_session(current_user.id)

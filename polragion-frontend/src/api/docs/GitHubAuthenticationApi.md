@@ -126,7 +126,7 @@ No authorization required
 
 ## me
 
-> any me()
+> User me()
 
 Me
 
@@ -161,7 +161,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-**any**
+[**User**](User.md)
 
 ### Authorization
 

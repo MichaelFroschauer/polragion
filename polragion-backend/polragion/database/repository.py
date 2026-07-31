@@ -25,7 +25,7 @@ class UserRepository(Repository[User, UUID], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def upsert_from_github(self, github_user_id: str, username: str) -> User:
+    async def upsert_from_github(self, github_user_id: str, username: str, name: str, avatar_url: str) -> User:
         raise NotImplementedError
 
 

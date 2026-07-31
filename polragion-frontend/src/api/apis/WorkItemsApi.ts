@@ -165,6 +165,27 @@ export interface WorkItemsApiInterface {
     ingestWorkItemsFromDataSource(requestParameters: IngestWorkItemsFromDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse>;
 
     /**
+     * Creates request options for resetUserSession without sending the request
+     * @throws {RequiredError}
+     * @memberof WorkItemsApiInterface
+     */
+    resetUserSessionRequestOpts(): Promise<runtime.RequestOpts>;
+
+    /**
+     * 
+     * @summary Reset User Session
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof WorkItemsApiInterface
+     */
+    resetUserSessionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>>;
+
+    /**
+     * Reset User Session
+     */
+    resetUserSession(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any>;
+
+    /**
      * Creates request options for searchWorkItems without sending the request
      * @param {string} prompt 
      * @param {string} [projectId] 
@@ -386,6 +407,47 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
      */
     async ingestWorkItemsFromDataSource(requestParameters: IngestWorkItemsFromDataSourceRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse> {
         const response = await this.ingestWorkItemsFromDataSourceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resetUserSession without sending the request
+     */
+    async resetUserSessionRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/v1/work-items/reset`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Reset User Session
+     */
+    async resetUserSessionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.resetUserSessionRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     * Reset User Session
+     */
+    async resetUserSession(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.resetUserSessionRaw(initOverrides);
         return await response.value();
     }
 

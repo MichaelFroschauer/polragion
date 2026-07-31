@@ -13,6 +13,11 @@
  */
 
 import * as runtime from '../runtime';
+import {
+    type User,
+    UserFromJSON,
+    UserToJSON,
+} from '../models/User';
 
 /**
  * GitHubAuthenticationApi - interface
@@ -77,12 +82,12 @@ export interface GitHubAuthenticationApiInterface {
      * @throws {RequiredError}
      * @memberof GitHubAuthenticationApiInterface
      */
-    meRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>>;
+    meRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<User>>;
 
     /**
      * Me
      */
-    me(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any>;
+    me(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<User>;
 
 }
 
@@ -190,21 +195,17 @@ export class GitHubAuthenticationApi extends runtime.BaseAPI implements GitHubAu
     /**
      * Me
      */
-    async meRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async meRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<User>> {
         const requestOptions = await this.meRequestOpts();
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response, (jsonValue) => UserFromJSON(jsonValue));
     }
 
     /**
      * Me
      */
-    async me(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async me(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<User> {
         const response = await this.meRaw(initOverrides);
         return await response.value();
     }

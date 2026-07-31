@@ -133,6 +133,8 @@ async def github_callback(
     user = await user_repository.upsert_from_github(
         github_user_id=str(github_data["id"]),
         username=github_data["login"],
+        name=github_data["name"],
+        avatar_url=github_data["avatar_url"],
     )
 
     token_cipher = TokenCipher(settings.encryption_secret)
@@ -172,13 +174,15 @@ async def logout(
 
 @router.get(
     "/me",
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    response_model=User,
 )
 async def me(
         current_user: Annotated[User, Depends(get_current_user)]
-):
-    return {
-        "id": str(current_user.id),
-        "github_user_id": current_user.github_user_id,
-        "username": current_user.username,
-    }
+) -> User:
+    return current_user
+    # {
+    #     "id": str(current_user.id),
+    #     "github_user_id": current_user.github_user_id,
+    #     "username": current_user.username,
+    # }

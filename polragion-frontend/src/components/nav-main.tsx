@@ -11,37 +11,28 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog.tsx";
 import {useState} from "react";
+import {useChat} from "@/hooks/use-chat.tsx";
 
 
 export function NavMain() {
     const [open, setOpen] = useState(false)
+    const { resetSession: newChat } = useChat()
 
     return (
         <SidebarGroup>
-            <SidebarGroupLabel>
-                Platform
-            </SidebarGroupLabel>
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
 
             <SidebarMenu>
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setOpen(true)}>
-                        <SquarePen />
-                        New chat
-                    </SidebarMenuButton>
+                    <SidebarMenuButton onClick={newChat}><SquarePen />New chat</SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setOpen(true)}>
-                        <BookOpenIcon />
-                        Documentation
-                    </SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => setOpen(true)}><BookOpenIcon />Documentation</SidebarMenuButton>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setOpen(true)}>
-                        <Settings2Icon />
-                        Settings
-                    </SidebarMenuButton>
+                    <SidebarMenuButton onClick={() => setOpen(true)}><Settings2Icon />Settings</SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
 

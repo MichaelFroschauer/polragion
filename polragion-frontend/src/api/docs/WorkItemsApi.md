@@ -8,6 +8,7 @@ All URIs are relative to *http://localhost*
 | [**getChatHistory**](WorkItemsApi.md#getchathistory) | **GET** /v1/work-items/ask/history | Get Chat History |
 | [**ingestWorkItems**](WorkItemsApi.md#ingestworkitems) | **POST** /v1/work-items/ingest | Ingest Work Items |
 | [**ingestWorkItemsFromDataSource**](WorkItemsApi.md#ingestworkitemsfromdatasource) | **POST** /v1/work-items/ingest/import-json | Ingest Work Items From Data Source |
+| [**resetUserSession**](WorkItemsApi.md#resetusersession) | **GET** /v1/work-items/reset | Reset User Session |
 | [**searchWorkItems**](WorkItemsApi.md#searchworkitems) | **GET** /v1/work-items/search | Search Work Items |
 
 
@@ -272,6 +273,63 @@ No authorization required
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
 | **422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## resetUserSession
+
+> any resetUserSession()
+
+Reset User Session
+
+### Example
+
+```ts
+import {
+  Configuration,
+  WorkItemsApi,
+} from '';
+import type { ResetUserSessionRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new WorkItemsApi();
+
+  try {
+    const data = await api.resetUserSession();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+**any**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

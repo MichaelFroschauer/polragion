@@ -34,12 +34,12 @@ class InMemoryUserRepository(UserRepository):
 
         return self._users.get(user_id)
 
-    async def upsert_from_github(self, github_user_id: str, username: str) -> User:
+    async def upsert_from_github(self, github_user_id: str, username: str, name:str, avatar_url: str) -> User:
         existing_user = await self.get_by_github_user_id(github_user_id)
 
         if existing_user is not None:
             updated_user = existing_user.model_copy(
-                update={"username": username}
+                update={"username": username, "name": name, "avatar_url": avatar_url}
             )
 
             self._users[existing_user.id] = updated_user
@@ -48,6 +48,8 @@ class InMemoryUserRepository(UserRepository):
         new_user = User(
             github_user_id=github_user_id,
             username=username,
+            name=name,
+            avatar_url=avatar_url,
         )
 
         return await self.create(new_user)

@@ -15,6 +15,8 @@ class User(StrictModel):
     id: UUID = Field(default_factory=uuid4)
     github_user_id: str # Stable extern GitHub id
     username: str
+    name: str
+    avatar_url: str
     created_at: datetime = Field(default_factory=utc_now)
 
 
@@ -39,3 +41,4 @@ class UserSession(StrictModel):
     created_at: datetime = Field(default_factory=utc_now)
     expires_at: datetime | None = None
     revoked_at: datetime | None = None
+
