@@ -1,9 +1,13 @@
 # ============================================================================
 # Build stage: install dependencies and produce the static Vite build
 # ============================================================================
-FROM node:24-alpine AS builder
+FROM node:22.17.1-alpine AS builder
 
 WORKDIR /app
+
+RUN npm install -g npm@11.6.2 \
+    && node --version \
+    && npm --version
 
 # 1) Install dependencies first (cached as long as the lockfile is unchanged).
 #    `npm ci` installs exactly what is pinned in package-lock.json.
