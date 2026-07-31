@@ -83,18 +83,19 @@ def create_app(
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
         app.state.ai_service = CopilotService(app_settings, github_credentials_repository, runtime_url="localhost:4321")
 
-        def ai_message_event(event: AiMessageEventT) -> None:
-            print("****** NEW AI MESSAGE ******")
-            print(f"user_id: {str(event.user_id)}")
-            print(f"message: {event.message.text}")
-
-        unsubscribe = app.state.ai_service.add_message_response_handler(ai_message_event)
+        # TODO Message response handler for streaming
+        # def ai_message_event(event: AiMessageEventT) -> None:
+        #     print("****** NEW AI MESSAGE ******")
+        #     print(f"user_id: {str(event.user_id)}")
+        #     print(f"message: {event.message.text}")
+        #
+        # unsubscribe = app.state.ai_service.add_message_response_handler(ai_message_event)
 
         try:
             yield
         finally:
             vector_store.close()
-            unsubscribe()
+            #unsubscribe()
 
     app = FastAPI(
         title=app_settings.app_name,

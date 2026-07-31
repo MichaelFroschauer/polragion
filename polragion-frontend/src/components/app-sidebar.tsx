@@ -19,7 +19,7 @@ import {
     ListMinus,
     ListTodo,
     TableRowsSplit,
-    MessageSquareTextIcon,
+    MessageSquareTextIcon, LibraryBig,
 } from "lucide-react"
 
 const data = {
@@ -40,6 +40,20 @@ const data = {
         // },
     ],
     filter: [
+        {
+            title: "Projects",
+            url: "#",
+            icon: (
+                <LibraryBig />
+            ),
+            isActive: false,
+            items: [
+                {
+                    title: "Work in Progress",
+                    url: "#",
+                },
+            ],
+        },
         {
             title: "Documents",
             url: "#",
@@ -87,7 +101,7 @@ const data = {
 
 export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
     return (
-        <Sidebar variant="inset" {...props}>
+        <Sidebar variant="floating" collapsible="offcanvas" {...props}>
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>

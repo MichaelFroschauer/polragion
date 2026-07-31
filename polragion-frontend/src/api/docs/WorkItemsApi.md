@@ -15,7 +15,7 @@ All URIs are relative to *http://localhost*
 
 ## askWorkItem
 
-> string askWorkItem(prompt, projectId, limit, scoreThreshold)
+> WorkItemAskResponse askWorkItem(prompt, projectId, limit, scoreThreshold)
 
 Ask Work Item
 
@@ -67,7 +67,7 @@ example().catch(console.error);
 
 ### Return type
 
-**string**
+[**WorkItemAskResponse**](WorkItemAskResponse.md)
 
 ### Authorization
 
@@ -336,7 +336,7 @@ No authorization required
 
 ## searchWorkItems
 
-> Array&lt;WorkItemSearchHitResponse&gt; searchWorkItems(prompt, projectId, limit, scoreThreshold)
+> WorkItemSearchResponse searchWorkItems(prompt, projectId, limit, scoreThreshold)
 
 Search Work Items
 
@@ -388,7 +388,7 @@ example().catch(console.error);
 
 ### Return type
 
-[**Array&lt;WorkItemSearchHitResponse&gt;**](WorkItemSearchHitResponse.md)
+[**WorkItemSearchResponse**](WorkItemSearchResponse.md)
 
 ### Authorization
 

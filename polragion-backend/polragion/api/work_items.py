@@ -9,7 +9,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Requ
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
     get_ai_service
-from polragion.api.schemas import IngestResponse, WorkItemSearchHitResponse
+from polragion.api.schemas import IngestResponse, WorkItemSearchHit, WorkItemAskResponse, WorkItemSearchResponse
 from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService, WorkItemSearchResult
 from polragion.domain.data_fetcher import DataFetcher
@@ -73,7 +73,7 @@ def ingest_work_items_from_data_source(
 
 @router.get(
     "/search",
-    response_model=list[WorkItemSearchHitResponse],
+    response_model=WorkItemSearchResponse,
 )
 def search_work_items(
     request: Request,
@@ -83,7 +83,7 @@ def search_work_items(
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
     limit: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
-) -> list[WorkItemSearchHitResponse]:
+) -> WorkItemSearchResponse:
 
     effective_limit = limit or settings.search_default_limit
     if effective_limit > settings.search_max_limit:
@@ -109,8 +109,8 @@ def search_work_items(
         perf_counter() - started_at,
     )
 
-    return [
-        WorkItemSearchHitResponse(
+    work_item_search_hits = [
+        WorkItemSearchHit(
             work_item=result.work_item,
             score=result.score,
             point_id=result.point_id,
@@ -118,10 +118,12 @@ def search_work_items(
         for result in results
     ]
 
+    return WorkItemSearchResponse(work_items=work_item_search_hits)
+
 
 def build_work_item_ai_prompt(
     user_prompt: str,
-    hits: list[WorkItemSearchHitResponse],
+    hits: list[WorkItemSearchHit],
 ) -> str:
     retrieved_work_items = [
         {
@@ -272,7 +274,7 @@ def build_work_item_ai_prompt(
 
 @router.post(
     "/ask",
-    response_model=str,
+    response_model=WorkItemAskResponse,
     status_code=status.HTTP_200_OK,
     response_model_by_alias=True,
 )
@@ -286,9 +288,9 @@ async def ask_work_item(
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
     limit: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
-) -> str:
+) -> WorkItemAskResponse:
 
-    hits = search_work_items(
+    hits: WorkItemSearchResponse = search_work_items(
         request=request,
         settings=settings,
         prompt=prompt,
@@ -298,7 +300,7 @@ async def ask_work_item(
         score_threshold=score_threshold,
     )
 
-    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=hits)
+    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=hits.work_items)
 
     response: CopilotResponseMessage = await ai_service.send_message(
         CopilotSendMessage(
@@ -308,7 +310,7 @@ async def ask_work_item(
         )
     )
 
-    return response.text
+    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=hits.work_items)
 
 
 @router.get(

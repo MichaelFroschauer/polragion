@@ -34,10 +34,15 @@ import {
     PolarionWorkItemToJSON,
 } from '../models/PolarionWorkItem';
 import {
-    type WorkItemSearchHitResponse,
-    WorkItemSearchHitResponseFromJSON,
-    WorkItemSearchHitResponseToJSON,
-} from '../models/WorkItemSearchHitResponse';
+    type WorkItemAskResponse,
+    WorkItemAskResponseFromJSON,
+    WorkItemAskResponseToJSON,
+} from '../models/WorkItemAskResponse';
+import {
+    type WorkItemSearchResponse,
+    WorkItemSearchResponseFromJSON,
+    WorkItemSearchResponseToJSON,
+} from '../models/WorkItemSearchResponse';
 
 export interface AskWorkItemRequest {
     prompt: string;
@@ -90,12 +95,12 @@ export interface WorkItemsApiInterface {
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
-    askWorkItemRaw(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>>;
+    askWorkItemRaw(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemAskResponse>>;
 
     /**
      * Ask Work Item
      */
-    askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string>;
+    askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse>;
 
     /**
      * Creates request options for getChatHistory without sending the request
@@ -207,12 +212,12 @@ export interface WorkItemsApiInterface {
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
-    searchWorkItemsRaw(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkItemSearchHitResponse>>>;
+    searchWorkItemsRaw(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemSearchResponse>>;
 
     /**
      * Search Work Items
      */
-    searchWorkItems(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkItemSearchHitResponse>>;
+    searchWorkItems(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemSearchResponse>;
 
 }
 
@@ -266,21 +271,17 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
     /**
      * Ask Work Item
      */
-    async askWorkItemRaw(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+    async askWorkItemRaw(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemAskResponse>> {
         const requestOptions = await this.askWorkItemRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<string>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkItemAskResponseFromJSON(jsonValue));
     }
 
     /**
      * Ask Work Item
      */
-    async askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+    async askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse> {
         const response = await this.askWorkItemRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -496,17 +497,17 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
     /**
      * Search Work Items
      */
-    async searchWorkItemsRaw(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkItemSearchHitResponse>>> {
+    async searchWorkItemsRaw(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemSearchResponse>> {
         const requestOptions = await this.searchWorkItemsRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkItemSearchHitResponseFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkItemSearchResponseFromJSON(jsonValue));
     }
 
     /**
      * Search Work Items
      */
-    async searchWorkItems(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkItemSearchHitResponse>> {
+    async searchWorkItems(requestParameters: SearchWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemSearchResponse> {
         const response = await this.searchWorkItemsRaw(requestParameters, initOverrides);
         return await response.value();
     }

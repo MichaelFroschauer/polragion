@@ -18,7 +18,9 @@ docs/LocationInner.md
 docs/PolarionWorkItem.md
 docs/User.md
 docs/ValidationError.md
-docs/WorkItemSearchHitResponse.md
+docs/WorkItemAskResponse.md
+docs/WorkItemSearchHit.md
+docs/WorkItemSearchResponse.md
 docs/WorkItemsApi.md
 index.ts
 models/ChatHistoryMessage.ts
@@ -33,6 +35,8 @@ models/LocationInner.ts
 models/PolarionWorkItem.ts
 models/User.ts
 models/ValidationError.ts
-models/WorkItemSearchHitResponse.ts
+models/WorkItemAskResponse.ts
+models/WorkItemSearchHit.ts
+models/WorkItemSearchResponse.ts
 models/index.ts
 runtime.ts

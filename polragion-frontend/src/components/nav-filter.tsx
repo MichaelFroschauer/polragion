@@ -6,7 +6,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem,
 } from "@/components/ui/sidebar.tsx"
-import {ChevronRightIcon} from "lucide-react"
+import {ArrowUpNarrowWide, ChevronRightIcon} from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible.tsx";
 
 export function NavFilter({items,}: {
@@ -25,6 +25,7 @@ export function NavFilter({items,}: {
     return (
         <SidebarGroup>
             <SidebarGroupLabel>Filters</SidebarGroupLabel>
+            <SidebarMenuButton tooltip="Reset Filter" className="[&[data-panel-open]>svg:last-child]:rotate-90"><ArrowUpNarrowWide />Reset</SidebarMenuButton>
 
             <SidebarMenu>
                 {items.map((item) => (

@@ -3,14 +3,18 @@ import type {ChatStatus} from "ai";
 import {workItemsApi} from "@/api/client.ts";
 import {useGitHubAuth} from "@/hooks/use-github-auth.tsx";
 import type {PromptInputMessage} from "@/components/ai/prompt-input.tsx";
-import type {WorkItemSearchHitResponse} from "@/api";
+import type {WorkItemAskResponse, WorkItemSearchResponse} from "@/api";
 
 export type ChatMode = "ask" | "search"
+
+export type ChatContentType = ChatMode | "string"
 
 export interface ChatEntry {
     id: string
     role: "user" | "assistant"
-    content: string
+    mode: ChatMode
+    contentType: ChatContentType
+    content: WorkItemSearchResponse | WorkItemAskResponse | string
 }
 
 interface ChatContextValue {
@@ -22,12 +26,12 @@ interface ChatContextValue {
     resetSession: () => Promise<void>
 }
 
-function formatSearchHits(hits: WorkItemSearchHitResponse[]) {
-    if (hits.length === 0) {
+function formatSearchHits(hits: WorkItemSearchResponse) {
+    if (hits.workItems.length === 0) {
         return "No matching work items found."
     }
 
-    return hits
+    return hits.workItems
         .map(hit => {
             const item = hit.workItem
             const score = Math.round(hit.score * 100)
@@ -62,6 +66,8 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                     history.map((message, index) => ({
                         id: message.messageId ?? `history-${index}`,
                         role: message.role === "user" ? "user" : "assistant",
+                        mode: "ask",
+                        contentType: "string",
                         content: message.content,
                     })),
                 )
@@ -78,25 +84,27 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
     const handleSubmit = useCallback(
         async (message: PromptInputMessage) => {
             const prompt = message.text.trim()
+            const msg_mode = mode
             if (!prompt || !isAuthenticated || status !== "ready") {
                 return
             }
 
             setEntries(current => [
                 ...current,
-                { id: `user-${Date.now()}`, role: "user", content: prompt },
+                { id: `user-${Date.now()}`, role: "user", mode: msg_mode, contentType: "string", content: prompt },
             ])
             setStatus("submitted")
 
             try {
                 const answer =
-                    mode === "ask"
+                    msg_mode === "ask"
                         ? await workItemsApi.askWorkItem({ prompt })
-                        : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
+                        : await workItemsApi.searchWorkItems({ prompt })
+                        // : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
 
                 setEntries(current => [
                     ...current,
-                    { id: `assistant-${Date.now()}`, role: "assistant", content: answer },
+                    { id: `assistant-${Date.now()}`, role: "assistant", mode: msg_mode, contentType: msg_mode, content: answer },
                 ])
                 setStatus("ready")
             } catch {
@@ -105,6 +113,8 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                     {
                         id: `error-${Date.now()}`,
                         role: "assistant",
+                        mode: msg_mode,
+                        contentType: "string",
                         content: "Something went wrong while contacting the backend. Please try again.",
                     },
                 ])

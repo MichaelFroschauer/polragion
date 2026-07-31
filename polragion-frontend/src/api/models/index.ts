@@ -12,4 +12,6 @@ export * from './LocationInner';
 export * from './PolarionWorkItem';
 export * from './User';
 export * from './ValidationError';
-export * from './WorkItemSearchHitResponse';
+export * from './WorkItemAskResponse';
+export * from './WorkItemSearchHit';
+export * from './WorkItemSearchResponse';
