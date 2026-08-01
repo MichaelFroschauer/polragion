@@ -31,7 +31,24 @@ export interface LinkedWorkItem {
      * @memberof LinkedWorkItem
      */
     role: string;
+    /**
+     * 
+     * @type {LinkedWorkItemDirectionEnum}
+     * @memberof LinkedWorkItem
+     */
+    direction: LinkedWorkItemDirectionEnum;
 }
+
+
+/**
+ * @export
+ */
+export const LinkedWorkItemDirectionEnum = {
+    Outgoing: 'outgoing',
+    Incoming: 'incoming'
+} as const;
+export type LinkedWorkItemDirectionEnum = typeof LinkedWorkItemDirectionEnum[keyof typeof LinkedWorkItemDirectionEnum];
+
 
 /**
  * Check if a given object implements the LinkedWorkItem interface.
@@ -39,6 +56,7 @@ export interface LinkedWorkItem {
 export function instanceOfLinkedWorkItem(value: object): value is LinkedWorkItem {
     if (!('id' in value) || value['id'] === undefined) return false;
     if (!('role' in value) || value['role'] === undefined) return false;
+    if (!('direction' in value) || value['direction'] === undefined) return false;
     return true;
 }
 
@@ -54,6 +72,7 @@ export function LinkedWorkItemFromJSONTyped(json: any, ignoreDiscriminator: bool
         
         'id': json['id'],
         'role': json['role'],
+        'direction': json['direction'],
     };
 }
 
@@ -70,6 +89,7 @@ export function LinkedWorkItemToJSONTyped(value?: LinkedWorkItem | null, ignoreD
         
         'id': value['id'],
         'role': value['role'],
+        'direction': value['direction'],
     };
 }
 

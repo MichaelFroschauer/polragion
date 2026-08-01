@@ -21,92 +21,16 @@ import { mapValues } from '../runtime';
 export interface CustomFields {
     /**
      * 
-     * @type {CustomFieldsWorkitemTypeEnum}
-     * @memberof CustomFields
-     */
-    workitemType: CustomFieldsWorkitemTypeEnum;
-    /**
-     * 
      * @type {string}
      * @memberof CustomFields
      */
-    priority?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CustomFields
-     */
-    severity?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CustomFields
-     */
-    author?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CustomFields
-     */
-    assignee?: string | null;
-    /**
-     * 
-     * @type {Date}
-     * @memberof CustomFields
-     */
-    created?: Date | null;
-    /**
-     * 
-     * @type {Date}
-     * @memberof CustomFields
-     */
-    updated?: Date | null;
-    /**
-     * 
-     * @type {Date}
-     * @memberof CustomFields
-     */
-    dueDate?: Date | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CustomFields
-     */
-    safetyClass?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CustomFields
-     */
-    requirementCategory?: string | null;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof CustomFields
-     */
-    tags?: Array<string>;
+    safetyRequirement?: string | null;
 }
-
-
-/**
- * @export
- */
-export const CustomFieldsWorkitemTypeEnum = {
-    Requirement: 'requirement',
-    Defect: 'defect',
-    Testcase: 'testcase',
-    Task: 'task',
-    ChangeRequest: 'change_request',
-    Risk: 'risk'
-} as const;
-export type CustomFieldsWorkitemTypeEnum = typeof CustomFieldsWorkitemTypeEnum[keyof typeof CustomFieldsWorkitemTypeEnum];
-
 
 /**
  * Check if a given object implements the CustomFields interface.
  */
 export function instanceOfCustomFields(value: object): value is CustomFields {
-    if ((!('workitemType' in (value as Record<string, any>)) && !('workitem_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['workitemType'] === undefined && (value as Record<string, any>)['workitem_type'] === undefined)) return false;
     return true;
 }
 
@@ -120,17 +44,7 @@ export function CustomFieldsFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
         
-        'workitemType': json['workitem_type'],
-        'priority': json['priority'] === undefined ? undefined : json['priority'] === null ? null : json['priority'],
-        'severity': json['severity'] === undefined ? undefined : json['severity'] === null ? null : json['severity'],
-        'author': json['author'] === undefined ? undefined : json['author'] === null ? null : json['author'],
-        'assignee': json['assignee'] === undefined ? undefined : json['assignee'] === null ? null : json['assignee'],
-        'created': json['created'] === undefined ? undefined : json['created'] === null ? null : (new Date(json['created'])),
-        'updated': json['updated'] === undefined ? undefined : json['updated'] === null ? null : (new Date(json['updated'])),
-        'dueDate': json['due_date'] === undefined ? undefined : json['due_date'] === null ? null : (new Date(json['due_date'])),
-        'safetyClass': json['safety_class'] === undefined ? undefined : json['safety_class'] === null ? null : json['safety_class'],
-        'requirementCategory': json['requirement_category'] === undefined ? undefined : json['requirement_category'] === null ? null : json['requirement_category'],
-        'tags': json['tags'] == null ? undefined : json['tags'],
+        'safetyRequirement': json['safety_requirement'] === undefined ? undefined : json['safety_requirement'] === null ? null : json['safety_requirement'],
     };
 }
 
@@ -145,17 +59,7 @@ export function CustomFieldsToJSONTyped(value?: CustomFields | null, ignoreDiscr
 
     return {
         
-        'workitem_type': value['workitemType'],
-        'priority': value['priority'],
-        'severity': value['severity'],
-        'author': value['author'],
-        'assignee': value['assignee'],
-        'created': value['created'] == null ? value['created'] : value['created'].toISOString(),
-        'updated': value['updated'] == null ? value['updated'] : value['updated'].toISOString(),
-        'due_date': value['dueDate'] == null ? value['dueDate'] : value['dueDate'].toISOString().substring(0,10),
-        'safety_class': value['safetyClass'],
-        'requirement_category': value['requirementCategory'],
-        'tags': value['tags'],
+        'safety_requirement': value['safetyRequirement'],
     };
 }
 

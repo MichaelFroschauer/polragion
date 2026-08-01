@@ -259,10 +259,14 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>
 
+// Links are generated from trusted work item data, so the interstitial confirmation is not needed.
+const disabledLinkSafety = { enabled: false }
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+      linkSafety={disabledLinkSafety}
       {...props}
     />
   ),

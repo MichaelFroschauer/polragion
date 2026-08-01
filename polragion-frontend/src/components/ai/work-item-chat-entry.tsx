@@ -6,18 +6,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import type { WorkItemSearchHit } from "@/api"
 import {WorkItemDescription} from "@/components/ai/work-item-description.tsx";
-
-const polarion_url = import.meta.env.POLARION_WEB_URL
+import {getWorkItemUrl} from "@/lib/work-item-references.ts";
 
 interface WorkItemProps {
     hit: WorkItemSearchHit
-}
-
-function getWorkItemUrl(projectId: string, workItemId: string) {
-    if (polarion_url === undefined) {
-        return "#"
-    }
-    return `${polarion_url}/polarion/#/project/${projectId}/workitem?id=${workItemId}`
 }
 
 export function WorkItemChatEntry({ hit }: WorkItemProps) {
@@ -32,13 +24,13 @@ export function WorkItemChatEntry({ hit }: WorkItemProps) {
                         <a
                             href={getWorkItemUrl(
                                 workItem.projectId,
-                                workItem.workitemId,
+                                workItem.workItemId,
                             )}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 font-mono text-sm font-medium text-primary hover:underline"
                         >
-                            {workItem.workitemId}
+                            {workItem.workItemId}
                             <ExternalLinkIcon className="size-3" />
                         </a>
 
@@ -56,25 +48,25 @@ export function WorkItemChatEntry({ hit }: WorkItemProps) {
 
             {/* Metadata */}
             <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                <span>{workItem.customFields.workitemType}</span>
+                <span>{workItem.workItemType}</span>
                 <span>Project {workItem.projectId}</span>
                 <span>Rev. {workItem.revision}</span>
             </div>
 
             {/* Description */}
-            {workItem.text && (
-                <WorkItemDescription html={workItem.text} />
+            {workItem.description && (
+                <WorkItemDescription html={workItem.description} />
             )}
 
             {/* Linked work items */}
-            {workItem.linkedWorkitems?.length ? (
+            {workItem.linkedWorkItems?.length ? (
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <LinkIcon className="size-3.5" />
                         Linked
                     </div>
 
-                    {workItem.linkedWorkitems.map(linked => (
+                    {workItem.linkedWorkItems.map(linked => (
                         <a
                             key={`${linked.role}-${linked.id}`}
                             href={getWorkItemUrl(

@@ -8,12 +8,15 @@ Validated domain representation of a Polarion work item.
 Name | Type
 ------------ | -------------
 `projectId` | string
-`workitemId` | string
+`projectName` | string
+`workItemId` | string
+`workItemType` | string
 `title` | string
-`text` | string
+`description` | string
 `revision` | number
 `status` | string
-`linkedWorkitems` | [Array&lt;LinkedWorkItem&gt;](LinkedWorkItem.md)
+`location` | string
+`linkedWorkItems` | [Array&lt;LinkedWorkItem&gt;](LinkedWorkItem.md)
 `customFields` | [CustomFields](CustomFields.md)
 
 ## Example
@@ -24,12 +27,15 @@ import type { PolarionWorkItem } from ''
 // TODO: Update the object below with actual values
 const example = {
   "projectId": null,
-  "workitemId": null,
+  "projectName": null,
+  "workItemId": null,
+  "workItemType": null,
   "title": null,
-  "text": null,
+  "description": null,
   "revision": null,
   "status": null,
-  "linkedWorkitems": null,
+  "location": null,
+  "linkedWorkItems": null,
   "customFields": null,
 } satisfies PolarionWorkItem
 

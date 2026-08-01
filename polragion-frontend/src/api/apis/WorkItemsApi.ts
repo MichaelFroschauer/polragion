@@ -55,7 +55,11 @@ export interface IngestWorkItemsRequest {
     polarionWorkItem: Array<PolarionWorkItem>;
 }
 
-export interface IngestWorkItemsFromDataSourceRequest {
+export interface IngestWorkItemsFromJsonDataSourceRequest {
+    limit?: number | null;
+}
+
+export interface IngestWorkItemsFromPolarionDataSourceRequest {
     limit?: number | null;
 }
 
@@ -147,27 +151,50 @@ export interface WorkItemsApiInterface {
     ingestWorkItems(requestParameters: IngestWorkItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse>;
 
     /**
-     * Creates request options for ingestWorkItemsFromDataSource without sending the request
+     * Creates request options for ingestWorkItemsFromJsonDataSource without sending the request
      * @param {number} [limit] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
-    ingestWorkItemsFromDataSourceRequestOpts(requestParameters: IngestWorkItemsFromDataSourceRequest): Promise<runtime.RequestOpts>;
+    ingestWorkItemsFromJsonDataSourceRequestOpts(requestParameters: IngestWorkItemsFromJsonDataSourceRequest): Promise<runtime.RequestOpts>;
 
     /**
      * 
-     * @summary Ingest Work Items From Data Source
+     * @summary Ingest Work Items From Json Data Source
      * @param {number} [limit] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
-    ingestWorkItemsFromDataSourceRaw(requestParameters: IngestWorkItemsFromDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>>;
+    ingestWorkItemsFromJsonDataSourceRaw(requestParameters: IngestWorkItemsFromJsonDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>>;
 
     /**
-     * Ingest Work Items From Data Source
+     * Ingest Work Items From Json Data Source
      */
-    ingestWorkItemsFromDataSource(requestParameters: IngestWorkItemsFromDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse>;
+    ingestWorkItemsFromJsonDataSource(requestParameters: IngestWorkItemsFromJsonDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse>;
+
+    /**
+     * Creates request options for ingestWorkItemsFromPolarionDataSource without sending the request
+     * @param {number} [limit] 
+     * @throws {RequiredError}
+     * @memberof WorkItemsApiInterface
+     */
+    ingestWorkItemsFromPolarionDataSourceRequestOpts(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest): Promise<runtime.RequestOpts>;
+
+    /**
+     * 
+     * @summary Ingest Work Items From Polarion Data Source
+     * @param {number} [limit] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof WorkItemsApiInterface
+     */
+    ingestWorkItemsFromPolarionDataSourceRaw(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>>;
+
+    /**
+     * Ingest Work Items From Polarion Data Source
+     */
+    ingestWorkItemsFromPolarionDataSource(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse>;
 
     /**
      * Creates request options for resetUserSession without sending the request
@@ -371,9 +398,9 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
     }
 
     /**
-     * Creates request options for ingestWorkItemsFromDataSource without sending the request
+     * Creates request options for ingestWorkItemsFromJsonDataSource without sending the request
      */
-    async ingestWorkItemsFromDataSourceRequestOpts(requestParameters: IngestWorkItemsFromDataSourceRequest): Promise<runtime.RequestOpts> {
+    async ingestWorkItemsFromJsonDataSourceRequestOpts(requestParameters: IngestWorkItemsFromJsonDataSourceRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         if (requestParameters['limit'] != null) {
@@ -394,20 +421,61 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
     }
 
     /**
-     * Ingest Work Items From Data Source
+     * Ingest Work Items From Json Data Source
      */
-    async ingestWorkItemsFromDataSourceRaw(requestParameters: IngestWorkItemsFromDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>> {
-        const requestOptions = await this.ingestWorkItemsFromDataSourceRequestOpts(requestParameters);
+    async ingestWorkItemsFromJsonDataSourceRaw(requestParameters: IngestWorkItemsFromJsonDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>> {
+        const requestOptions = await this.ingestWorkItemsFromJsonDataSourceRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.JSONApiResponse(response, (jsonValue) => IngestResponseFromJSON(jsonValue));
     }
 
     /**
-     * Ingest Work Items From Data Source
+     * Ingest Work Items From Json Data Source
      */
-    async ingestWorkItemsFromDataSource(requestParameters: IngestWorkItemsFromDataSourceRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse> {
-        const response = await this.ingestWorkItemsFromDataSourceRaw(requestParameters, initOverrides);
+    async ingestWorkItemsFromJsonDataSource(requestParameters: IngestWorkItemsFromJsonDataSourceRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse> {
+        const response = await this.ingestWorkItemsFromJsonDataSourceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for ingestWorkItemsFromPolarionDataSource without sending the request
+     */
+    async ingestWorkItemsFromPolarionDataSourceRequestOpts(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/v1/work-items/ingest/import-polarion`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Ingest Work Items From Polarion Data Source
+     */
+    async ingestWorkItemsFromPolarionDataSourceRaw(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<IngestResponse>> {
+        const requestOptions = await this.ingestWorkItemsFromPolarionDataSourceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => IngestResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Ingest Work Items From Polarion Data Source
+     */
+    async ingestWorkItemsFromPolarionDataSource(requestParameters: IngestWorkItemsFromPolarionDataSourceRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<IngestResponse> {
+        const response = await this.ingestWorkItemsFromPolarionDataSourceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

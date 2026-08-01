@@ -18,7 +18,7 @@ from polragion.domain.data_worker import DataWorker
 from polragion.infrastructure.polarion_data_fetcher import PolarionImportConfig, PolarionDataFetcher
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
 from polragion.models.user import User
-from polragion.models.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem, ReducedWorkItem
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,9 @@ def search_work_items(
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
 ) -> WorkItemSearchResponse:
 
+    # TODO: Remove
+    limit = 50
+
     effective_limit = limit or settings.search_default_limit
     if effective_limit > settings.search_max_limit:
         raise HTTPException(
@@ -154,12 +157,10 @@ def build_work_item_ai_prompt(
 ) -> str:
     retrieved_work_items = [
         {
-            # Stable reference used by the AI in citations.
-            "source_id": f"WI-{index}",
             "retrieval_rank": index,
             "similarity_score": round(hit.score, 6),
-            "point_id": str(hit.point_id),
-            "work_item": hit.work_item.model_dump(
+            "id": str(f"{hit.work_item.project_id}:{hit.work_item.work_item_id}"),
+            "work_item": ReducedWorkItem.from_work_item(hit.work_item).model_dump(
                 mode="json",
                 by_alias=True,
             ),
@@ -185,8 +186,8 @@ def build_work_item_ai_prompt(
         f"""
         <role>
         You are Polragion, an assistant specialized in analyzing Polarion
-        work items such as requirements, defects, tasks, risks, test cases,
-        change requests, and their relationships.
+        work items such as requirements, test cases, other information
+        and their relationships.
         </role>
 
         <objective>
@@ -196,7 +197,7 @@ def build_work_item_ai_prompt(
 
         <grounding_rules>
         1. Base factual statements only on the retrieved work items below.
-        2. Do not invent work items, identifiers, statuses, owners, dates,
+        2. Do not invent work items, identifiers, statuses, data,
            relationships, requirements, acceptance criteria, or other facts.
         3. General explanations may be used only when they help interpret the
            supplied data. Clearly distinguish general guidance from facts
@@ -243,9 +244,9 @@ def build_work_item_ai_prompt(
         <citation_rules>
         Cite work-item-specific statements using the provided source IDs.
 
-        Citation examples:
-        - [WI-1]
-        - [WI-1, WI-3]
+        Citation examples (Could be other prefixes):
+        - [ProjectId:WI-1234]
+        - [ProjectId:WI-1234, ProjectId:WI-34567]
 
         Every factual claim about a work item should have a citation near the
         claim.
@@ -253,6 +254,9 @@ def build_work_item_ai_prompt(
         Never create a source ID that is not present in the retrieved data.
         Do not cite similarity scores as evidence unless the user explicitly
         asks about search relevance.
+        
+        Example:
+        This is a statement that was fetched out of a specific work item. [Polragion:WI-1234]
         </citation_rules>
 
         <response_rules>

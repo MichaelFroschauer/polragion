@@ -7,7 +7,8 @@ All URIs are relative to *http://localhost*
 | [**askWorkItem**](WorkItemsApi.md#askworkitem) | **POST** /v1/work-items/ask | Ask Work Item |
 | [**getChatHistory**](WorkItemsApi.md#getchathistory) | **GET** /v1/work-items/ask/history | Get Chat History |
 | [**ingestWorkItems**](WorkItemsApi.md#ingestworkitems) | **POST** /v1/work-items/ingest | Ingest Work Items |
-| [**ingestWorkItemsFromDataSource**](WorkItemsApi.md#ingestworkitemsfromdatasource) | **POST** /v1/work-items/ingest/import-json | Ingest Work Items From Data Source |
+| [**ingestWorkItemsFromJsonDataSource**](WorkItemsApi.md#ingestworkitemsfromjsondatasource) | **POST** /v1/work-items/ingest/import-json | Ingest Work Items From Json Data Source |
+| [**ingestWorkItemsFromPolarionDataSource**](WorkItemsApi.md#ingestworkitemsfrompolariondatasource) | **POST** /v1/work-items/ingest/import-polarion | Ingest Work Items From Polarion Data Source |
 | [**resetUserSession**](WorkItemsApi.md#resetusersession) | **GET** /v1/work-items/reset | Reset User Session |
 | [**searchWorkItems**](WorkItemsApi.md#searchworkitems) | **GET** /v1/work-items/search | Search Work Items |
 
@@ -211,11 +212,11 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## ingestWorkItemsFromDataSource
+## ingestWorkItemsFromJsonDataSource
 
-> IngestResponse ingestWorkItemsFromDataSource(limit)
+> IngestResponse ingestWorkItemsFromJsonDataSource(limit)
 
-Ingest Work Items From Data Source
+Ingest Work Items From Json Data Source
 
 ### Example
 
@@ -224,7 +225,7 @@ import {
   Configuration,
   WorkItemsApi,
 } from '';
-import type { IngestWorkItemsFromDataSourceRequest } from '';
+import type { IngestWorkItemsFromJsonDataSourceRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -233,10 +234,76 @@ async function example() {
   const body = {
     // number (optional)
     limit: 56,
-  } satisfies IngestWorkItemsFromDataSourceRequest;
+  } satisfies IngestWorkItemsFromJsonDataSourceRequest;
 
   try {
-    const data = await api.ingestWorkItemsFromDataSource(body);
+    const data = await api.ingestWorkItemsFromJsonDataSource(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **limit** | `number` |  | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**IngestResponse**](IngestResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## ingestWorkItemsFromPolarionDataSource
+
+> IngestResponse ingestWorkItemsFromPolarionDataSource(limit)
+
+Ingest Work Items From Polarion Data Source
+
+### Example
+
+```ts
+import {
+  Configuration,
+  WorkItemsApi,
+} from '';
+import type { IngestWorkItemsFromPolarionDataSourceRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new WorkItemsApi();
+
+  const body = {
+    // number (optional)
+    limit: 56,
+  } satisfies IngestWorkItemsFromPolarionDataSourceRequest;
+
+  try {
+    const data = await api.ingestWorkItemsFromPolarionDataSource(body);
     console.log(data);
   } catch (error) {
     console.error(error);

@@ -5,11 +5,13 @@ description = "FastAPI backend for indexing and searching Polarion work items"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "beautifulsoup4==4.15.0",
     "cryptography==49.0.0",
     "fastapi>=0.115,<1.0",
     "fastembed>=0.5,<1.0",
     "github-copilot-sdk==1.0.8",
     "itsdangerous>=2.2.0",
+    "markdownify==1.2.3",
     "polarion>=1.4.0",
     "pydantic>=2.10,<3.0",
     "pydantic-settings==2.14.2",

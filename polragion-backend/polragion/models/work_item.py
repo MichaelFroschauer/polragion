@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from polragion.utils.general import html_to_markdown
+
 
 class LinkedWorkItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -46,3 +48,24 @@ class PolarionWorkItem(BaseModel):
     custom_fields: CustomFields = Field(
         default_factory=CustomFields
     )
+
+
+class ReducedWorkItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str = Field(min_length=1, max_length=128)
+    work_item_id: str = Field(min_length=1, max_length=128)
+    work_item_type: str = Field(min_length=1, max_length=128)
+
+    title: str = Field(default="", max_length=5_000)
+    description: str | None = Field(default=None, max_length=500_000)
+
+    @classmethod
+    def from_work_item(cls, work_item: PolarionWorkItem) -> ReducedWorkItem:
+        reduced = cls.model_validate(
+            work_item.model_dump(
+                include=set(cls.model_fields)
+            )
+        )
+        reduced.description = html_to_markdown(reduced.description)
+        return reduced

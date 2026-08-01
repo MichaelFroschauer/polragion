@@ -26,20 +26,6 @@ interface ChatContextValue {
     resetSession: () => Promise<void>
 }
 
-function formatSearchHits(hits: WorkItemSearchResponse) {
-    if (hits.workItems.length === 0) {
-        return "No matching work items found."
-    }
-
-    return hits.workItems
-        .map(hit => {
-            const item = hit.workItem
-            const score = Math.round(hit.score * 100)
-            return `**${item.workitemId} — ${item.title}**\n\n${item.status} · ${item.projectId} · ${score}% match\n\n${item.text}`
-        })
-        .join("\n\n---\n\n")
-}
-
 const UseChat = createContext<ChatContextValue | null>(null);
 
 export function ChatContextProvider({ children }: PropsWithChildren) {

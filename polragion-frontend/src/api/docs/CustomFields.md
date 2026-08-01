@@ -6,17 +6,7 @@
 
 Name | Type
 ------------ | -------------
-`workitemType` | string
-`priority` | string
-`severity` | string
-`author` | string
-`assignee` | string
-`created` | Date
-`updated` | Date
-`dueDate` | Date
-`safetyClass` | string
-`requirementCategory` | string
-`tags` | Array&lt;string&gt;
+`safetyRequirement` | string
 
 ## Example
 
@@ -25,17 +15,7 @@ import type { CustomFields } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  "workitemType": null,
-  "priority": null,
-  "severity": null,
-  "author": null,
-  "assignee": null,
-  "created": null,
-  "updated": null,
-  "dueDate": null,
-  "safetyClass": null,
-  "requirementCategory": null,
-  "tags": null,
+  "safetyRequirement": null,
 } satisfies CustomFields
 
 console.log(example)
