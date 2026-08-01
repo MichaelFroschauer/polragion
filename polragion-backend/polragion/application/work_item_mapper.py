@@ -10,16 +10,16 @@ class WorkItemIndexMapper:
     """
 
     def to_document(self, work_item: PolarionWorkItem) -> VectorDocument:
-        logical_id = f"{work_item.project_id}:{work_item.workitem_id}"
+        logical_id = f"{work_item.project_id}:{work_item.work_item_id}"
         embedding_text = "\n".join(
             [
                 f"Project: {work_item.project_id}",
-                f"ID: {work_item.workitem_id}",
-                f"Type: {work_item.custom_fields.workitem_type}",
+                f"ID: {work_item.work_item_id}",
+                f"Type: {work_item.work_item_type}",
                 f"Status: {work_item.status}",
                 f"Title: {work_item.title}",
                 "",
-                work_item.text,
+                work_item.description if work_item.description else "",
             ]
         )
 

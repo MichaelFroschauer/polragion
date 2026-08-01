@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "projects": [
+    {
+      "project_id": "Project_1",
+      "enabled": true,
+      "documents": [
+        "My_fancy_test_document"
+      ],
+      "work_items": {
+        "query": null,
+        "common_fields": [
+          "id",
+          "title",
+          "description",
+          "type",
+          "status",
+          "location",
+          "revision"
+        ],
+        "fields_by_type": {
+          "requirement": [
+            "customFields.safetyrequirement"
+          ]
+        },
+        "relations": {
+          "fields": [
+            "linkedWorkItems",
+            "linkedWorkItemsDerived"
+          ]
+        }
+      }
+    }
+  ]
+}
