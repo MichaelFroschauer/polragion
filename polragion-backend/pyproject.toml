@@ -10,6 +10,7 @@ dependencies = [
     "fastembed>=0.5,<1.0",
     "github-copilot-sdk==1.0.8",
     "itsdangerous>=2.2.0",
+    "polarion>=1.4.0",
     "pydantic>=2.10,<3.0",
     "pydantic-settings==2.14.2",
     "qdrant-client>=1.13,<2.0",

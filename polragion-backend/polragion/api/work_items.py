@@ -1,8 +1,9 @@
 import json
 import logging
+from pathlib import Path
 from textwrap import dedent
 from time import perf_counter
-from typing import Annotated
+from typing import Annotated, Iterable
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Request
 
@@ -14,6 +15,7 @@ from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService, WorkItemSearchResult
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
+from polragion.infrastructure.polarion_data_fetcher import PolarionImportConfig, PolarionDataFetcher
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
 from polragion.models.user import User
 from polragion.models.work_item import PolarionWorkItem
@@ -61,13 +63,38 @@ def ingest_work_items(
     response_model=IngestResponse,
     status_code=status.HTTP_200_OK,
 )
-def ingest_work_items_from_data_source(
+def ingest_work_items_from_json_data_source(
     data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
     data_worker: Annotated[DataWorker, Depends(get_data_worker)],
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
 
     count = data_worker.work(data_fetcher.fetch_data(limit))
+    return IngestResponse(status="ok", ingested_items=count)
+
+
+def load_import_config(path: Path) -> PolarionImportConfig:
+    config_text = path.read_text(encoding="utf-8")
+    return PolarionImportConfig.model_validate_json(config_text)
+
+
+@router.post(
+    "/ingest/import-polarion",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items_from_polarion_data_source(
+    settings: Annotated[Settings, Depends(get_settings)],
+    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
+    limit: Annotated[int | None, Query(ge=1)] = None,
+) -> IngestResponse:
+
+    config = load_import_config(Path(settings.polarion_import_config_path))
+
+    data_fetcher = PolarionDataFetcher(settings, config)
+    data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
+    count = data_worker.work(data)
+
     return IngestResponse(status="ok", ingested_items=count)
 
 
