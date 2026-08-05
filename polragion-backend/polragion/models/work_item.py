@@ -1,9 +1,7 @@
-from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from polragion.utils.general import html_to_markdown
 
 
 class LinkedWorkItem(BaseModel):
@@ -67,5 +65,5 @@ class ReducedWorkItem(BaseModel):
                 include=set(cls.model_fields)
             )
         )
-        reduced.description = html_to_markdown(reduced.description)
+        #reduced.description = html_to_markdown(reduced.description)
         return reduced

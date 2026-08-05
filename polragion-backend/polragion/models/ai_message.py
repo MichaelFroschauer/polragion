@@ -17,25 +17,6 @@ class CopilotMessageEvent(StrictModel):
     user_id: UUID
     message: CopilotResponseMessage
 
-# class CopilotModel(BaseModel):
-#     model_config = ConfigDict(extra="ignore")
-#
-#     id: str
-#     name: str
-#     publisher: str
-#     registry: str | None = None
-#     summary: str | None = None
-#     html_url: str | None = None
-#     version: str | None = None
-#     rate_limit_tier: str
-#
-#     capabilities: list[str] = Field(default_factory=list)
-#     supported_input_modalities: list[str] = Field(default_factory=list)
-#     supported_output_modalities: list[str] = Field(default_factory=list)
-#     tags: list[str] = Field(default_factory=list)
-#     # max_input_tokens: int
-#     # max_output_tokens: int
-
 class CopilotModel(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
