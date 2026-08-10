@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from polragion.application.work_item_service import WorkItemService
 from polragion.models.work_item import PolarionWorkItem
 from polragion.settings import Settings
+from polragion.utils.general import html_to_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,9 @@ class QdrantDataWorker:
 
         for work_item in data_list:
             logger.info("Fetched work item with ID: %s", work_item.work_item_id)
+
+            work_item.description = html_to_markdown(work_item.description)
+
             batch.append(work_item)
 
             if len(batch) >= self._batch_size:

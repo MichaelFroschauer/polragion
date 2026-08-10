@@ -45,19 +45,31 @@ export interface PolarionWorkItem {
      * @type {string}
      * @memberof PolarionWorkItem
      */
-    workitemId: string;
+    projectName?: string | null;
     /**
      * 
      * @type {string}
      * @memberof PolarionWorkItem
      */
-    title: string;
+    workItemId: string;
     /**
      * 
      * @type {string}
      * @memberof PolarionWorkItem
      */
-    text: string;
+    workItemType: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PolarionWorkItem
+     */
+    title?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof PolarionWorkItem
+     */
+    description?: string | null;
     /**
      * 
      * @type {number}
@@ -69,19 +81,25 @@ export interface PolarionWorkItem {
      * @type {string}
      * @memberof PolarionWorkItem
      */
-    status: string;
+    status?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PolarionWorkItem
+     */
+    location?: string | null;
     /**
      * 
      * @type {Array<LinkedWorkItem>}
      * @memberof PolarionWorkItem
      */
-    linkedWorkitems?: Array<LinkedWorkItem>;
+    linkedWorkItems?: Array<LinkedWorkItem>;
     /**
      * 
      * @type {CustomFields}
      * @memberof PolarionWorkItem
      */
-    customFields: CustomFields;
+    customFields?: CustomFields;
 }
 
 /**
@@ -89,12 +107,9 @@ export interface PolarionWorkItem {
  */
 export function instanceOfPolarionWorkItem(value: object): value is PolarionWorkItem {
     if ((!('projectId' in (value as Record<string, any>)) && !('project_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['projectId'] === undefined && (value as Record<string, any>)['project_id'] === undefined)) return false;
-    if ((!('workitemId' in (value as Record<string, any>)) && !('workitem_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['workitemId'] === undefined && (value as Record<string, any>)['workitem_id'] === undefined)) return false;
-    if (!('title' in value) || value['title'] === undefined) return false;
-    if (!('text' in value) || value['text'] === undefined) return false;
+    if ((!('workItemId' in (value as Record<string, any>)) && !('work_item_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['workItemId'] === undefined && (value as Record<string, any>)['work_item_id'] === undefined)) return false;
+    if ((!('workItemType' in (value as Record<string, any>)) && !('work_item_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['workItemType'] === undefined && (value as Record<string, any>)['work_item_type'] === undefined)) return false;
     if (!('revision' in value) || value['revision'] === undefined) return false;
-    if (!('status' in value) || value['status'] === undefined) return false;
-    if ((!('customFields' in (value as Record<string, any>)) && !('custom_fields' in (value as Record<string, any>))) || ((value as Record<string, any>)['customFields'] === undefined && (value as Record<string, any>)['custom_fields'] === undefined)) return false;
     return true;
 }
 
@@ -109,13 +124,16 @@ export function PolarionWorkItemFromJSONTyped(json: any, ignoreDiscriminator: bo
     return {
         
         'projectId': json['project_id'],
-        'workitemId': json['workitem_id'],
-        'title': json['title'],
-        'text': json['text'],
+        'projectName': json['project_name'] === undefined ? undefined : json['project_name'] === null ? null : json['project_name'],
+        'workItemId': json['work_item_id'],
+        'workItemType': json['work_item_type'],
+        'title': json['title'] == null ? undefined : json['title'],
+        'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'revision': json['revision'],
-        'status': json['status'],
-        'linkedWorkitems': json['linked_workitems'] == null ? undefined : ((json['linked_workitems'] as Array<any>).map(LinkedWorkItemFromJSON)),
-        'customFields': CustomFieldsFromJSON(json['custom_fields']),
+        'status': json['status'] === undefined ? undefined : json['status'] === null ? null : json['status'],
+        'location': json['location'] === undefined ? undefined : json['location'] === null ? null : json['location'],
+        'linkedWorkItems': json['linked_work_items'] == null ? undefined : ((json['linked_work_items'] as Array<any>).map(LinkedWorkItemFromJSON)),
+        'customFields': json['custom_fields'] == null ? undefined : CustomFieldsFromJSON(json['custom_fields']),
     };
 }
 
@@ -131,12 +149,15 @@ export function PolarionWorkItemToJSONTyped(value?: PolarionWorkItem | null, ign
     return {
         
         'project_id': value['projectId'],
-        'workitem_id': value['workitemId'],
+        'project_name': value['projectName'],
+        'work_item_id': value['workItemId'],
+        'work_item_type': value['workItemType'],
         'title': value['title'],
-        'text': value['text'],
+        'description': value['description'],
         'revision': value['revision'],
         'status': value['status'],
-        'linked_workitems': value['linkedWorkitems'] == null ? undefined : ((value['linkedWorkitems'] as Array<any>).map(LinkedWorkItemToJSON)),
+        'location': value['location'],
+        'linked_work_items': value['linkedWorkItems'] == null ? undefined : ((value['linkedWorkItems'] as Array<any>).map(LinkedWorkItemToJSON)),
         'custom_fields': CustomFieldsToJSON(value['customFields']),
     };
 }

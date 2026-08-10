@@ -1,8 +1,11 @@
-from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
 
 class LinkedWorkItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -18,20 +21,6 @@ class CustomFields(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     safety_requirement: str | None = Field(default=None, max_length=128)
-
-    # priority: str | None = Field(default=None, max_length=128)
-    # severity: str | None = Field(default=None, max_length=128)
-    #
-    # author: str | None = Field(default=None, max_length=256)
-    # assignee: str | None = Field(default=None, max_length=256)
-    #
-    # created: datetime | None = None
-    # updated: datetime | None = None
-    # due_date: date | None = None
-    #
-    # requirement_category: str | None = Field(default=None, max_length=256)
-    #
-    # tags: list[str] = Field(default_factory=list, max_length=100)
 
 
 class PolarionWorkItem(BaseModel):
@@ -60,3 +49,27 @@ class PolarionWorkItem(BaseModel):
     custom_fields: CustomFields = Field(
         default_factory=CustomFields
     )
+<<<<<<< HEAD
+=======
+
+
+class ReducedWorkItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_id: str = Field(min_length=1, max_length=128)
+    work_item_id: str = Field(min_length=1, max_length=128)
+    work_item_type: str = Field(min_length=1, max_length=128)
+
+    title: str = Field(default="", max_length=5_000)
+    description: str | None = Field(default=None, max_length=500_000)
+
+    @classmethod
+    def from_work_item(cls, work_item: PolarionWorkItem) -> ReducedWorkItem:
+        reduced = cls.model_validate(
+            work_item.model_dump(
+                include=set(cls.model_fields)
+            )
+        )
+        #reduced.description = html_to_markdown(reduced.description)
+        return reduced
+>>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03

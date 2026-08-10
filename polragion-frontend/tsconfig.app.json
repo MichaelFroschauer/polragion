@@ -22,9 +22,9 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "erasableSyntaxOnly": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"]

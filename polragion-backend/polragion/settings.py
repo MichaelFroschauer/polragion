@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # =======================================================================
     #   Sqlite Config
-    sqlite_file_path: str = "C:/gitclones/testFrs/polragion/docker/backend-data/polragion.db"
+    sqlite_file_path: str = ""
 
     # =======================================================================
     #   Qdrant Config
@@ -51,7 +51,11 @@ class Settings(BaseSettings):
     search_max_limit: int = Field(default=100, ge=1, le=1_000)
     search_score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     max_ingest_batch_size: int = Field(default=100, ge=1, le=50_000)
+<<<<<<< HEAD
     json_data_source: str | Path = "C:/gitclones/testFrs/polragion/testset/polarion_workitems_testset_2000_en/polarion_workitems_testset_2000_en.json"
+=======
+    json_data_source: str | Path = ""
+>>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
 
     # =======================================================================
     #   Security Config
@@ -70,10 +74,17 @@ class Settings(BaseSettings):
 
     # =======================================================================
     #   Polarion Config
+<<<<<<< HEAD
     polarion_host: str = "https://keb10650.keba.co.at/polarion/"
     polarion_user: str = "sb"
     polarion_password: str = "safetybot"
     polarion_import_config_path: str = "C:/gitclones/testFrs/polragion/docker/polarion-import-config.json"
+=======
+    polarion_host: str = ""
+    polarion_user: str = ""
+    polarion_password: str = ""
+    polarion_import_config_path: str = ""
+>>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
 
 
     @cached_property

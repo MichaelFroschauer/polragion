@@ -8,6 +8,7 @@ Name | Type
 ------------ | -------------
 `id` | string
 `role` | string
+`direction` | string
 
 ## Example
 
@@ -18,6 +19,7 @@ import type { LinkedWorkItem } from ''
 const example = {
   "id": null,
   "role": null,
+  "direction": null,
 } satisfies LinkedWorkItem
 
 console.log(example)
