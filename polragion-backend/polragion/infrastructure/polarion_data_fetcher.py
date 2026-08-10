@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Literal
@@ -12,6 +13,7 @@ from polragion.utils.general import StrictModel
 from pydantic import Field
 from urllib.parse import unquote
 
+logger = logging.getLogger(__name__)
 
 class RelationsConfig(StrictModel):
     fields: list[str] = Field(
@@ -162,6 +164,9 @@ class PolarionDataFetcher:
                     field_list=requested_work_item_field_keys,
                     limit=remaining,
                 )
+
+                if len(raw_work_items) <= 0:
+                    logger.warning(f"No work items found in {document} with query: {query}")
 
                 batch: list[PolarionWorkItem] = []
 

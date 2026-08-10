@@ -31,10 +31,8 @@ _DOCUMENT_TEXT_PAYLOAD_KEY: Final = "_document_text"
 
 
 class QdrantHybridVectorStore:
-    """Dense+sparse retrieval with Qdrant RRF and FastEmbed reranking.
-
-    ``score_threshold`` in :meth:`search` applies to the final cross-encoder
-    score. Cross-encoder score ranges are model-specific.
+    """
+    Dense+sparse retrieval with Qdrant RRF and FastEmbed reranking.
     """
 
     def __init__(self, settings: Settings) -> None:
@@ -241,12 +239,12 @@ class QdrantHybridVectorStore:
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
                 query_filter=query_filter,
                 limit=candidate_limit,
+                score_threshold=score_threshold,
                 with_payload=True,
             )
 
-            candidates: list[
-                tuple[models.ScoredPoint, dict[str, Any], str]
-            ] = []
+            candidates: list[tuple[models.ScoredPoint, dict[str, Any], str]] = []
+
             for point in response.points:
                 if point.payload is None:
                     continue
@@ -254,10 +252,7 @@ class QdrantHybridVectorStore:
                 payload = dict(point.payload)
                 document_text = payload.get(_DOCUMENT_TEXT_PAYLOAD_KEY)
                 if not isinstance(document_text, str):
-                    logger.warning(
-                        "Skipping Qdrant point %s because its document text is missing",
-                        point.id,
-                    )
+                    logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
                     continue
 
                 candidates.append((point, payload, document_text))
@@ -274,9 +269,7 @@ class QdrantHybridVectorStore:
                 )
             )
             if len(rerank_scores) != len(candidates):
-                raise VectorStoreUnavailableError(
-                    "FastEmbed reranker returned an unexpected number of scores"
-                )
+                raise VectorStoreUnavailableError("FastEmbed reranker returned an unexpected number of scores")
 
             ranked = sorted(
                 zip(candidates, rerank_scores, strict=True),
@@ -289,13 +282,8 @@ class QdrantHybridVectorStore:
 
             hits: list[VectorSearchHit] = []
             for (point, payload, _), rerank_score in ranked:
-                score = float(rerank_score)
-                if score_threshold is not None and score < score_threshold:
-                    continue
 
-                document_id = str(
-                    payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id)
-                )
+                document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
                 payload.pop(_DOCUMENT_TEXT_PAYLOAD_KEY, None)
                 for key in _RESERVED_PAYLOAD_KEYS:
                     payload.pop(key, None)
@@ -304,7 +292,8 @@ class QdrantHybridVectorStore:
                     VectorSearchHit(
                         document_id=document_id,
                         point_id=str(point.id),
-                        score=score,
+                        #score=float(point.score),
+                        score=float(rerank_score),
                         metadata=self._as_json_mapping(payload),
                     )
                 )
