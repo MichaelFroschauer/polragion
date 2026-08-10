@@ -33,17 +33,22 @@ class Settings(BaseSettings):
     #   Qdrant Config
     qdrant_url: str = "http://localhost:6333"
     qdrant_collection_prefix: str = "polragion"
-    qdrant_batch_size: int = Field(default=256, ge=1, le=10_000)
-    qdrant_parallel: int = Field(default=4, ge=1, le=64)
+    qdrant_batch_size: int = Field(default=32, ge=1, le=10_000)
+    qdrant_upload_parallel: int = Field(default=4, ge=1, le=64)
+    qdrant_client_timeout_seconds: int = Field(default=120, ge=1, le=3600)
 
     #   FastEmbed Simple Embedding Config
-    fastembed_dense_model: str = "BAAI/bge-small-en-v1.5"
+    #   https://qdrant.github.io/fastembed/examples/Supported_Models/#supported-text-embedding-models
+    #fastembed_dense_model: str = "BAAI/bge-small-en-v1.5"
 
     #   FastEmbed Hybrid Embedding Config (Dense + Sparse Embedding Hybrid Search)
-    #fastembed_dense_model: str = "BAAI/bge-large-en-v1.5"
-    fastembed_sparse_model: str = "prithvida/Splade_PP_en_v1"
-    fastembed_reranker_model: str = "BAAI/bge-reranker-base"
-    qdrant_hybrid_candidate_limit: int = 50
+    fastembed_dense_model: str = "BAAI/bge-base-en"
+    fastembed_sparse_model: str = "prithivida/Splade_PP_en_v1"
+    fastembed_reranker_model: str = "jinaai/jina-reranker-v1-turbo-en"
+    fastembed_cache_path: str = ""
+    fastembed_parallel: int | None = Field(default=None, ge=1, le=64)
+
+    qdrant_hybrid_candidate_limit: int = Field(default=50, ge=1, le=50_000)
 
     #   Other different vector DB configurations
     index_schema_version: int = Field(default=1, ge=1)
@@ -51,11 +56,9 @@ class Settings(BaseSettings):
     search_max_limit: int = Field(default=100, ge=1, le=1_000)
     search_score_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     max_ingest_batch_size: int = Field(default=100, ge=1, le=50_000)
-<<<<<<< HEAD
-    json_data_source: str | Path = "C:/gitclones/testFrs/polragion/testset/polarion_workitems_testset_2000_en/polarion_workitems_testset_2000_en.json"
-=======
+
     json_data_source: str | Path = ""
->>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
+
 
     # =======================================================================
     #   Security Config
@@ -74,17 +77,10 @@ class Settings(BaseSettings):
 
     # =======================================================================
     #   Polarion Config
-<<<<<<< HEAD
-    polarion_host: str = "https://keb10650.keba.co.at/polarion/"
-    polarion_user: str = "sb"
-    polarion_password: str = "safetybot"
-    polarion_import_config_path: str = "C:/gitclones/testFrs/polragion/docker/polarion-import-config.json"
-=======
     polarion_host: str = ""
     polarion_user: str = ""
     polarion_password: str = ""
     polarion_import_config_path: str = ""
->>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
 
 
     @cached_property

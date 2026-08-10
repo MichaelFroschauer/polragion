@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Requ
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
     get_ai_service
-from polragion.api.schemas import IngestResponse, WorkItemSearchHit, WorkItemAskResponse, WorkItemSearchResponse
+from polragion.api.models import IngestResponse, WorkItemSearchHit, WorkItemAskResponse, WorkItemSearchResponse
 from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService, WorkItemSearchResult
 from polragion.domain.data_fetcher import DataFetcher

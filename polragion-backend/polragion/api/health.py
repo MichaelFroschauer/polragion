@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from polragion.api.dependencies import get_vector_store
-from polragion.api.schemas import HealthResponse
+from polragion.api.models import HealthResponse
 from polragion.domain.vector_store import VectorStore
 
 router = APIRouter(prefix="/health", tags=["health"])

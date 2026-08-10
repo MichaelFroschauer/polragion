@@ -4,11 +4,8 @@ import httpx
 from fastapi import HTTPException
 from starlette import status
 
-from polragion.infrastructure.copilot_service import GitHubCredentialsMissingError
 from polragion.models.user import OAuthToken, GitHubCredentials
 from polragion.settings import Settings
-from polragion.utils.general import utc_now
-from polragion.utils.token_cipher import TokenCipher
 
 logger = logging.getLogger(__name__)
 

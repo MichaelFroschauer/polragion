@@ -558,8 +558,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "markdownify"
 version = "1.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -573,7 +571,6 @@ wheels = [
 ]
 
 [[package]]
->>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
 name = "mmh3"
 version = "5.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -769,10 +766,7 @@ dependencies = [
     { name = "fastembed" },
     { name = "github-copilot-sdk" },
     { name = "itsdangerous" },
-<<<<<<< HEAD
-=======
     { name = "markdownify" },
->>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
     { name = "polarion" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -797,12 +791,8 @@ requires-dist = [
     { name = "github-copilot-sdk", specifier = "==1.0.8" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<1.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
-<<<<<<< HEAD
-    { name = "polarion", specifier = "==1.4.0" },
-=======
     { name = "markdownify", specifier = "==1.2.3" },
     { name = "polarion", specifier = ">=1.4.0" },
->>>>>>> 195cf09cd3c41af887256f56774551a2fac22c03
     { name = "pydantic", specifier = ">=2.10,<3.0" },
     { name = "pydantic-settings", specifier = "==2.14.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3,<10.0" },

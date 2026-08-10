@@ -17,10 +17,12 @@ class WorkItemSearchHit(BaseModel):
     score: float
     point_id: str
 
+
 class WorkItemSearchResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     work_items: list[WorkItemSearchHit]
+
 
 class WorkItemAskResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")

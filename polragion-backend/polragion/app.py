@@ -26,6 +26,7 @@ from polragion.domain.vector_store import VectorStore
 from polragion.infrastructure.copilot_service import CopilotService
 from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
+from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
 from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
 from polragion.settings import Settings
 
@@ -47,7 +48,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 def create_app(
     *,
     settings: Settings | None = None,
-    vector_store_factory: VectorStoreFactory = QdrantVectorStore,
+    vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
     data_fetcher_factory: DataFetcherFactory = JsonDataFetcher,
     data_worker_factory: DataWorkerFactory = QdrantDataWorker,
 ) -> FastAPI:

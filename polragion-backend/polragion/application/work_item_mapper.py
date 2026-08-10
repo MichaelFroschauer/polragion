@@ -1,6 +1,10 @@
+import logging
+
 from polragion.domain.vector_store import VectorDocument
 from polragion.models.work_item import PolarionWorkItem
+from polragion.utils.text_sanitizer import ParsedDocument, html_to_document
 
+logger = logging.getLogger(__name__)
 
 class WorkItemIndexMapper:
     """Maps domain work items to vector documents.
@@ -11,15 +15,28 @@ class WorkItemIndexMapper:
 
     def to_document(self, work_item: PolarionWorkItem) -> VectorDocument:
         logical_id = f"{work_item.project_id}:{work_item.work_item_id}"
+
+        description_text = work_item.description if work_item.description else ""
+        document: ParsedDocument | None = html_to_document(description_text, remove_boilerplate=True)
+
+        if document is None:
+            logger.warning(f"Document with ID '{logical_id}' could not be html sanitized.")
+            description_embedding_text = description_text
+        else:
+            work_item.description = document.markdown
+            description_embedding_text = document.embedding_text
+
         embedding_text = "\n".join(
             [
                 f"Project: {work_item.project_id}",
+                f"Document: {work_item.document_name}",
                 f"ID: {work_item.work_item_id}",
                 f"Type: {work_item.work_item_type}",
                 f"Status: {work_item.status}",
+                "",
                 f"Title: {work_item.title}",
                 "",
-                work_item.description if work_item.description else "",
+                description_embedding_text,
             ]
         )
 

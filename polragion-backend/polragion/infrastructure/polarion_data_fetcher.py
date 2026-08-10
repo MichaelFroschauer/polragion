@@ -210,6 +210,7 @@ class PolarionDataFetcher:
         return PolarionWorkItem(
             project_id=project_id,
             project_name=project_name,
+            document_name=self._get_document_name(raw_work_item=raw_work_item),
             work_item_id=work_item_id,
             work_item_type=work_item_type,
             title=title if title else "",
@@ -319,6 +320,15 @@ class PolarionDataFetcher:
             return self._text_value(getattr(custom_field, "value", None))
 
         return None
+
+
+    def _get_document_name(self, raw_work_item: Any) -> str:
+        location = getattr(raw_work_item, "location", None)
+        if (location is None or location.strip() == ""):
+            return ""
+
+        result = location.partition('/modules/')[2].partition('/workitems/')[0]
+        return result
 
 
     @staticmethod

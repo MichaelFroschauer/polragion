@@ -26,7 +26,7 @@ class QdrantVectorStore:
         self._settings = settings
         self._collection_name = settings.qdrant_collection_name
         self._model_name = settings.fastembed_dense_model
-        self._client = QdrantClient(url=settings.qdrant_url)
+        self._client = QdrantClient(url=settings.qdrant_url, timeout=settings.qdrant_client_timeout_seconds)
 
     def initialize(self) -> None:
         try:
@@ -107,7 +107,7 @@ class QdrantVectorStore:
                 payload=payloads,
                 ids=[qdrant_point_id(document.id) for document in documents],
                 batch_size=self._settings.qdrant_batch_size,
-                parallel=self._settings.qdrant_parallel,
+                parallel=self._settings.qdrant_upload_parallel,
                 wait=True,
             )
         except Exception as exc:

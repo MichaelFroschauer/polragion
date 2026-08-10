@@ -1,5 +1,7 @@
 import logging
 from collections.abc import Iterable, Mapping
+from itertools import batched
+from time import perf_counter
 from typing import Any, Final
 
 from fastembed import SparseEmbedding, SparseTextEmbedding, TextEmbedding
@@ -27,15 +29,6 @@ _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
 _DOCUMENT_TEXT_PAYLOAD_KEY: Final = "_document_text"
 
-# These sparse models calculate corpus-level IDF inside Qdrant.
-_SPARSE_MODELS_REQUIRING_IDF: Final = frozenset(
-    {
-        "Qdrant/bm25",
-        "Qdrant/bm42-all-minilm-l6-v2-attentions",
-        "Qdrant/minicoil-v1",
-    }
-)
-
 
 class QdrantHybridVectorStore:
     """Dense+sparse retrieval with Qdrant RRF and FastEmbed reranking.
@@ -45,6 +38,8 @@ class QdrantHybridVectorStore:
     """
 
     def __init__(self, settings: Settings) -> None:
+        self._initialized = False
+
         self._settings = settings
         self._collection_name = settings.qdrant_collection_name
         self._dense_model_name = settings.fastembed_dense_model
@@ -52,23 +47,41 @@ class QdrantHybridVectorStore:
         self._reranker_model_name = settings.fastembed_reranker_model
         self._candidate_limit = max(1, int(getattr(settings, "qdrant_hybrid_candidate_limit", 50)))
 
-        self._client = QdrantClient(url=settings.qdrant_url)
+        self._client = QdrantClient(url=settings.qdrant_url, timeout=settings.qdrant_client_timeout_seconds)
         self._sparse_model: SparseTextEmbedding | None = None
         self._dense_model: TextEmbedding | None = None
         self._reranker: TextCrossEncoder | None = None
 
     def initialize(self) -> None:
+        self._initialized = False
+
         try:
             if not self._reranker_model_name:
                 raise VectorStoreConfigurationError("fastembed_reranker_model must be configured")
 
-            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name)
-            self._dense_model = TextEmbedding(model_name=self._dense_model_name)
-            self._reranker = TextCrossEncoder(model_name=self._reranker_model_name)
+            logger.info("Loading sparse model '%s'...", self._sparse_model_name)
+            start = perf_counter()
+            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name, cache_dir=self._settings.fastembed_cache_path)
+            logger.info("Sparse model loaded in %.1fs", perf_counter() - start)
 
+            logger.info("Loading dense model '%s'...", self._dense_model_name)
+            start = perf_counter()
+            self._dense_model = TextEmbedding(model_name=self._dense_model_name, cache_dir=self._settings.fastembed_cache_path)
+            logger.info("Dense model loaded in %.1fs",perf_counter() - start)
+
+            logger.info("Loading reranker '%s'...", self._reranker_model_name)
+            start = perf_counter()
+            self._reranker = TextCrossEncoder(model_name=self._reranker_model_name, cache_dir=self._settings.fastembed_cache_path)
+            logger.info("Reranker loaded in %.1fs", perf_counter() - start)
+
+            logger.info("Determining dense embedding size...")
             expected_size = self._client.get_embedding_size(self._dense_model_name)
+            logger.info("Dense embedding size: %d", expected_size)
 
-            if not self._client.collection_exists(self._collection_name):
+            collection_exists = self._client.collection_exists(self._collection_name)
+            logger.info("Collection exists: %s", collection_exists)
+
+            if not collection_exists:
                 logger.info(
                     "Creating Qdrant collection '%s' with dense model '%s', "
                     "sparse model '%s', and reranker '%s'",
@@ -77,6 +90,8 @@ class QdrantHybridVectorStore:
                     self._sparse_model_name,
                     self._reranker_model_name,
                 )
+
+                start = perf_counter()
                 self._client.create_collection(
                     collection_name=self._collection_name,
                     vectors_config={
@@ -92,84 +107,92 @@ class QdrantHybridVectorStore:
                         )
                     },
                 )
+                logger.info("Qdrant collection created in %.1fs", perf_counter() - start)
 
             self._validate_collection_layout(expected_size)
-            logger.info(
-                "Using validated Qdrant collection '%s'",
-                self._collection_name,
-            )
+            self._initialized = True
+
+            logger.info("Using validated Qdrant collection '%s'", self._collection_name)
+
         except VectorStoreConfigurationError:
+            self._initialized = False
             raise
         except Exception as exc:
-            raise VectorStoreUnavailableError(
-                f"Could not initialize Qdrant at {self._settings.qdrant_url}"
-            ) from exc
+            self._initialized = False
+            raise VectorStoreUnavailableError(f"Could not initialize Qdrant at {self._settings.qdrant_url}") from exc
 
     def upsert(self, documents: Iterable[VectorDocument]) -> None:
-        document_list = list(documents)
-        if not document_list:
-            return
-
         self._ensure_initialized()
-        self._validate_document_metadata(document_list)
 
-        texts = [document.text for document in document_list]
+        for document_batch in batched(documents, self._settings.qdrant_batch_size):
+            document_list = list(document_batch)
+            if not document_list:
+                continue
 
-        try:
-            dense_embeddings = self._make_dense_passage_embeddings(texts)
-            sparse_embeddings = self._make_sparse_passage_embeddings(texts)
+            if not self._validate_document_metadata(document_list):
+                logger.error("Discard batch, because items contains reserved key ...")
+                continue
 
-            if not (
-                len(document_list)
-                == len(dense_embeddings)
-                == len(sparse_embeddings)
-            ):
-                raise VectorStoreUnavailableError(
-                    "FastEmbed returned an unexpected number of embeddings"
-                )
+            texts = [document.text for document in document_list]
 
-            points: list[models.PointStruct] = []
-            for document, dense_embedding, sparse_embedding in zip(
-                document_list,
-                dense_embeddings,
-                sparse_embeddings,
-                strict=True,
-            ):
-                payload = dict(document.metadata)
-                payload[_DOCUMENT_ID_PAYLOAD_KEY] = document.id
-                payload[_INDEX_MODEL_PAYLOAD_KEY] = self._dense_model_name
-                payload[_INDEX_SCHEMA_PAYLOAD_KEY] = (
-                    self._settings.index_schema_version
-                )
-                payload[_DOCUMENT_TEXT_PAYLOAD_KEY] = document.text
+            try:
+                dense_embeddings = self._make_dense_passage_embeddings(texts)
+                sparse_embeddings = self._make_sparse_passage_embeddings(texts)
 
-                points.append(
-                    models.PointStruct(
-                        id=qdrant_point_id(document.id),
-                        vector={
-                            _DENSE_VECTOR_NAME: dense_embedding.tolist(),
-                            _SPARSE_VECTOR_NAME: models.SparseVector(
-                                indices=sparse_embedding.indices.tolist(),
-                                values=sparse_embedding.values.tolist(),
-                            ),
-                        },
-                        payload=payload,
+                if not (len(document_list) == len(dense_embeddings) == len(sparse_embeddings)):
+                    raise VectorStoreUnavailableError("FastEmbed returned an unexpected number of embeddings")
+
+                points: list[models.PointStruct] = []
+                for document, dense_embedding, sparse_embedding in zip(
+                    document_list,
+                    dense_embeddings,
+                    sparse_embeddings,
+                    strict=True,
+                ):
+                    payload = dict(document.metadata)
+                    payload[_DOCUMENT_ID_PAYLOAD_KEY] = document.id
+                    payload[_INDEX_MODEL_PAYLOAD_KEY] = self._dense_model_name
+                    payload[_INDEX_SCHEMA_PAYLOAD_KEY] = self._settings.index_schema_version
+                    payload[_DOCUMENT_TEXT_PAYLOAD_KEY] = document.text
+
+                    points.append(
+                        models.PointStruct(
+                            id=qdrant_point_id(document.id),
+                            vector={
+                                _DENSE_VECTOR_NAME: dense_embedding.tolist(),
+                                _SPARSE_VECTOR_NAME: models.SparseVector(
+                                    indices=sparse_embedding.indices.tolist(),
+                                    values=sparse_embedding.values.tolist(),
+                                ),
+                            },
+                            payload=payload,
+                        )
                     )
-                )
 
-            self._client.upload_points(
-                collection_name=self._collection_name,
-                points=points,
-                batch_size=self._settings.qdrant_batch_size,
-                parallel=self._settings.qdrant_parallel,
-                wait=True,
-            )
-        except VectorStoreConfigurationError:
-            raise
-        except VectorStoreUnavailableError:
-            raise
-        except Exception as exc:
-            raise VectorStoreUnavailableError("Qdrant ingestion failed") from exc
+                logger.info(
+                    "Uploading %d points to Qdrant, text chars=%d, max text chars=%d",
+                    len(points),
+                    sum(len(document.text) for document in document_list),
+                    max(len(document.text) for document in document_list),
+                )
+                self._client.upsert(
+                    collection_name=self._collection_name,
+                    points=points,
+                    wait=True,
+                )
+                # self._client.upload_points(
+                #     collection_name=self._collection_name,
+                #     points=points,
+                #     batch_size=self._settings.qdrant_batch_size,
+                #     parallel=self._settings.qdrant_upload_parallel,
+                #     wait=True,
+                # )
+            except VectorStoreConfigurationError:
+                raise
+            except VectorStoreUnavailableError:
+                raise
+            except Exception as exc:
+                raise VectorStoreUnavailableError("Qdrant ingestion failed") from exc
 
     def search(
         self,
@@ -306,7 +329,7 @@ class QdrantHybridVectorStore:
             model.passage_embed(
                 texts,
                 batch_size=self._settings.qdrant_batch_size,
-                parallel=self._settings.qdrant_parallel,
+                parallel=self._settings.fastembed_parallel,
             )
         )
 
@@ -316,7 +339,7 @@ class QdrantHybridVectorStore:
             model.passage_embed(
                 texts,
                 batch_size=self._settings.qdrant_batch_size,
-                parallel=self._settings.qdrant_parallel,
+                parallel=self._settings.fastembed_parallel,
             )
         )
 
@@ -327,7 +350,7 @@ class QdrantHybridVectorStore:
                 model.query_embed(
                     query,
                     batch_size=1,
-                    parallel=self._settings.qdrant_parallel,
+                    parallel=self._settings.fastembed_parallel,
                 )
             )
         )
@@ -343,7 +366,7 @@ class QdrantHybridVectorStore:
                 model.query_embed(
                     query,
                     batch_size=1,
-                    parallel=self._settings.qdrant_parallel,
+                    parallel=self._settings.fastembed_parallel,
                 )
             )
         )
@@ -384,15 +407,19 @@ class QdrantHybridVectorStore:
             )
 
         expected_modifier = self._sparse_modifier()
-        if expected_modifier is not None and sparse_config.modifier != expected_modifier:
+        if sparse_config.modifier != expected_modifier:
+            expected = expected_modifier.value if expected_modifier else None
+            actual = sparse_config.modifier.value if sparse_config.modifier else None
+
             raise VectorStoreConfigurationError(
-                f"Sparse vector '{_SPARSE_VECTOR_NAME}' must use modifier "
-                f"'{expected_modifier.value}' for model '{self._sparse_model_name}'"
+                f"Sparse vector '{_SPARSE_VECTOR_NAME}' has modifier "
+                f"'{actual}', expected '{expected}' for model "
+                f"'{self._sparse_model_name}'"
             )
 
     def _validate_document_metadata(
         self, documents: Iterable[VectorDocument]
-    ) -> None:
+    ) -> bool:
         reserved_keys = set(_RESERVED_PAYLOAD_KEYS)
         reserved_keys.update(
             {
@@ -403,43 +430,57 @@ class QdrantHybridVectorStore:
             }
         )
 
+        contains_reserved_keys = False
         for document in documents:
             collisions = reserved_keys.intersection(document.metadata)
             if collisions:
                 keys = ", ".join(sorted(collisions))
-                raise VectorStoreConfigurationError(
-                    f"Document '{document.id}' metadata uses reserved keys: {keys}"
-                )
+                logger.error(f"Document '{document.id}' metadata uses reserved keys: {keys}")
+                contains_reserved_keys = True
+
+        return not contains_reserved_keys
+
 
     def _sparse_modifier(self) -> models.Modifier | None:
-        if self._sparse_model_name in _SPARSE_MODELS_REQUIRING_IDF:
+        model_info = next(
+            (
+                model
+                for model in SparseTextEmbedding.list_supported_models()
+                if model["model"] == self._sparse_model_name
+            ),
+            None,
+        )
+
+        if model_info is None:
+            raise VectorStoreConfigurationError(f"Unsupported sparse model '{self._sparse_model_name}'")
+
+        if model_info.get("requires_idf"):
             return models.Modifier.IDF
+
         return None
 
+
     def _ensure_initialized(self) -> None:
+        if not self._initialized:
+            raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must complete successfully first")
+
         self._require_dense_model()
         self._require_sparse_model()
         self._require_reranker()
 
     def _require_dense_model(self) -> TextEmbedding:
         if self._dense_model is None:
-            raise VectorStoreConfigurationError(
-                "QdrantHybridVectorStore.initialize() must be called first"
-            )
+            raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must be called first")
         return self._dense_model
 
     def _require_sparse_model(self) -> SparseTextEmbedding:
         if self._sparse_model is None:
-            raise VectorStoreConfigurationError(
-                "QdrantHybridVectorStore.initialize() must be called first"
-            )
+            raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must be called first")
         return self._sparse_model
 
     def _require_reranker(self) -> TextCrossEncoder:
         if self._reranker is None:
-            raise VectorStoreConfigurationError(
-                "QdrantHybridVectorStore.initialize() must be called first"
-            )
+            raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must be called first")
         return self._reranker
 
     @staticmethod
@@ -447,15 +488,11 @@ class QdrantHybridVectorStore:
         return dict(payload)  # type: ignore[return-value]
 
     def is_ready(self) -> bool:
+        if not self._initialized:
+            return False
+
         try:
-            models_ready = (
-                self._dense_model is not None
-                and self._sparse_model is not None
-                and self._reranker is not None
-            )
-            return models_ready and self._client.collection_exists(
-                self._collection_name
-            )
+            return self._client.collection_exists(self._collection_name)
         except Exception:
             logger.exception("Qdrant readiness check failed")
             return False

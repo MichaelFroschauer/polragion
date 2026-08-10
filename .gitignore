@@ -1,5 +1,6 @@
 **/qdrant_storage/
 **/qdrant_storage*/
+**/cache/
 **/.env
 **/__pycache__/
 **/.idea/
