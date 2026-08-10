@@ -8,6 +8,6 @@ def test_work_item_is_mapped_to_vector_document() -> None:
     document = WorkItemIndexMapper().to_document(item)
 
     assert document.id == "DEMO:REQ-123"
-    assert "The system shall authenticate users" in document.text
+    assert "The system shall authenticate users" in document.dense_text
     assert document.metadata["project_id"] == "DEMO"
     assert document.metadata["workitem_id"] == "REQ-123"

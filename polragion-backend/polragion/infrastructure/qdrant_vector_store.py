@@ -101,7 +101,7 @@ class QdrantVectorStore:
             self._client.upload_collection(
                 collection_name=self._collection_name,
                 vectors=[
-                    models.Document(text=document.text, model=self._model_name)
+                    models.Document(text=document.dense_text, model=self._model_name)
                     for document in documents
                 ],
                 payload=payloads,

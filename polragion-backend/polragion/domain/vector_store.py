@@ -11,7 +11,9 @@ class VectorDocument:
     """Vector-store-independent document to be embedded and indexed."""
 
     id: str
-    text: str
+    dense_text: str
+    sparse_text: str
+    reranker_text: str
     metadata: Metadata
 
 

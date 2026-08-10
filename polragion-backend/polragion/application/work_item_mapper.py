@@ -26,22 +26,35 @@ class WorkItemIndexMapper:
             work_item.description = document.markdown
             description_embedding_text = document.embedding_text
 
-        embedding_text = "\n".join(
-            [
-                f"Project: {work_item.project_id}",
-                f"Document: {work_item.document_name}",
-                f"ID: {work_item.work_item_id}",
-                f"Type: {work_item.work_item_type}",
-                f"Status: {work_item.status}",
-                "",
-                f"Title: {work_item.title}",
-                "",
-                description_embedding_text,
-            ]
-        )
+        dense_text = "\n".join([
+            f"Title: {work_item.title}",
+            "",
+            description_embedding_text,
+        ])
+
+        sparse_text = "\n".join([
+            f"Project: {work_item.project_id}",
+            f"Document: {work_item.document_name}",
+            f"ID: {work_item.work_item_id}",
+            f"Type: {work_item.work_item_type}",
+            f"Title: {work_item.title}",
+            "",
+            description_embedding_text,
+        ])
+
+        reranker_text = "\n".join([
+            f"ID: {work_item.work_item_id}",
+            f"Document: {work_item.document_name}",
+            f"Type: {work_item.work_item_type}",
+            f"Title: {work_item.title}",
+            "",
+            description_embedding_text,
+        ])
 
         return VectorDocument(
             id=logical_id,
-            text=embedding_text,
+            dense_text=dense_text,
+            sparse_text=sparse_text,
+            reranker_text=reranker_text,
             metadata=work_item.model_dump(mode="json"),
         )

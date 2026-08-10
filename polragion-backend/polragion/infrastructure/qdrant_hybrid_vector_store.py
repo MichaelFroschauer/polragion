@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
-_DOCUMENT_TEXT_PAYLOAD_KEY: Final = "_document_text"
+_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
 
 
 class QdrantHybridVectorStore:
@@ -131,11 +131,12 @@ class QdrantHybridVectorStore:
                 logger.error("Discard batch, because items contains reserved key ...")
                 continue
 
-            texts = [document.text for document in document_list]
+            dense_texts = [document.dense_text for document in document_list]
+            sparse_texts = [document.sparse_text for document in document_list]
 
             try:
-                dense_embeddings = self._make_dense_passage_embeddings(texts)
-                sparse_embeddings = self._make_sparse_passage_embeddings(texts)
+                dense_embeddings = self._make_dense_passage_embeddings(dense_texts)
+                sparse_embeddings = self._make_sparse_passage_embeddings(sparse_texts)
 
                 if not (len(document_list) == len(dense_embeddings) == len(sparse_embeddings)):
                     raise VectorStoreUnavailableError("FastEmbed returned an unexpected number of embeddings")
@@ -151,7 +152,7 @@ class QdrantHybridVectorStore:
                     payload[_DOCUMENT_ID_PAYLOAD_KEY] = document.id
                     payload[_INDEX_MODEL_PAYLOAD_KEY] = self._dense_model_name
                     payload[_INDEX_SCHEMA_PAYLOAD_KEY] = self._settings.index_schema_version
-                    payload[_DOCUMENT_TEXT_PAYLOAD_KEY] = document.text
+                    payload[_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY] = document.reranker_text
 
                     points.append(
                         models.PointStruct(
@@ -170,8 +171,8 @@ class QdrantHybridVectorStore:
                 logger.info(
                     "Uploading %d points to Qdrant, text chars=%d, max text chars=%d",
                     len(points),
-                    sum(len(document.text) for document in document_list),
-                    max(len(document.text) for document in document_list),
+                    sum(len(document.sparse_text) for document in document_list),
+                    max(len(document.sparse_text) for document in document_list),
                 )
                 self._client.upsert(
                     collection_name=self._collection_name,
@@ -250,12 +251,12 @@ class QdrantHybridVectorStore:
                     continue
 
                 payload = dict(point.payload)
-                document_text = payload.get(_DOCUMENT_TEXT_PAYLOAD_KEY)
-                if not isinstance(document_text, str):
+                document_reranker_text = payload.get(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY)
+                if not isinstance(document_reranker_text, str):
                     logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
                     continue
 
-                candidates.append((point, payload, document_text))
+                candidates.append((point, payload, document_reranker_text))
 
             if not candidates:
                 return []
@@ -284,7 +285,7 @@ class QdrantHybridVectorStore:
             for (point, payload, _), rerank_score in ranked:
 
                 document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
-                payload.pop(_DOCUMENT_TEXT_PAYLOAD_KEY, None)
+                payload.pop(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY, None)
                 for key in _RESERVED_PAYLOAD_KEYS:
                     payload.pop(key, None)
 
@@ -415,7 +416,7 @@ class QdrantHybridVectorStore:
                 _DOCUMENT_ID_PAYLOAD_KEY,
                 _INDEX_MODEL_PAYLOAD_KEY,
                 _INDEX_SCHEMA_PAYLOAD_KEY,
-                _DOCUMENT_TEXT_PAYLOAD_KEY,
+                _DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY,
             }
         )
 
