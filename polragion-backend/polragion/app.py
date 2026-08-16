@@ -121,6 +121,11 @@ def create_app(
         "http://127.0.0.1",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:5173",
+
+        "https://127.0.0.1",
+        "https://127.0.0.1:8080",
+        "https://127.0.0.1:5173",
+        "https://192.168.178.51:5173"
     ]
     app.add_middleware(
         CORSMiddleware,
