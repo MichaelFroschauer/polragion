@@ -43,8 +43,8 @@ class WorkItemIndexMapper:
         ])
 
         reranker_text = "\n".join([
-            f"ID: {work_item.work_item_id}",
             f"Document: {work_item.document_name}",
+            f"ID: {work_item.work_item_id}",
             f"Type: {work_item.work_item_type}",
             f"Title: {work_item.title}",
             "",

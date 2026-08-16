@@ -55,7 +55,7 @@ export function WorkItemChatEntry({ hit }: WorkItemProps) {
 
             {/* Description */}
             {workItem.description && (
-                <WorkItemDescription html={workItem.description} />
+                <WorkItemDescription markdown={workItem.description} />
             )}
 
             {/* Linked work items */}

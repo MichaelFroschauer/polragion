@@ -17,6 +17,9 @@ class SQLiteDatabase:
         self._create_schema()
 
     def _connect(self) -> sqlite3.Connection:
+        if self._settings.sqlite_file_path is None or self._settings.sqlite_file_path.strip() == "":
+            raise ValueError("SQLite file path not set")
+
         conn = sqlite3.connect(self._settings.sqlite_file_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")

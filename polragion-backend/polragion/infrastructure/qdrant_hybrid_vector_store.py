@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
-_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
+# TODO: Change before next ingest
+#_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
+_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_text"
 
 
 class QdrantHybridVectorStore:

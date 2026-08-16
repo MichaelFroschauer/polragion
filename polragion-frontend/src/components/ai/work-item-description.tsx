@@ -1,62 +1,68 @@
-import {useState} from "react"
+import {useEffect, useRef, useState} from "react"
 import {ChevronDownIcon, ChevronUpIcon} from "lucide-react"
-import DOMPurify from "dompurify"
+import {Streamdown} from "streamdown"
 
-export function WorkItemDescription({html}: { html: string }) {
+export function WorkItemDescription({markdown}: { markdown: string }) {
     const [expanded, setExpanded] = useState(false)
+    const [overflowing, setOverflowing] = useState(false)
+    const clipRef = useRef<HTMLDivElement>(null)
+    const contentRef = useRef<HTMLDivElement>(null)
+
+    // Only measurable while collapsed; the expanded container always fits its content.
+    useEffect(() => {
+        const clip = clipRef.current
+        const content = contentRef.current
+        if (expanded || !clip || !content) return
+
+        const observer = new ResizeObserver(() => {
+            setOverflowing(clip.scrollHeight > clip.clientHeight)
+        })
+        observer.observe(content)
+        return () => observer.disconnect()
+    }, [markdown, expanded])
 
     return (
         <div className="space-y-2">
-            <div className={`overflow-hidden ${expanded ? "" : "max-h-30"}`}>
-                <div className="
-                    prose prose-sm max-w-none
-                    text-muted-foreground
+            <div ref={clipRef} className={`overflow-hidden ${expanded ? "" : "max-h-30"}`}>
+                <div ref={contentRef}>
+                    <Streamdown
+                        parseIncompleteMarkdown={false}
+                        className="
+                            text-sm text-muted-foreground
 
-                    prose-headings:mb-2
-                    prose-headings:mt-4
-                    prose-headings:text-foreground
+                            [&>*:first-child]:mt-0
+                            [&>*:last-child]:mb-0
 
-                    prose-h1:text-base
-                    prose-h2:text-sm
+                            [&_h1]:text-base
+                            [&_h2]:text-sm
+                            [&_:is(h1,h2,h3,h4)]:text-foreground
 
-                    prose-p:my-2
+                            [&_strong]:font-medium
+                            [&_strong]:text-foreground
 
-                    prose-strong:font-medium
-                    prose-strong:text-foreground
-
-                    prose-blockquote:my-3
-                    prose-blockquote:border-l-2
-                    prose-blockquote:pl-3
-
-                    prose-li:my-0
-
-                    prose-table:my-3
-                    prose-th:px-2
-                    prose-th:py-1
-                    prose-td:px-2
-                    prose-td:py-1
-
-                    prose-pre:max-w-full
-                    prose-pre:overflow-x-auto
-                    prose-pre:text-xs
-                    "
-                    dangerouslySetInnerHTML={{
-                        __html: DOMPurify.sanitize(html),
-                    }}
-                />
+                            [&_pre]:max-w-full
+                            [&_pre]:overflow-x-auto
+                            [&_pre]:text-xs
+                        "
+                    >
+                        {markdown}
+                    </Streamdown>
+                </div>
             </div>
 
-            <button
-                type="button"
-                onClick={() => setExpanded(value => !value)}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-                {expanded ? (
-                    <><ChevronUpIcon className="size-3"/> Show less</>
-                ) : (
-                    <><ChevronDownIcon className="size-3"/>Show more</>
-                )}
-            </button>
+            {overflowing && (
+                <button
+                    type="button"
+                    onClick={() => setExpanded(value => !value)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                    {expanded ? (
+                        <><ChevronUpIcon className="size-3"/> Show less</>
+                    ) : (
+                        <><ChevronDownIcon className="size-3"/>Show more</>
+                    )}
+                </button>
+            )}
         </div>
     )
 }
