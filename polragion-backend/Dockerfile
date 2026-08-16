@@ -51,11 +51,14 @@ ENV PATH="/app/.venv/bin:$PATH" \
 COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 COPY --chown=appuser:appuser polragion ./polragion
 
+# The SSL certificates for HTTPS are mounted at runtime (see docker-compose.yaml)
+# into /app/certs, a directory readable by the non-root appuser.
+
 # Writable data directory for the SQLite database (owned by the non-root user).
-RUN mkdir -p /app/data && chown appuser:appuser /app/data
+RUN mkdir -p /app/data /app/certs && chown appuser:appuser /app/data /app/certs
 
 USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "polragion.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "polragion.app:app", "--host", "0.0.0.0", "--port", "8000", "--ssl-keyfile", "/app/certs/lan-key.pem", "--ssl-certfile", "/app/certs/lan-cert.pem"]

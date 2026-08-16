@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173/"
 
     # =======================================================================
+    #   Copilot CLI Config
+    copilot_url: str = "localhost:4321"
+
+    # =======================================================================
     #   Sqlite Config
     sqlite_file_path: str = ""
 
@@ -39,10 +43,10 @@ class Settings(BaseSettings):
 
     #   FastEmbed Simple Embedding Config
     #   https://qdrant.github.io/fastembed/examples/Supported_Models/#supported-text-embedding-models
-    #fastembed_dense_model: str = "BAAI/bge-small-en-v1.5"
+    fastembed_dense_model: str = "BAAI/bge-small-en-v1.5"
 
     #   FastEmbed Hybrid Embedding Config (Dense + Sparse Embedding Hybrid Search)
-    fastembed_dense_model: str = "BAAI/bge-base-en"
+    #fastembed_dense_model: str = "BAAI/bge-base-en"
     fastembed_sparse_model: str = "prithivida/Splade_PP_en_v1"
     fastembed_reranker_model: str = "jinaai/jina-reranker-v1-turbo-en"
     fastembed_cache_path: str = ""
@@ -66,7 +70,7 @@ class Settings(BaseSettings):
     encryption_secret: str = ""
     # The session cookie may only carry the Secure flag when the backend is
     # actually reachable over HTTPS, otherwise the browser discards it.
-    session_cookie_secure: bool = False
+    session_cookie_secure: bool = True
 
     #=======================================================================
     #   GitHub Config

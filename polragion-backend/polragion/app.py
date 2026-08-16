@@ -48,7 +48,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 def create_app(
     *,
     settings: Settings | None = None,
-    vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
+    vector_store_factory: VectorStoreFactory = QdrantVectorStore,
     data_fetcher_factory: DataFetcherFactory = JsonDataFetcher,
     data_worker_factory: DataWorkerFactory = QdrantDataWorker,
 ) -> FastAPI:
@@ -82,7 +82,7 @@ def create_app(
         app.state.github_credentials_repository = github_credentials_repository
 
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
-        app.state.ai_service = CopilotService(app_settings, github_credentials_repository, runtime_url="localhost:4321")
+        app.state.ai_service = CopilotService(app_settings, github_credentials_repository, runtime_url=app_settings.copilot_url)
 
         # TODO Message response handler for streaming
         # def ai_message_event(event: AiMessageEventT) -> None:
@@ -116,16 +116,16 @@ def create_app(
 
     origins = [
         "http://localhost",
-        "http://localhost:8080",
         "http://localhost:5173",
         "http://127.0.0.1",
-        "http://127.0.0.1:8080",
         "http://127.0.0.1:5173",
 
+        "https://localhost",
+        "https://localhost:5173",
         "https://127.0.0.1",
-        "https://127.0.0.1:8080",
         "https://127.0.0.1:5173",
-        "https://192.168.178.51:5173"
+        "https://192.168.178.51:5173",
+        "https://192.168.178.124:5173",
     ]
     app.add_middleware(
         CORSMiddleware,

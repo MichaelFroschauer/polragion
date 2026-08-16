@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
 # 2) Copy the source and build the production bundle into /app/dist.
+#    VITE_API_URL=/api makes the client call the backend through the nginx
+#    /api/ proxy (same-origin), which avoids CORS and mixed-content issues.
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
 COPY . .
 RUN npm run build
 
@@ -25,12 +29,13 @@ RUN npm run build
 FROM nginx:1.27-alpine AS runtime
 
 # Custom nginx config: SPA fallback, gzip and asset caching.
+# The SSL certificates are mounted at runtime (see docker-compose.yaml).
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Only the compiled static assets end up in the final image.
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 80 443
 
 # nginx runs in the foreground so the container stays alive.
 CMD ["nginx", "-g", "daemon off;"]

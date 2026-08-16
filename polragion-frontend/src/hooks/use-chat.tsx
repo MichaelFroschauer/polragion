@@ -71,7 +71,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
         async (message: PromptInputMessage) => {
             const prompt = message.text.trim()
             const msg_mode = mode
-            if (!prompt || !isAuthenticated || status !== "ready") {
+            if (!prompt || (!isAuthenticated && msg_mode === "ask") || status !== "ready") {
                 return
             }
 
