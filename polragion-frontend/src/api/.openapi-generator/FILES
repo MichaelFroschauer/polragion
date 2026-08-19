@@ -3,6 +3,7 @@ apis/GitHubModelsApi.ts
 apis/HealthApi.ts
 apis/WorkItemsApi.ts
 apis/index.ts
+docs/AnswerDetail.md
 docs/ChatHistoryMessage.md
 docs/CopilotModel.md
 docs/CopilotModelSelection.md
@@ -23,6 +24,7 @@ docs/WorkItemSearchHit.md
 docs/WorkItemSearchResponse.md
 docs/WorkItemsApi.md
 index.ts
+models/AnswerDetail.ts
 models/ChatHistoryMessage.ts
 models/CopilotModel.ts
 models/CopilotModelSelection.ts

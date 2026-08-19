@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:api": "openapi-generator-cli generate -i http://localhost:8000/openapi.json -g typescript-fetch -o src/api --additional-properties=supportsES6=true,typescriptThreePlus=true,withInterfaces=true"
+    "generate:api": "openapi-generator-cli generate -i https://localhost:8000/openapi.json -g typescript-fetch -o src/api --additional-properties=supportsES6=true,typescriptThreePlus=true,withInterfaces=true"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

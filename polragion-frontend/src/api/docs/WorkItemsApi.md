@@ -16,7 +16,7 @@ All URIs are relative to *http://localhost*
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(prompt, projectId, limit, scoreThreshold)
+> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, answerDetail)
 
 Ask Work Item
 
@@ -39,9 +39,13 @@ async function example() {
     // string (optional)
     projectId: projectId_example,
     // number (optional)
-    limit: 56,
+    limitWorkItemSearch: 56,
+    // number (optional)
+    limitAiModelWorkItems: 56,
     // number (optional)
     scoreThreshold: 8.14,
+    // AnswerDetail (optional)
+    answerDetail: ...,
   } satisfies AskWorkItemRequest;
 
   try {
@@ -63,8 +67,10 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **prompt** | `string` |  | [Defaults to `undefined`] |
 | **projectId** | `string` |  | [Optional] [Defaults to `undefined`] |
-| **limit** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **limitAiModelWorkItems** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
 

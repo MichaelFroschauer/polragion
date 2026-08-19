@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type AnswerDetail,
+    AnswerDetailFromJSON,
+    AnswerDetailToJSON,
+} from '../models/AnswerDetail';
+import {
     type ChatHistoryMessage,
     ChatHistoryMessageFromJSON,
     ChatHistoryMessageToJSON,
@@ -47,8 +52,10 @@ import {
 export interface AskWorkItemRequest {
     prompt: string;
     projectId?: string | null;
-    limit?: number | null;
+    limitWorkItemSearch?: number | null;
+    limitAiModelWorkItems?: number | null;
     scoreThreshold?: number | null;
+    answerDetail?: AnswerDetail;
 }
 
 export interface IngestWorkItemsRequest {
@@ -81,8 +88,10 @@ export interface WorkItemsApiInterface {
      * Creates request options for askWorkItem without sending the request
      * @param {string} prompt 
      * @param {string} [projectId] 
-     * @param {number} [limit] 
+     * @param {number} [limitWorkItemSearch] 
+     * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
+     * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
@@ -93,8 +102,10 @@ export interface WorkItemsApiInterface {
      * @summary Ask Work Item
      * @param {string} prompt 
      * @param {string} [projectId] 
-     * @param {number} [limit] 
+     * @param {number} [limitWorkItemSearch] 
+     * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
+     * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -274,12 +285,20 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
             queryParameters['project_id'] = requestParameters['projectId'];
         }
 
-        if (requestParameters['limit'] != null) {
-            queryParameters['limit'] = requestParameters['limit'];
+        if (requestParameters['limitWorkItemSearch'] != null) {
+            queryParameters['limit_work_item_search'] = requestParameters['limitWorkItemSearch'];
+        }
+
+        if (requestParameters['limitAiModelWorkItems'] != null) {
+            queryParameters['limit_ai_model_work_items'] = requestParameters['limitAiModelWorkItems'];
         }
 
         if (requestParameters['scoreThreshold'] != null) {
             queryParameters['score_threshold'] = requestParameters['scoreThreshold'];
+        }
+
+        if (requestParameters['answerDetail'] != null) {
+            queryParameters['answer_detail'] = requestParameters['answerDetail'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

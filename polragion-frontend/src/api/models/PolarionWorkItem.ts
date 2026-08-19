@@ -63,6 +63,12 @@ export interface PolarionWorkItem {
      * @type {string}
      * @memberof PolarionWorkItem
      */
+    documentName?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PolarionWorkItem
+     */
     title?: string;
     /**
      * 
@@ -127,6 +133,7 @@ export function PolarionWorkItemFromJSONTyped(json: any, ignoreDiscriminator: bo
         'projectName': json['project_name'] === undefined ? undefined : json['project_name'] === null ? null : json['project_name'],
         'workItemId': json['work_item_id'],
         'workItemType': json['work_item_type'],
+        'documentName': json['document_name'] === undefined ? undefined : json['document_name'] === null ? null : json['document_name'],
         'title': json['title'] == null ? undefined : json['title'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'revision': json['revision'],
@@ -152,6 +159,7 @@ export function PolarionWorkItemToJSONTyped(value?: PolarionWorkItem | null, ign
         'project_name': value['projectName'],
         'work_item_id': value['workItemId'],
         'work_item_type': value['workItemType'],
+        'document_name': value['documentName'],
         'title': value['title'],
         'description': value['description'],
         'revision': value['revision'],

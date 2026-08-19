@@ -10,6 +10,7 @@ interface GitHubAuthContextValue {
   isLoading: boolean
   login: () => void
   logout: () => Promise<void>
+  switchAccount: () => void
   refresh: () => Promise<void>
 }
 
@@ -48,9 +49,15 @@ export function GitHubAuthProvider({ children }: PropsWithChildren) {
     }
   }, [])
 
+  const switchAccount = useCallback(() => {
+    // Full page redirect, the backend handles the OAuth dance and redirects back.
+    window.location.href = `${apiBasePath}/auth/github/switch-account`
+    console.log(`${apiBasePath}/auth/github/switch-account`)
+  }, [])
+
   const value = useMemo<GitHubAuthContextValue>(
-    () => ({ user, isAuthenticated: user !== null, isLoading, login, logout, refresh }),
-    [user, isLoading, login, logout, refresh],
+    () => ({ user, isAuthenticated: user !== null, isLoading, login, logout, switchAccount, refresh }),
+    [user, isLoading, login, logout, switchAccount, refresh],
   )
 
   return <GitHubAuthContext.Provider value={value}>{children}</GitHubAuthContext.Provider>

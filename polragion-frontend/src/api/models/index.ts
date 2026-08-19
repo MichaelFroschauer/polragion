@@ -1,5 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
+export * from './AnswerDetail';
 export * from './ChatHistoryMessage';
 export * from './CopilotModel';
 export * from './CopilotModelSelection';

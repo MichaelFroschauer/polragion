@@ -14,10 +14,19 @@
 
 import * as runtime from '../runtime';
 import {
+    type HTTPValidationError,
+    HTTPValidationErrorFromJSON,
+    HTTPValidationErrorToJSON,
+} from '../models/HTTPValidationError';
+import {
     type User,
     UserFromJSON,
     UserToJSON,
 } from '../models/User';
+
+export interface GithubLoginRequest {
+    selectAccount?: boolean;
+}
 
 /**
  * GitHubAuthenticationApi - interface
@@ -28,24 +37,47 @@ import {
 export interface GitHubAuthenticationApiInterface {
     /**
      * Creates request options for githubLogin without sending the request
+     * @param {boolean} [selectAccount] 
      * @throws {RequiredError}
      * @memberof GitHubAuthenticationApiInterface
      */
-    githubLoginRequestOpts(): Promise<runtime.RequestOpts>;
+    githubLoginRequestOpts(requestParameters: GithubLoginRequest): Promise<runtime.RequestOpts>;
 
     /**
      * 
      * @summary Github Login
+     * @param {boolean} [selectAccount] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof GitHubAuthenticationApiInterface
      */
-    githubLoginRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+    githubLoginRaw(requestParameters: GithubLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
 
     /**
      * Github Login
      */
-    githubLogin(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+    githubLogin(requestParameters: GithubLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
+
+    /**
+     * Creates request options for githubSwitchAccount without sending the request
+     * @throws {RequiredError}
+     * @memberof GitHubAuthenticationApiInterface
+     */
+    githubSwitchAccountRequestOpts(): Promise<runtime.RequestOpts>;
+
+    /**
+     * 
+     * @summary Github Switch Account
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof GitHubAuthenticationApiInterface
+     */
+    githubSwitchAccountRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>>;
+
+    /**
+     * Github Switch Account
+     */
+    githubSwitchAccount(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void>;
 
     /**
      * Creates request options for logout without sending the request
@@ -99,8 +131,12 @@ export class GitHubAuthenticationApi extends runtime.BaseAPI implements GitHubAu
     /**
      * Creates request options for githubLogin without sending the request
      */
-    async githubLoginRequestOpts(): Promise<runtime.RequestOpts> {
+    async githubLoginRequestOpts(requestParameters: GithubLoginRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
+
+        if (requestParameters['selectAccount'] != null) {
+            queryParameters['select_account'] = requestParameters['selectAccount'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -118,8 +154,8 @@ export class GitHubAuthenticationApi extends runtime.BaseAPI implements GitHubAu
     /**
      * Github Login
      */
-    async githubLoginRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.githubLoginRequestOpts();
+    async githubLoginRaw(requestParameters: GithubLoginRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.githubLoginRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -128,8 +164,44 @@ export class GitHubAuthenticationApi extends runtime.BaseAPI implements GitHubAu
     /**
      * Github Login
      */
-    async githubLogin(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.githubLoginRaw(initOverrides);
+    async githubLogin(requestParameters: GithubLoginRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.githubLoginRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for githubSwitchAccount without sending the request
+     */
+    async githubSwitchAccountRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/auth/github/switch-account`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Github Switch Account
+     */
+    async githubSwitchAccountRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.githubSwitchAccountRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Github Switch Account
+     */
+    async githubSwitchAccount(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.githubSwitchAccountRaw(initOverrides);
     }
 
     /**

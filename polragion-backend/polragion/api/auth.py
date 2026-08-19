@@ -52,9 +52,9 @@ async def _exchange_code_for_token(code: str, settings: Settings) -> tuple[OAuth
 
 
 async def get_current_user(
-        request: Request,
-        user_repository: Annotated[UserRepository, Depends(get_user_repository)],
-        session_service: Annotated[SessionService, Depends(get_session_service)],
+    request: Request,
+    user_repository: Annotated[UserRepository, Depends(get_user_repository)],
+    session_service: Annotated[SessionService, Depends(get_session_service)],
 ) -> User:
 
     raw_session_token = request.session.get("sid")
@@ -82,24 +82,11 @@ async def get_current_user(
     status_code=status.HTTP_303_SEE_OTHER
 )
 async def github_login(
-        request: Request,
-        settings: Annotated[Settings, Depends(get_settings)],
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+    select_account: bool = False,
 ):
-    state = secrets.token_urlsafe(32)
-
-    request.session["github_oauth_state"] = state
-
-    query = urlencode(
-        {
-            "client_id": settings.github_client_id,
-            "redirect_uri": settings.github_redirect_uri,
-            "state": state,
-        }
-    )
-
-    authorization_url = f"https://github.com/login/oauth/authorize?{query}"
-
-    return RedirectResponse(url=authorization_url, status_code=status.HTTP_303_SEE_OTHER)
+    return _create_github_login_redirect(request=request, settings=settings, select_account=select_account)
 
 
 @router.get(
@@ -160,15 +147,10 @@ async def github_callback(
     status_code=status.HTTP_200_OK,
 )
 async def logout(
-        request: Request,
-        session_service: Annotated[SessionService, Depends(get_session_service)],
+    request: Request,
+    session_service: Annotated[SessionService, Depends(get_session_service)],
 ):
-    raw_session_token = request.session.get("sid")
-
-    if isinstance(raw_session_token, str):
-        await session_service.revoke_session(raw_session_token)
-
-    request.session.clear()
+    await _logout(request=request, session_service=session_service)
     return {"authenticated": False}
 
 
@@ -178,11 +160,57 @@ async def logout(
     response_model=User,
 )
 async def me(
-        current_user: Annotated[User, Depends(get_current_user)]
+    current_user: Annotated[User, Depends(get_current_user)]
 ) -> User:
     return current_user
-    # {
-    #     "id": str(current_user.id),
-    #     "github_user_id": current_user.github_user_id,
-    #     "username": current_user.username,
-    # }
+
+
+@router.get(
+    "/switch-account",
+    status_code=status.HTTP_303_SEE_OTHER
+)
+async def github_switch_account(
+        request: Request,
+        settings: Annotated[Settings, Depends(get_settings)],
+        session_service: Annotated[SessionService, Depends(get_session_service)],
+):
+    await _logout(request=request, session_service=session_service)
+    return _create_github_login_redirect(request=request, settings=settings, select_account=True)
+
+
+def _create_github_login_redirect(
+    request: Request,
+    settings: Settings,
+    *,
+    select_account: bool = False,
+) -> RedirectResponse:
+    state = secrets.token_urlsafe(32)
+    request.session["github_oauth_state"] = state
+
+    params = {
+        "client_id": settings.github_client_id,
+        "redirect_uri": settings.github_redirect_uri,
+        "state": state,
+    }
+
+    if select_account:
+        params["prompt"] = "select_account"
+
+    query = urlencode(params)
+
+    return RedirectResponse(
+        url=f"https://github.com/login/oauth/authorize?{query}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+async def _logout(
+    request: Request,
+    session_service: SessionService,
+):
+    raw_session_token = request.session.get("sid")
+
+    if isinstance(raw_session_token, str):
+        await session_service.revoke_session(raw_session_token)
+
+    request.session.clear()

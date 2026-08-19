@@ -1,5 +1,6 @@
 import json
 import logging
+from enum import StrEnum
 from pathlib import Path
 from textwrap import dedent
 from time import perf_counter
@@ -151,9 +152,43 @@ def search_work_items(
     return WorkItemSearchResponse(work_items=work_item_search_hits)
 
 
+class AnswerDetail(StrEnum):
+    AUTO = "auto"
+    SHORT = "short"
+    STANDARD = "standard"
+    DETAILED = "detailed"
+
+ANSWER_DETAIL_INSTRUCTIONS: dict[AnswerDetail, str] = {
+    AnswerDetail.AUTO: """
+        Choose the response length and level of detail that best fits the
+        user's question. Prefer concise answers for simple questions and
+        provide more detail when necessary.
+    """,
+    AnswerDetail.SHORT: """
+        Give a very short and direct answer.
+        Include only the exact information necessary to answer the question.
+        Avoid extended explanations, background information, and repetition.
+        The user wants a very short and direct answer.
+    """,
+    AnswerDetail.STANDARD: """
+        Give a balanced answer.
+        Include enough explanation and context to make the answer easy to
+        understand, but avoid unnecessary detail and repetition.
+        The user wants a concise but not too long answer.
+    """,
+    AnswerDetail.DETAILED: """
+        Give a thorough explanation.
+        Include relevant context, relationships, important details,
+        ambiguities, and implications supported by the available evidence.
+        Prefer completeness over brevity, while avoiding repetition.
+        The user wants a detailed answer with thorough information and explanation.
+    """,
+}
+
 def build_work_item_ai_prompt(
     user_prompt: str,
     hits: list[WorkItemSearchHit],
+    answer_detail: AnswerDetail = AnswerDetail.AUTO,
 ) -> str:
     retrieved_work_items = [
         {
@@ -181,6 +216,10 @@ def build_work_item_ai_prompt(
         .replace("<", "\\u003c")
         .replace(">", "\\u003e")
     )
+
+    answer_detail_instruction = dedent(
+        ANSWER_DETAIL_INSTRUCTIONS[answer_detail]
+    ).strip()
 
     return dedent(
         f"""
@@ -258,6 +297,10 @@ def build_work_item_ai_prompt(
         Example:
         This is a statement that was fetched out of a specific work item. [Polragion:WI-1234]
         </citation_rules>
+        
+        <response_detail level="{answer_detail.value}">
+        {answer_detail_instruction}
+        </response_detail>
 
         <response_rules>
         1. Answer in the same language as the user's request unless the user
@@ -317,8 +360,10 @@ async def ask_work_item(
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
-    limit: Annotated[int | None, Query(ge=1)] = None,
+    limit_work_item_search: Annotated[int | None, Query(ge=1)] = None,
+    limit_ai_model_work_items: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
+    answer_detail: Annotated[AnswerDetail, Query()] = AnswerDetail.AUTO,
 ) -> WorkItemAskResponse:
 
     hits: WorkItemSearchResponse = search_work_items(
@@ -327,11 +372,12 @@ async def ask_work_item(
         prompt=prompt,
         work_item_service=work_item_service,
         project_id=project_id,
-        limit=limit,
+        limit=limit_work_item_search,
         score_threshold=score_threshold,
     )
 
-    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=hits.work_items)
+    work_items = hits.work_items[:limit_ai_model_work_items]
+    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=work_items, answer_detail=answer_detail)
 
     response: CopilotResponseMessage = await ai_service.send_message(
         CopilotSendMessage(

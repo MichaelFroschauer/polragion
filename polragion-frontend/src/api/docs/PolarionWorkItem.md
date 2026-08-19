@@ -11,6 +11,7 @@ Name | Type
 `projectName` | string
 `workItemId` | string
 `workItemType` | string
+`documentName` | string
 `title` | string
 `description` | string
 `revision` | number
@@ -30,6 +31,7 @@ const example = {
   "projectName": null,
   "workItemId": null,
   "workItemType": null,
+  "documentName": null,
   "title": null,
   "description": null,
   "revision": null,

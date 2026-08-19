@@ -3,7 +3,7 @@ import type {ChatStatus} from "ai";
 import {workItemsApi} from "@/api/client.ts";
 import {useGitHubAuth} from "@/hooks/use-github-auth.tsx";
 import type {PromptInputMessage} from "@/components/ai/prompt-input.tsx";
-import type {WorkItemAskResponse, WorkItemSearchResponse} from "@/api";
+import {AnswerDetail, type WorkItemAskResponse, type WorkItemSearchResponse} from "@/api";
 
 export type ChatMode = "ask" | "search"
 
@@ -84,7 +84,14 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
             try {
                 const answer =
                     msg_mode === "ask"
-                        ? await workItemsApi.askWorkItem({ prompt })
+                        ? await workItemsApi.askWorkItem({
+                            prompt,
+                            projectId: null,
+                            limitWorkItemSearch: 50,
+                            limitAiModelWorkItems: 20,
+                            scoreThreshold: 0.4,
+                            answerDetail: AnswerDetail.Auto,
+                        })
                         : await workItemsApi.searchWorkItems({ prompt })
                         // : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
 

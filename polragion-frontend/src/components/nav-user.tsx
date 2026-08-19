@@ -23,7 +23,7 @@ import {
 import {
   ChevronsUpDownIcon,
   LogOutIcon,
-  LogInIcon, SquarePen
+  LogInIcon, SquarePen, ArrowLeftRight
 } from "lucide-react"
 import {useGitHubAuth} from "@/hooks/use-github-auth.tsx";
 import {Skeleton} from "@/components/ui/skeleton.tsx";
@@ -31,7 +31,7 @@ import {Skeleton} from "@/components/ui/skeleton.tsx";
 export function NavUser() {
   const { isMobile } = useSidebar()
 
-  const { user, isLoading, login, logout } = useGitHubAuth()
+  const { user, isLoading, login, logout, switchAccount } = useGitHubAuth()
 
   if (isLoading) {
     return <Skeleton className="h-8 w-28 rounded-md" />
@@ -124,9 +124,12 @@ export function NavUser() {
               New chat
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={switchAccount}>
+              <ArrowLeftRight />
+              Switch account
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={logout}>
-              <LogOutIcon
-              />
+              <LogOutIcon />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
