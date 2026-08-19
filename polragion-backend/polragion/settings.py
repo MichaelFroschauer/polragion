@@ -85,6 +85,9 @@ class Settings(BaseSettings):
     polarion_user: str = ""
     polarion_password: str = ""
     polarion_import_config_path: str = ""
+    # Path to the Polarion server's CA certificate (PEM). When set, it is merged
+    # with the certifi bundle at runtime.
+    polarion_ca_cert_path: str = ""
 
 
     @cached_property

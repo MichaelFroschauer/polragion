@@ -1,4 +1,6 @@
 import logging
+import os
+import tempfile
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, Literal
@@ -109,18 +111,42 @@ class PolarionDataFetcher:
         self._batch_size = settings.max_ingest_batch_size
         self._import_config = import_config
 
-        # ca_bundle = create_ca_bundle(
-        #     company_ca_path=Path("certificates/company-ca.pem"),
-        #     output_path=Path(".runtime/combined-ca-bundle.pem"),
-        # )
+        verify_certificate = self._configure_ca_trust(settings)
 
         self._client = polarion.Polarion(
             polarion_url=settings.polarion_host,
             user=settings.polarion_user,
             password=settings.polarion_password,
-            # verify_certificate=str(ca_bundle),
+            verify_certificate=verify_certificate,
         )
         self._tracker_service = self._client.getService("Tracker")
+
+
+    @staticmethod
+    def _configure_ca_trust(settings: Settings) -> bool | str:
+        """Trust the Polarion server's CA without editing the image's certifi bundle.
+
+        Builds a combined bundle (certifi defaults + Polarion CA) and points
+        requests/OpenSSL at it via REQUESTS_CA_BUNDLE/SSL_CERT_FILE.
+        """
+
+        ca_path = settings.polarion_ca_cert_path.strip()
+        if not ca_path:
+            return True
+
+        company_ca = Path(ca_path)
+        if not company_ca.is_file():
+            raise FileNotFoundError(f"Polarion CA certificate not found: {company_ca}")
+
+        bundle = create_ca_bundle(
+            company_ca_path=company_ca,
+            output_path=Path(tempfile.gettempdir()) / "polragion-combined-ca-bundle.pem",
+        )
+
+        os.environ["REQUESTS_CA_BUNDLE"] = str(bundle)
+        os.environ["SSL_CERT_FILE"] = str(bundle)
+
+        return str(bundle)
 
 
     def fetch_data(self, limit: int | None = None) -> Iterable[PolarionWorkItem]:
