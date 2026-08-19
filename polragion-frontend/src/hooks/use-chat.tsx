@@ -3,7 +3,13 @@ import type {ChatStatus} from "ai";
 import {workItemsApi} from "@/api/client.ts";
 import {useGitHubAuth} from "@/hooks/use-github-auth.tsx";
 import type {PromptInputMessage} from "@/components/ai/prompt-input.tsx";
-import {AnswerDetail, type WorkItemAskResponse, type WorkItemSearchResponse} from "@/api";
+import {
+    AnswerDetail,
+    AnswerDetailFromJSON,
+    AnswerDetailFromJSONTyped,
+    type WorkItemAskResponse,
+    type WorkItemSearchResponse
+} from "@/api";
 
 export type ChatMode = "ask" | "search"
 
@@ -90,7 +96,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                             limitWorkItemSearch: 50,
                             limitAiModelWorkItems: 20,
                             scoreThreshold: 0.4,
-                            answerDetail: AnswerDetail.Auto,
+                            answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
                         : await workItemsApi.searchWorkItems({ prompt })
                         // : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))

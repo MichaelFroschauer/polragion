@@ -1,6 +1,6 @@
-import { BrainIcon, CheckIcon, ChevronsUpDownIcon, EyeIcon, LockIcon } from "lucide-react"
+import {BrainIcon, CheckIcon, ChevronsUpDownIcon, EyeIcon, Layers2, LockIcon} from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import type { CopilotModel, CopilotModelSelection } from "@/api"
+import {AnswerDetail, AnswerDetailToJSON, type CopilotModel, type CopilotModelSelection} from "@/api"
 import { gitHubModelsApi } from "@/api/client"
 import {
   ModelSelector,
@@ -68,6 +68,20 @@ function effortLabel(effort: string) {
   return EFFORT_LABELS[effort] ?? effort
 }
 
+function responseLengthLabel(responseLength: string) {
+    switch (responseLength) {
+      case "short":
+        return "Short"
+      case "standard":
+        return "Standard"
+      case "detailed":
+        return "Detailed"
+      default:
+        // case "auto":
+        return "Automatic"
+    }
+}
+
 function isBlockedByPolicy(model: CopilotModel) {
   return model.policyState != null && model.policyState !== "enabled"
 }
@@ -101,6 +115,7 @@ export function ModelPicker() {
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<CopilotModel[]>([])
   const [selection, setSelection] = useState<CopilotModelSelection | null>(null)
+  const [answerDetailSelection, setAnswerDetailSelection] = useState<AnswerDetail | null>(AnswerDetail.Auto)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -134,6 +149,10 @@ export function ModelPicker() {
     }
   }, [isAuthenticated])
 
+  useEffect(() => {
+    localStorage.setItem("answerDetailSelection", AnswerDetailToJSON(answerDetailSelection) ?? "");
+  }, [answerDetailSelection]);
+
   const applySelection = useCallback(
     async (model: CopilotModel, reasoningEffort?: string | null) => {
       // Optimistic update, the backend response is authoritative.
@@ -163,21 +182,47 @@ export function ModelPicker() {
 
   function CapabilityTooltip({label, children}: { label: React.ReactNode, children: React.ReactNode }) {
     return (
-        <Tooltip>
-          <TooltipTrigger
-              render={
-                <span className="inline-flex">
-                  {children}
-                </span>
-              }
-          />
-          <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              {children}
+            </span>
+          }
+        />
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
     )
   }
 
   return (
     <div className="flex items-center gap-2">
+
+      <Select
+        items={Object.values(AnswerDetail).map(detail => ({ label: responseLengthLabel(detail), value: detail }))}
+        onValueChange={(value) => setAnswerDetailSelection(value as AnswerDetail)}
+        value={answerDetailSelection ?? AnswerDetail.Auto}
+      >
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <SelectTrigger aria-label="Reasoning effort" size="sm">
+                <Layers2 className="size-3.5 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+            }
+          />
+          <TooltipContent>Model response length</TooltipContent>
+        </Tooltip>
+        <SelectContent>
+          {Object.values(AnswerDetail).map(detail => (
+            <SelectItem key={detail} value={detail}>
+              {responseLengthLabel(detail)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       {supportsEffort && (
         <Select
           items={efforts.map(effort => ({ label: effortLabel(effort), value: effort }))}
@@ -186,7 +231,12 @@ export function ModelPicker() {
               void applySelection(selected, value)
             }
           }}
-          value={selection?.reasoningEffort ?? selected?.defaultReasoningEffort ?? null}
+          value={
+              selection?.reasoningEffort ??
+              selected?.defaultReasoningEffort ??
+              selected?.supportedReasoningEfforts?.at((selected?.supportedReasoningEfforts.length - 1) / 2)
+              ?? null
+          }
         >
           <Tooltip>
             <TooltipTrigger
