@@ -154,14 +154,24 @@ export function ModelPicker() {
   }, [answerDetailSelection]);
 
   const applySelection = useCallback(
-    async (model: CopilotModel, reasoningEffort?: string | null) => {
+    async (model: CopilotModel, reasoningEffort: string | null) => {
+
+      let appliedReasoningEffort: string | undefined = reasoningEffort ?? undefined
+      if (!appliedReasoningEffort) {
+        appliedReasoningEffort = model.defaultReasoningEffort ?? undefined
+      }
+      if (!appliedReasoningEffort && model.supportedReasoningEfforts?.length) {
+        const middleIndex = Math.floor((model.supportedReasoningEfforts.length - 1) / 2)
+        appliedReasoningEffort = model.supportedReasoningEfforts[middleIndex] ?? undefined
+      }
+
       // Optimistic update, the backend response is authoritative.
-      setSelection({ model, reasoningEffort: reasoningEffort ?? model.defaultReasoningEffort })
+      setSelection({ model, reasoningEffort: appliedReasoningEffort })
       try {
         setSelection(
           await gitHubModelsApi.setUserModel({
             modelId: model.id,
-            reasoningEffort: reasoningEffort ?? undefined,
+            reasoningEffort: appliedReasoningEffort,
           }),
         )
       } catch {
@@ -297,7 +307,7 @@ export function ModelPicker() {
                           if (blocked) {
                             return
                           }
-                          void applySelection(model)
+                          void applySelection(model, null)
                           setOpen(false)
                         }}
                         value={`${model.name} ${model.id}`}
