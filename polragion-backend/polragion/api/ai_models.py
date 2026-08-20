@@ -40,9 +40,10 @@ class CopilotModelSelection(BaseModel):
 
 def _resolve_reasoning_effort(model: CopilotModel, requested_effort: str | None) -> str | None:
     supported = model.supported_reasoning_efforts or []
+    requested_effort = requested_effort.strip() if requested_effort else None
 
     if not model.supports_reasoning_effort or not supported:
-        if requested_effort is not None:
+        if requested_effort:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Model {model.id} does not support a reasoning effort",

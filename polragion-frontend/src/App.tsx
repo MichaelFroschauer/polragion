@@ -6,6 +6,7 @@ import { Chat } from "@/components/ai/chat.tsx";
 import { GitHubAuthProvider } from "@/hooks/use-github-auth.tsx";
 import {TooltipProvider} from "@/components/ui/tooltip.tsx";
 import {ChatContextProvider} from "@/hooks/use-chat.tsx";
+import {SettingsProvider} from "@/hooks/use-settings.tsx";
 
 function App() {
     const [showIntro, setShowIntro] = useState(() => {
@@ -20,6 +21,7 @@ function App() {
     return (
         <TooltipProvider>
         <GitHubAuthProvider>
+        <SettingsProvider>
         <ChatContextProvider>
             {/* Is rendered directly without delay */}
             <Page>
@@ -41,6 +43,7 @@ function App() {
                 </div>
             )}
         </ChatContextProvider>
+        </SettingsProvider>
         </GitHubAuthProvider>
         </TooltipProvider>
     )

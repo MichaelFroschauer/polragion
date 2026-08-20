@@ -252,7 +252,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
                 model=self._user_models.get(user_id, self.default_model_id),
-                reasoning_effort=self._user_reasoning_efforts.get(user_id),
+                reasoning_effort=self._user_reasoning_efforts.get(user_id, None),
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
                 available_tools=["custom:*"],

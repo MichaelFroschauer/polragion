@@ -2,7 +2,6 @@ import type { ReactNode } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { GitHubAuthButton } from "@/components/ai/github-auth-button"
 import { ModelPicker } from "@/components/ai/model-picker"
-import { Separator } from "@/components/ui/separator"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
 interface PageProps {
@@ -16,10 +15,7 @@ export default function Page({ children }: PageProps) {
             <SidebarInset className="min-h-0 overflow-hidden">
                 <header className="flex h-14 shrink-0 items-center gap-2 px-4">
                     <SidebarTrigger className="-ml-1" />
-                    <Separator
-                        orientation="vertical"
-                        className="data-[orientation=vertical]:h-4"
-                    />
+
                     <div className="ml-auto flex items-center gap-2">
                         <GitHubAuthButton />
                         <ModelPicker />

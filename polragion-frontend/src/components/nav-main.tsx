@@ -8,10 +8,11 @@ import {
 import {BookOpenIcon, Info, Settings2Icon, SquarePen} from "lucide-react"
 import {
     AlertDialog, AlertDialogAction, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog.tsx";
 import {useState} from "react";
 import {useChat} from "@/hooks/use-chat.tsx";
+import {SettingsDialog} from "@/components/settings-dialog.tsx";
 
 
 export function NavMain() {
@@ -32,14 +33,13 @@ export function NavMain() {
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setOpen(true)}><Settings2Icon />Settings</SidebarMenuButton>
+                    <SettingsDialog
+                        trigger={<SidebarMenuButton><Settings2Icon />Settings</SidebarMenuButton>}
+                    />
                 </SidebarMenuItem>
             </SidebarMenu>
 
             <AlertDialog open={open} onOpenChange={setOpen}>
-                <AlertDialogTrigger>
-                </AlertDialogTrigger>
-
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <div className="flex items-center gap-2">

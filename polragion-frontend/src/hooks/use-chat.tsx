@@ -6,10 +6,10 @@ import type {PromptInputMessage} from "@/components/ai/prompt-input.tsx";
 import {
     AnswerDetail,
     AnswerDetailFromJSON,
-    AnswerDetailFromJSONTyped,
     type WorkItemAskResponse,
     type WorkItemSearchResponse
 } from "@/api";
+import {useSettings} from "@/hooks/use-settings.tsx";
 
 export type ChatMode = "ask" | "search"
 
@@ -32,10 +32,12 @@ interface ChatContextValue {
     resetSession: () => Promise<void>
 }
 
-const UseChat = createContext<ChatContextValue | null>(null);
+const ChatContext = createContext<ChatContextValue | null>(null);
 
 export function ChatContextProvider({ children }: PropsWithChildren) {
     const { isAuthenticated } = useGitHubAuth()
+    const { settings } = useSettings()
+
     const [mode, setMode] = useState<ChatMode>("ask")
     const [entries, setEntries] = useState<ChatEntry[]>([])
     const [status, setStatus] = useState<ChatStatus>("ready")
@@ -93,9 +95,9 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                         ? await workItemsApi.askWorkItem({
                             prompt,
                             projectId: null,
-                            limitWorkItemSearch: 50,
-                            limitAiModelWorkItems: 20,
-                            scoreThreshold: 0.4,
+                            limitWorkItemSearch: settings.workItemSearch.maxResults,
+                            limitAiModelWorkItems: settings.aiSearch.maxResultsForAi,
+                            scoreThreshold: settings.workItemSearch.minScore,
                             answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
                         : await workItemsApi.searchWorkItems({ prompt })
@@ -140,12 +142,12 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
     )
 
     return (
-        <UseChat.Provider value={value}>{children}</UseChat.Provider>
+        <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
     )
 }
 
 export function useChat(): ChatContextValue {
-    const context = useContext(UseChat);
+    const context = useContext(ChatContext);
     if (!context) {
         throw new Error("useChat must be used within a ChatContextProvider");
     }
