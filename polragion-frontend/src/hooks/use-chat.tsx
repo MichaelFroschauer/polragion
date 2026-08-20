@@ -98,9 +98,16 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                             limitWorkItemSearch: settings.workItemSearch.maxResults,
                             limitAiModelWorkItems: settings.aiSearch.maxResultsForAi,
                             scoreThreshold: settings.workItemSearch.minScore,
+                            doReranking: settings.workItemSearch.doReranking,
                             answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
-                        : await workItemsApi.searchWorkItems({ prompt })
+                        : await workItemsApi.searchWorkItems({
+                            prompt,
+                            projectId: null,
+                            limit: settings.workItemSearch.maxResults,
+                            scoreThreshold: settings.workItemSearch.minScore,
+                            doReranking: settings.workItemSearch.doReranking,
+                        })
                         // : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
 
                 setEntries(current => [

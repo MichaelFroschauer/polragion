@@ -26,7 +26,7 @@ import {
 import {
     NumberSetting,
     SettingsSection,
-    SliderSetting,
+    SliderSetting, SwitchSetting,
     TextareaSetting,
 } from "@/components/settings/setting-fields.tsx"
 
@@ -202,6 +202,17 @@ export function SettingsDialog({
                                     step={limits.workItemSearch.minScore.step}
                                     value={draft.workItemSearch.minScore}
                                 />
+
+                                <SwitchSetting
+                                    hint="If enabled, the search results are reranked using a hybrid approach that combines vector similarity and keyword matching. This can improve the relevance of the results, especially for queries that contain specific terms. But it also increases the search time and cost drastically, so use it only if necessary."
+                                    id="work-item-do-reranking"
+                                    label="Hybrid search reranking"
+                                    onChange={function (checked: boolean): void {
+                                        setWorkItemSearch({doReranking: checked})
+                                    }}
+                                    checked={draft.workItemSearch.doReranking}
+                                />
+
                             </SettingsSection>
                         </TabsContent>
 

@@ -111,10 +111,8 @@ def search_work_items(
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
     limit: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
+    do_reranking: bool | None = None,
 ) -> WorkItemSearchResponse:
-
-    # TODO: Remove
-    limit = 50
 
     effective_limit = limit or settings.search_default_limit
     if effective_limit > settings.search_max_limit:
@@ -133,6 +131,7 @@ def search_work_items(
         limit=effective_limit,
         project_id=project_id,
         score_threshold=effective_threshold,
+        do_reranking=do_reranking,
     )
     logger.info(
         "Work-item search returned %d results in %.3f seconds",
@@ -363,6 +362,7 @@ async def ask_work_item(
     limit_work_item_search: Annotated[int | None, Query(ge=1)] = None,
     limit_ai_model_work_items: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
+    do_reranking: bool | None = None,
     answer_detail: Annotated[AnswerDetail, Query()] = AnswerDetail.AUTO,
 ) -> WorkItemAskResponse:
 
@@ -374,6 +374,7 @@ async def ask_work_item(
         project_id=project_id,
         limit=limit_work_item_search,
         score_threshold=score_threshold,
+        do_reranking=do_reranking,
     )
 
     work_items = hits.work_items[:limit_ai_model_work_items]

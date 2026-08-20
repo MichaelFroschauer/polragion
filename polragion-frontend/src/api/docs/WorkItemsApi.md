@@ -16,7 +16,7 @@ All URIs are relative to *http://localhost*
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, answerDetail)
+> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, answerDetail)
 
 Ask Work Item
 
@@ -44,6 +44,8 @@ async function example() {
     limitAiModelWorkItems: 56,
     // number (optional)
     scoreThreshold: 8.14,
+    // boolean (optional)
+    doReranking: true,
     // AnswerDetail (optional)
     answerDetail: ...,
   } satisfies AskWorkItemRequest;
@@ -70,6 +72,7 @@ example().catch(console.error);
 | **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **limitAiModelWorkItems** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
@@ -409,7 +412,7 @@ No authorization required
 
 ## searchWorkItems
 
-> WorkItemSearchResponse searchWorkItems(prompt, projectId, limit, scoreThreshold)
+> WorkItemSearchResponse searchWorkItems(prompt, projectId, limit, scoreThreshold, doReranking)
 
 Search Work Items
 
@@ -435,6 +438,8 @@ async function example() {
     limit: 56,
     // number (optional)
     scoreThreshold: 8.14,
+    // boolean (optional)
+    doReranking: true,
   } satisfies SearchWorkItemsRequest;
 
   try {
@@ -458,6 +463,7 @@ example().catch(console.error);
 | **projectId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **limit** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

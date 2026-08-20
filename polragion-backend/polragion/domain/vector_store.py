@@ -24,6 +24,7 @@ class VectorSearchHit:
     document_id: str
     point_id: str
     score: float
+    reranker_score: float | None
     metadata: Mapping[str, JsonValue]
 
 
@@ -45,6 +46,7 @@ class VectorStore(Protocol):
         limit: int,
         project_id: str | None = None,
         score_threshold: float | None = None,
+        **kwargs
     ) -> list[VectorSearchHit]:
         """Find documents ordered by descending semantic similarity."""
         ...

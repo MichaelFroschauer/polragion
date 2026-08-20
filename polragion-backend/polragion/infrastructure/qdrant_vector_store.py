@@ -4,6 +4,7 @@ from typing import Any
 
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.http.models import CollectionInfo
 
 from polragion.domain.vector_store import (
     JsonValue,
@@ -44,10 +45,15 @@ class QdrantVectorStore:
                         size=expected_size,
                         distance=models.Distance.COSINE,
                     ),
+                    metadata={
+                        "embedding_models": {
+                            "dense_model": self._model_name,
+                        }
+                    },
                 )
                 return
 
-            collection_info = self._client.get_collection(self._collection_name)
+            collection_info: CollectionInfo = self._client.get_collection(self._collection_name)
             self._validate_collection(collection_info, expected_size)
             logger.info(
                 "Using validated Qdrant collection '%s'",
@@ -60,7 +66,7 @@ class QdrantVectorStore:
                 f"Could not initialize Qdrant at {self._settings.qdrant_url}"
             ) from exc
 
-    def _validate_collection(self, collection_info: Any, expected_size: int) -> None:
+    def _validate_collection(self, collection_info: CollectionInfo, expected_size: int) -> None:
         vectors = collection_info.config.params.vectors
 
         if isinstance(vectors, Mapping):
@@ -83,6 +89,24 @@ class QdrantVectorStore:
             raise VectorStoreConfigurationError(
                 f"Collection '{self._collection_name}' uses distance "
                 f"{actual_distance}, expected cosine distance."
+            )
+
+        collection_metadata = collection_info.config.metadata
+        if not collection_metadata:
+            logger.warning(f"Collection '{self._collection_name}' has no metadata to check embedding models.")
+            return
+
+        collection_embedding_info = collection_metadata["embedding_models"]
+        if not collection_embedding_info["dense_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' was created without saving the used dense embedding model as metadata."
+            )
+
+        if self._settings.fastembed_dense_model != collection_embedding_info["dense_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' uses different dense embedding model "
+                f"configured in settings: '{self._settings.fastembed_dense_model}' "
+                f"embedding model of collection: '{collection_embedding_info["dense_model"]}'."
             )
 
     def upsert(self, documents: Iterable[VectorDocument]) -> None:
@@ -120,6 +144,7 @@ class QdrantVectorStore:
         limit: int,
         project_id: str | None = None,
         score_threshold: float | None = None,
+        **kwargs
     ) -> list[VectorSearchHit]:
         query_filter = None
         if project_id is not None:

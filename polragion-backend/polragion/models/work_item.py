@@ -22,7 +22,7 @@ class CustomFields(BaseModel):
 class PolarionWorkItem(BaseModel):
     """Validated domain representation of a Polarion work item."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     project_id: str = Field(min_length=1, max_length=128)
     project_name: str | None = Field(default=None, max_length=128)

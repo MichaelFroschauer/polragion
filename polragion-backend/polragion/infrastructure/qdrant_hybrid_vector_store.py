@@ -8,6 +8,7 @@ from fastembed import SparseEmbedding, SparseTextEmbedding, TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.http.models import CollectionInfo
 
 from polragion.domain.vector_store import JsonValue, VectorDocument, VectorSearchHit
 from polragion.infrastructure.errors import (
@@ -78,10 +79,7 @@ class QdrantHybridVectorStore:
             expected_size = self._client.get_embedding_size(self._dense_model_name)
             logger.info("Dense embedding size: %d", expected_size)
 
-            collection_exists = self._client.collection_exists(self._collection_name)
-            logger.info("Collection exists: %s", collection_exists)
-
-            if not collection_exists:
+            if not self._client.collection_exists(self._collection_name):
                 logger.info(
                     "Creating Qdrant collection '%s' with dense model '%s', "
                     "sparse model '%s', and reranker '%s'",
@@ -90,8 +88,6 @@ class QdrantHybridVectorStore:
                     self._sparse_model_name,
                     self._reranker_model_name,
                 )
-
-                start = perf_counter()
                 self._client.create_collection(
                     collection_name=self._collection_name,
                     vectors_config={
@@ -106,10 +102,17 @@ class QdrantHybridVectorStore:
                             modifier=self._sparse_modifier(),
                         )
                     },
+                    metadata={
+                        "embedding_models": {
+                            "dense_model": self._dense_model_name,
+                            "sparse_model": self._sparse_model_name,
+                            "reranker_model": self._reranker_model_name,
+                        }
+                    },
                 )
-                logger.info("Qdrant collection created in %.1fs", perf_counter() - start)
 
-            self._validate_collection_layout(expected_size)
+            collection_info: CollectionInfo = self._client.get_collection(self._collection_name)
+            self._validate_collection(collection_info, expected_size)
             self._initialized = True
 
             logger.info("Using validated Qdrant collection '%s'", self._collection_name)
@@ -202,6 +205,7 @@ class QdrantHybridVectorStore:
         limit: int,
         project_id: str | None = None,
         score_threshold: float | None = None,
+        **kwargs
     ) -> list[VectorSearchHit]:
         if limit <= 0 or not query.strip():
             return []
@@ -246,62 +250,86 @@ class QdrantHybridVectorStore:
                 with_payload=True,
             )
 
-            candidates: list[tuple[models.ScoredPoint, dict[str, Any], str]] = []
+            if not kwargs.get("do_reranking", False):
+                hits: list[VectorSearchHit] = []
+                for point in response.points:
+                    if point.payload is None:
+                        continue
 
-            for point in response.points:
-                if point.payload is None:
-                    continue
+                    payload = dict(point.payload)
+                    document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
+                    for key in _RESERVED_PAYLOAD_KEYS:
+                        payload.pop(key, None)
 
-                payload = dict(point.payload)
-                document_reranker_text = payload.get(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY)
-                if not isinstance(document_reranker_text, str):
-                    logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
-                    continue
+                    hits.append(
+                        VectorSearchHit(
+                            document_id=document_id,
+                            point_id=str(point.id),
+                            score=float(point.score),
+                            reranker_score=None,
+                            metadata=self._as_json_mapping(payload),
+                        )
+                    )
+                    if len(hits) >= limit:
+                        break
 
-                candidates.append((point, payload, document_reranker_text))
+            else:
+                candidates: list[tuple[models.ScoredPoint, dict[str, Any], str]] = []
 
-            if not candidates:
-                return []
+                for point in response.points:
+                    if point.payload is None:
+                        continue
 
-            reranker = self._require_reranker()
-            rerank_scores = list(
-                reranker.rerank(
-                    query,
-                    [document_text for _, _, document_text in candidates],
-                    batch_size=self._settings.qdrant_batch_size,
-                )
-            )
-            if len(rerank_scores) != len(candidates):
-                raise VectorStoreUnavailableError("FastEmbed reranker returned an unexpected number of scores")
+                    payload = dict(point.payload)
+                    document_reranker_text = payload.get(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY)
+                    if not isinstance(document_reranker_text, str):
+                        logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
+                        continue
 
-            ranked = sorted(
-                zip(candidates, rerank_scores, strict=True),
-                key=lambda item: (
-                    float(item[1]),
-                    float(item[0][0].score),
-                ),
-                reverse=True,
-            )
+                    candidates.append((point, payload, document_reranker_text))
 
-            hits: list[VectorSearchHit] = []
-            for (point, payload, _), rerank_score in ranked:
+                if not candidates:
+                    return []
 
-                document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
-                payload.pop(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY, None)
-                for key in _RESERVED_PAYLOAD_KEYS:
-                    payload.pop(key, None)
-
-                hits.append(
-                    VectorSearchHit(
-                        document_id=document_id,
-                        point_id=str(point.id),
-                        #score=float(point.score),
-                        score=float(rerank_score),
-                        metadata=self._as_json_mapping(payload),
+                reranker = self._require_reranker()
+                rerank_scores = list(
+                    reranker.rerank(
+                        query,
+                        [document_text for _, _, document_text in candidates],
+                        batch_size=self._settings.fastembed_reranker_batch_size,
                     )
                 )
-                if len(hits) >= limit:
-                    break
+                if len(rerank_scores) != len(candidates):
+                    raise VectorStoreUnavailableError("FastEmbed reranker returned an unexpected number of scores")
+
+                ranked = sorted(
+                    zip(candidates, rerank_scores, strict=True),
+                    key=lambda item: (
+                        float(item[1]),
+                        float(item[0][0].score),
+                    ),
+                    reverse=True,
+                )
+
+                hits: list[VectorSearchHit] = []
+                for (point, payload, _), rerank_score in ranked:
+
+                    document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
+                    payload.pop(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY, None)
+                    for key in _RESERVED_PAYLOAD_KEYS:
+                        payload.pop(key, None)
+
+                    hits.append(
+                        VectorSearchHit(
+                            document_id=document_id,
+                            point_id=str(point.id),
+                            score=float(point.score),
+                            reranker_score=float(rerank_score),
+                            metadata=self._as_json_mapping(payload),
+                        )
+                    )
+                    if len(hits) >= limit:
+                        break
 
             return hits
         except VectorStoreConfigurationError:
@@ -364,7 +392,7 @@ class QdrantHybridVectorStore:
         )
         return embedding.tolist()
 
-    def _validate_collection_layout(self, expected_dense_size: int) -> None:
+    def _validate_collection(self, collection_info: CollectionInfo, expected_dense_size: int) -> None:
         collection = self._client.get_collection(self._collection_name)
         vectors = collection.config.params.vectors
         sparse_vectors = collection.config.params.sparse_vectors or {}
@@ -408,6 +436,49 @@ class QdrantHybridVectorStore:
                 f"'{actual}', expected '{expected}' for model "
                 f"'{self._sparse_model_name}'"
             )
+
+        collection_metadata = collection_info.config.metadata
+        if not collection_metadata:
+            logger.warning(f"Collection '{self._collection_name}' has no metadata to check embedding and reranker models.")
+            return
+
+        collection_embedding_info = collection_metadata["embedding_models"]
+        if not collection_embedding_info["dense_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' was created without saving the used dense embedding model as metadata."
+            )
+
+        if self._settings.fastembed_dense_model != collection_embedding_info["dense_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' uses different dense embedding model "
+                f"configured in settings: '{self._settings.fastembed_dense_model}' "
+                f"embedding model of collection: '{collection_embedding_info["dense_model"]}'."
+            )
+
+        if not collection_embedding_info["sparse_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' was created without saving the used sparse embedding model as metadata."
+            )
+
+        if self._settings.fastembed_sparse_model != collection_embedding_info["sparse_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' uses different sparse embedding model "
+                f"configured in settings: '{self._settings.fastembed_sparse_model}' "
+                f"embedding model of collection: '{collection_embedding_info["sparse_model"]}'."
+            )
+
+        if not collection_embedding_info["reranker_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' was created without saving the used reranker embedding model as metadata."
+            )
+
+        if self._settings.fastembed_reranker_model != collection_embedding_info["reranker_model"]:
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' uses different reranker model "
+                f"configured in settings: '{self._settings.fastembed_reranker_model}' "
+                f"model of collection: '{collection_embedding_info["reranker_model"]}'."
+            )
+
 
     def _validate_document_metadata(
         self, documents: Iterable[VectorDocument]

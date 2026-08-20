@@ -207,7 +207,7 @@ type SwitchSettingProps = Omit<SettingRowProps, "children" | "controlClassName">
 export function SwitchSetting({checked, onChange, ...row}: SwitchSettingProps) {
     return (
         <SettingRow controlClassName="@md/field-group:w-auto!" {...row}>
-            <Switch checked={checked} id={row.id} onCheckedChange={(next) => onChange(next)}/>
+            <Switch checked={checked} id={row.id} onCheckedChange={(next) => onChange(next)} />
         </SettingRow>
     )
 }

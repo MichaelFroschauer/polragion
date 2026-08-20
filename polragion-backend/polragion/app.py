@@ -48,7 +48,7 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 def create_app(
     *,
     settings: Settings | None = None,
-    vector_store_factory: VectorStoreFactory = QdrantVectorStore,
+    vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
     data_fetcher_factory: DataFetcherFactory = JsonDataFetcher,
     data_worker_factory: DataWorkerFactory = QdrantDataWorker,
 ) -> FastAPI:

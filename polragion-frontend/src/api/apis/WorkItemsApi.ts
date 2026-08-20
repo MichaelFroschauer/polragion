@@ -55,6 +55,7 @@ export interface AskWorkItemRequest {
     limitWorkItemSearch?: number | null;
     limitAiModelWorkItems?: number | null;
     scoreThreshold?: number | null;
+    doReranking?: boolean | null;
     answerDetail?: AnswerDetail;
 }
 
@@ -75,6 +76,7 @@ export interface SearchWorkItemsRequest {
     projectId?: string | null;
     limit?: number | null;
     scoreThreshold?: number | null;
+    doReranking?: boolean | null;
 }
 
 /**
@@ -91,6 +93,7 @@ export interface WorkItemsApiInterface {
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
+     * @param {boolean} [doReranking] 
      * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -105,6 +108,7 @@ export interface WorkItemsApiInterface {
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
+     * @param {boolean} [doReranking] 
      * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -234,6 +238,7 @@ export interface WorkItemsApiInterface {
      * @param {string} [projectId] 
      * @param {number} [limit] 
      * @param {number} [scoreThreshold] 
+     * @param {boolean} [doReranking] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
      */
@@ -246,6 +251,7 @@ export interface WorkItemsApiInterface {
      * @param {string} [projectId] 
      * @param {number} [limit] 
      * @param {number} [scoreThreshold] 
+     * @param {boolean} [doReranking] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -295,6 +301,10 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
 
         if (requestParameters['scoreThreshold'] != null) {
             queryParameters['score_threshold'] = requestParameters['scoreThreshold'];
+        }
+
+        if (requestParameters['doReranking'] != null) {
+            queryParameters['do_reranking'] = requestParameters['doReranking'];
         }
 
         if (requestParameters['answerDetail'] != null) {
@@ -566,6 +576,10 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
 
         if (requestParameters['scoreThreshold'] != null) {
             queryParameters['score_threshold'] = requestParameters['scoreThreshold'];
+        }
+
+        if (requestParameters['doReranking'] != null) {
+            queryParameters['do_reranking'] = requestParameters['doReranking'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

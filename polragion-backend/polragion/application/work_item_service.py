@@ -34,12 +34,14 @@ class WorkItemService:
         limit: int,
         project_id: str | None = None,
         score_threshold: float | None = None,
+        **kwargs
     ) -> list[WorkItemSearchResult]:
         hits = self._vector_store.search(
             query,
             limit=limit,
             project_id=project_id,
             score_threshold=score_threshold,
+            **kwargs
         )
 
         return [

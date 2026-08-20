@@ -4,6 +4,7 @@ import {createContext, type PropsWithChildren, useCallback, useContext, useEffec
 interface WorkItemSearchSettings {
     maxResults: number
     minScore: number
+    doReranking: boolean
 }
 
 interface AiSearchSettings {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     workItemSearch: {
         maxResults: 100,
         minScore: 0.3,
+        doReranking: false,
     },
 
     aiSearch: {
@@ -39,7 +41,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
  */
 export const SETTINGS_LIMITS = {
     workItemSearch: {
-        maxResults: {min: 1, max: 500, step: 1, integer: true},
+        maxResults: {min: 1, max: 200, step: 1, integer: true},
         minScore: {min: 0, max: 1, step: 0.01, integer: false},
     },
     aiSearch: {
@@ -52,6 +54,7 @@ export const SETTINGS_LIMITS = {
 export type SettingsFieldPath =
     | "workItemSearch.maxResults"
     | "workItemSearch.minScore"
+    | "workItemSearch.doReranking"
     | "aiSearch.maxResultsForAi"
     | "customUserSystemPrompt"
 
