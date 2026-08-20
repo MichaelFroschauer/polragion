@@ -56,6 +56,7 @@ export interface AskWorkItemRequest {
     limitAiModelWorkItems?: number | null;
     scoreThreshold?: number | null;
     doReranking?: boolean | null;
+    userDefinedSystemPrompt?: string | null;
     answerDetail?: AnswerDetail;
 }
 
@@ -94,6 +95,7 @@ export interface WorkItemsApiInterface {
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
+     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -109,6 +111,7 @@ export interface WorkItemsApiInterface {
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
+     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -305,6 +308,10 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
 
         if (requestParameters['doReranking'] != null) {
             queryParameters['do_reranking'] = requestParameters['doReranking'];
+        }
+
+        if (requestParameters['userDefinedSystemPrompt'] != null) {
+            queryParameters['user_defined_system_prompt'] = requestParameters['userDefinedSystemPrompt'];
         }
 
         if (requestParameters['answerDetail'] != null) {

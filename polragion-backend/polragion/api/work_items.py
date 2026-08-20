@@ -186,6 +186,7 @@ ANSWER_DETAIL_INSTRUCTIONS: dict[AnswerDetail, str] = {
 
 def build_work_item_ai_prompt(
     user_prompt: str,
+    user_system_prompt: str | None,
     hits: list[WorkItemSearchHit],
     answer_detail: AnswerDetail = AnswerDetail.AUTO,
 ) -> str:
@@ -333,6 +334,10 @@ def build_work_item_ai_prompt(
         {context_json}
         </retrieved_work_items>
 
+        <user_system_prompt>
+        {user_system_prompt.strip() if user_system_prompt else ""}
+        </user_system_prompt>
+
         <user_request>
         {user_prompt.strip()}
         </user_request>
@@ -363,6 +368,7 @@ async def ask_work_item(
     limit_ai_model_work_items: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     do_reranking: bool | None = None,
+    user_defined_system_prompt: str | None = None,
     answer_detail: Annotated[AnswerDetail, Query()] = AnswerDetail.AUTO,
 ) -> WorkItemAskResponse:
 
@@ -378,7 +384,7 @@ async def ask_work_item(
     )
 
     work_items = hits.work_items[:limit_ai_model_work_items]
-    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, hits=work_items, answer_detail=answer_detail)
+    ai_prompt = build_work_item_ai_prompt(user_prompt=prompt, user_system_prompt=user_defined_system_prompt, hits=work_items, answer_detail=answer_detail)
 
     response: CopilotResponseMessage = await ai_service.send_message(
         CopilotSendMessage(

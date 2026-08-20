@@ -22,13 +22,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
     version: 1,
 
     workItemSearch: {
-        maxResults: 100,
-        minScore: 0.3,
+        maxResults: 200,
+        minScore: 0.05,
         doReranking: false,
     },
 
     aiSearch: {
-        maxResultsForAi: 50,
+        maxResultsForAi: 100,
     },
 
     customUserSystemPrompt: undefined,

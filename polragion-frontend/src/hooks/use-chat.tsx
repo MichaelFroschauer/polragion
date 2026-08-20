@@ -99,6 +99,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                             limitAiModelWorkItems: settings.aiSearch.maxResultsForAi,
                             scoreThreshold: settings.workItemSearch.minScore,
                             doReranking: settings.workItemSearch.doReranking,
+                            userDefinedSystemPrompt: settings.customUserSystemPrompt,
                             answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
                         : await workItemsApi.searchWorkItems({

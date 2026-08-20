@@ -16,7 +16,7 @@ All URIs are relative to *http://localhost*
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, answerDetail)
+> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
 
 Ask Work Item
 
@@ -46,6 +46,8 @@ async function example() {
     scoreThreshold: 8.14,
     // boolean (optional)
     doReranking: true,
+    // string (optional)
+    userDefinedSystemPrompt: userDefinedSystemPrompt_example,
     // AnswerDetail (optional)
     answerDetail: ...,
   } satisfies AskWorkItemRequest;
@@ -73,6 +75,7 @@ example().catch(console.error);
 | **limitAiModelWorkItems** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **userDefinedSystemPrompt** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
