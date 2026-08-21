@@ -32,18 +32,19 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     # ports:
-    #   - "${BACKEND_PORT:-8000}:8000"
+    #   - "${BACKEND_PORT:-8000}:8000"  # can be switched off in production -> must only be accessible from within the docker network (because of nginx redirect)
     env_file:
-      - .env
+      - .env.backend
     environment:
       - DEBUG=False
       - QDRANT_URL=http://vector-db:6333
       - FASTEMBED_CACHE_PATH=/app/cache/fastembed
       - COPILOT_URL=copilot-cli:4321
-      - GITHUB_REDIRECT_URI=https://localhost:${FRONTEND_PORT:-443}/api/auth/github/callback
-      - FRONTEND_URL=https://localhost:${FRONTEND_PORT:-443}/
+      - GITHUB_REDIRECT_URI=https://${HOST_IP:-localhost}:${FRONTEND_PORT:-443}/api/auth/github/callback  # can be the same IP as the frontend URL because nginx will route the request to the backend
+      - FRONTEND_URL=https://${HOST_IP:-localhost}:${FRONTEND_PORT:-443}/
       - SQLITE_FILE_PATH=/app/data/polragion.db
       - POLARION_CA_CERT_PATH=/app/certs/polarion-ca.pem
+      - POLARION_IMPORT_CONFIG_PATH=/app/data/polarion-import-config.json
     volumes:
       - ./backend-data:/app/data:Z
       - ./cache:/app/cache:Z
@@ -69,6 +70,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: /api
+        VITE_POLARION_WEB_URL: ${VITE_POLARION_WEB_URL:-}
     restart: unless-stopped
     ports:
       - "${FRONTEND_HTTP_PORT:-80}:80"

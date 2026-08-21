@@ -103,6 +103,7 @@ def create_app(
         version="1.0.0",
         lifespan=lifespan,
         generate_unique_id_function=custom_generate_unique_id,
+        root_path="/api",
     )
 
     app.add_middleware(

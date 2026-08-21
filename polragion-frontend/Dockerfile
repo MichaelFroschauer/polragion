@@ -20,6 +20,8 @@ RUN --mount=type=cache,target=/root/.npm \
 #    /api/ proxy (same-origin), which avoids CORS and mixed-content issues.
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_POLARION_WEB_URL
+ENV VITE_POLARION_WEB_URL=$VITE_POLARION_WEB_URL
 COPY . .
 RUN npm run build
 

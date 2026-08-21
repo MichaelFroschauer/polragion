@@ -5,10 +5,13 @@
       "project_id": "Project_1",
       "enabled": true,
       "documents": [
-        "My_fancy_test_document"
+        {
+          "name": "My_fancy_test_document",
+          "category": "system-requirement-specification"
+        }
       ],
       "work_items": {
-        "query": null,
+        "query": "NOT type:(testequipment heading)",
         "common_fields": [
           "id",
           "title",

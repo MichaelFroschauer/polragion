@@ -63,11 +63,45 @@ const loadingQuotes = [
     "Preparing a suspiciously confident answer...",
 ]
 
+function AskMessageResponse({response}: {response: WorkItemAskResponse}) {
+    const [isOpen, setIsOpen] = useState(false)
+
+    return (
+        <>
+            <MessageResponse>{linkifyWorkItemReferences(response.answer)}</MessageResponse>
+            <Collapsible
+                className="w-full mt-2 space-y-2"
+                open={isOpen}
+                onOpenChange={setIsOpen}
+            >
+                <CollapsibleTrigger className="flex items-center gap-2 font-medium text-sm hover:underline">
+                    {isOpen ? (
+                        <Minus className="h-4 w-4" />
+                    ) : (
+                        <Plus className="h-4 w-4" />
+                    )}
+                    {isOpen ? "Hide used work items" : "Show used work items"}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2">
+                    {response.workItems.map((wi, index) =>
+                            <div className="divide-y" key={wi.workItem.workItemId}>
+                                <Fragment>
+                                    {index > 0 && <Separator />}
+                                    <WorkItemChatEntry hit={wi} />
+                                </Fragment>
+                            </div>
+                        )
+                    }
+                </CollapsibleContent>
+            </Collapsible>
+        </>
+    )
+}
+
 export function Chat() {
     const {isAuthenticated, isLoading: isAuthLoading, login} = useGitHubAuth()
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const {entries, status, mode, setMode, handleSubmit} = useChat()
-    const [isOpen, setIsOpen] = useState(false)
 
     const [loadingQuote, setLoadingQuote] = useState(
         () => loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)],
@@ -85,43 +119,13 @@ export function Chat() {
 
     function getMessageResponse(contentType: ChatContentType, response: WorkItemSearchResponse | WorkItemAskResponse | string) {
         if (contentType === "ask") {
-            const ask_response = response as WorkItemAskResponse;
-
-            return (
-                <>
-                    <MessageResponse>{linkifyWorkItemReferences(ask_response.answer)}</MessageResponse>
-                    <Collapsible
-                        className="w-full mt-2 space-y-2"
-                        open={isOpen}
-                        onOpenChange={setIsOpen}
-                    >
-                        <CollapsibleTrigger className="flex items-center gap-2 font-medium text-sm hover:underline">
-                            {isOpen ? (
-                                <Minus className="h-4 w-4" />
-                            ) : (
-                                <Plus className="h-4 w-4" />
-                            )}
-                            {isOpen ? "Hide used work items" : "Show used work items"}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-2">
-                            {ask_response.workItems.map((wi, index) =>
-                                    <div className="divide-y" key={wi.workItem.workItemId}>
-                                        <Fragment>
-                                            {index > 0 && <Separator />}
-                                            <WorkItemChatEntry hit={wi} />
-                                        </Fragment>
-                                    </div>
-                                )
-                            }
-                        </CollapsibleContent>
-                    </Collapsible>
-                </>
-            )
+            const askResponse = response as WorkItemAskResponse;
+            return <AskMessageResponse response={askResponse} />
         } else if (contentType === "search") {
-            const search_response = response as WorkItemSearchResponse;
-            return search_response.workItems.map((wi, index) =>
-                <div className="divide-y">
-                    <Fragment key={wi.workItem.workItemId}>
+            const searchResponse = response as WorkItemSearchResponse;
+            return searchResponse.workItems.map((wi, index) =>
+                <div className="divide-y" key={wi.workItem.workItemId}>
+                    <Fragment>
                         {index > 0 && <Separator />}
                         <WorkItemChatEntry hit={wi} />
                     </Fragment>

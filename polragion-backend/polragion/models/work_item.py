@@ -31,6 +31,7 @@ class PolarionWorkItem(BaseModel):
     work_item_type:  str = Field(min_length=1, max_length=128)
 
     document_name: str | None = Field(default=None, max_length=1024)
+    document_category: str | None = Field(default=None, max_length=128)
 
     title: str = Field(default="", max_length=5_000)
     description: str | None = Field(default=None, max_length=500_000)

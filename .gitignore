@@ -2,6 +2,8 @@
 **/qdrant_storage*/
 **/cache/
 **/.env
+**/.env*
+!**/.env*.example
 **/__pycache__/
 **/.idea/
 **/*.db

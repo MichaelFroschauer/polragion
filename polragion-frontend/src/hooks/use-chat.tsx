@@ -90,6 +90,9 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
             setStatus("submitted")
 
             try {
+                console.log("Submitting prompt to backend:", prompt, "mode:", msg_mode)
+                console.log("Settings used for submission:", settings)
+
                 const answer =
                     msg_mode === "ask"
                         ? await workItemsApi.askWorkItem({
@@ -131,7 +134,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                 setTimeout(() => setStatus("ready"), 1500)
             }
         },
-        [isAuthenticated, mode, status],
+        [isAuthenticated, mode, status, settings],
     )
 
     const resetSession = useCallback(async () => {

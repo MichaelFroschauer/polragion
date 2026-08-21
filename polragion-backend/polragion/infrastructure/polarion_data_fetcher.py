@@ -57,11 +57,14 @@ class WorkItemImportConfig(StrictModel):
 
         return list(dict.fromkeys(fields))
 
+class ProjectDocument(StrictModel):
+    name: str
+    category: str
 
 class ProjectImportConfig(StrictModel):
     project_id: str
     enabled: bool = True
-    documents: list[str]
+    documents: list[ProjectDocument]
     work_items: WorkItemImportConfig
 
 
@@ -177,7 +180,10 @@ class PolarionDataFetcher:
 
             for document in project_config.documents:
 
-                query = self._build_query(document=document, work_item_query=project_config.work_items.query)
+                document_name = document.name
+                document_category = document.category
+
+                query = self._build_query(document=document_name, work_item_query=project_config.work_items.query)
 
                 remaining = -1 if limit is None else limit - fetched
 
@@ -192,7 +198,7 @@ class PolarionDataFetcher:
                 )
 
                 if len(raw_work_items) <= 0:
-                    logger.warning(f"No work items found in {document} with query: {query}")
+                    logger.warning(f"No work items found in {document_name} with query: {query}")
 
                 batch: list[PolarionWorkItem] = []
 
@@ -201,6 +207,7 @@ class PolarionDataFetcher:
                         raw_work_item=raw_work_item,
                         project_id=project_config.project_id,
                         project_name=polarion_project.name,
+                        document_category=document_category,
                     )
                     batch.append(converted)
                     fetched += 1
@@ -219,7 +226,7 @@ class PolarionDataFetcher:
                     return
 
 
-    def _convert_work_item(self, raw_work_item: Any, project_id: str, project_name: str | None) -> PolarionWorkItem:
+    def _convert_work_item(self, raw_work_item: Any, project_id: str, project_name: str | None, document_category: str | None) -> PolarionWorkItem:
 
         work_item_id = self._required_text(getattr(raw_work_item, "id", None), field_name="id")
 
@@ -242,6 +249,7 @@ class PolarionDataFetcher:
             project_id=project_id,
             project_name=project_name,
             document_name=self._get_document_name(raw_work_item=raw_work_item),
+            document_category=document_category,
             work_item_id=work_item_id,
             work_item_type=work_item_type,
             title=title if title else "",
