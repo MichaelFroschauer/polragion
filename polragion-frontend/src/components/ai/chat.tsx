@@ -101,6 +101,7 @@ function AskMessageResponse({response}: {response: WorkItemAskResponse}) {
 export function Chat() {
     const {isAuthenticated, isLoading: isAuthLoading, login} = useGitHubAuth()
     const bottomRef = useRef<HTMLDivElement | null>(null)
+    const lastEntryRef = useRef<HTMLDivElement | null>(null)
     const {entries, status, mode, setMode, handleSubmit} = useChat()
 
     const [loadingQuote, setLoadingQuote] = useState(
@@ -108,7 +109,7 @@ export function Chat() {
     )
 
     useEffect(() => {
-        bottomRef.current?.scrollIntoView({behavior: "smooth", block: "end"})
+        lastEntryRef.current?.scrollIntoView({behavior: "smooth", block: "start"})
     }, [entries, status])
 
     useEffect(() => {
@@ -152,8 +153,9 @@ export function Chat() {
                             </p>
                         </div>
                     ) : (
-                        entries.map(entry => (
-                            <Message from={entry.role} key={entry.id}>
+                        entries.map((entry, index) => (
+                            <div ref={index === entries.length - 1 ? lastEntryRef : null}>
+                                <Message from={entry.role} key={entry.id}>
                                 <MessageContent>
                                     {entry.role === "assistant" ? (
                                         // <MessageResponse>{entry.content}</MessageResponse>
@@ -162,7 +164,8 @@ export function Chat() {
                                         <p className="whitespace-pre-wrap">{entry.content as string}</p>
                                     )}
                                 </MessageContent>
-                            </Message>
+                                </Message>
+                            </div>
                         ))
                     )}
                     <div ref={bottomRef}/>
