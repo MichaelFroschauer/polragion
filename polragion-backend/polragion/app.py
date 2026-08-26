@@ -35,12 +35,16 @@ VectorStoreFactory = Callable[[Settings], VectorStore]
 DataFetcherFactory = Callable[[Settings], DataFetcher]
 DataWorkerFactory = Callable[[Settings, WorkItemService], DataWorker]
 
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/health/" not in record.getMessage()
 
 def _configure_logging(settings: Settings) -> None:
     logging.basicConfig(
         level=settings.log_level.upper(),
         format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     )
+    logging.getLogger("uvicorn.access").addFilter(HealthCheckFilter())
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     return route.name  # uses the function name as operationId

@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from copilot import CopilotClient, RuntimeConnection, define_tool
+from copilot._jsonrpc import JsonRpcError
 from copilot.generated.rpc import ModelsListRequest
 from copilot.generated.session_events import UserMessageData
 from copilot.session import CopilotSession, PermissionHandler
@@ -258,6 +259,10 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 available_tools=["custom:*"],
                 streaming=False,
             )
+        except JsonRpcError as exc:
+            if "401" in str(exc) or "Unauthorized" in str(exc) or "Bad credentials" in str(exc):
+                raise GitHubReauthenticationRequiredError("GitHub Copilot authentication failed: Bad credentials") from exc
+            raise CopilotRequestError(f"Could not create a Copilot session for user {user_id}") from exc
         except Exception as exc:
             raise CopilotRequestError(f"Could not create a Copilot session for user {user_id}") from exc
 
@@ -452,13 +457,21 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
 
         await self.initialize()
 
-        result = await self.client.rpc.models.list(
-            ModelsListRequest(
-                git_hub_token=access_token,
+        try:
+            result = await self.client.rpc.models.list(
+                ModelsListRequest(
+                    git_hub_token=access_token,
+                )
             )
-        )
-
-        return result.models
+            return result.models
+        except JsonRpcError as exc:
+            logger.warning("Copilot RPC models.list failed for user %s: %s", user_id, exc)
+            if "401" in str(exc) or "Unauthorized" in str(exc) or "Bad credentials" in str(exc):
+                raise GitHubReauthenticationRequiredError("GitHub Copilot authentication failed: Bad credentials") from exc
+            raise CopilotRequestError(f"Failed to fetch available Copilot models: {exc}") from exc
+        except Exception as exc:
+            logger.error("Unexpected error fetching models for user %s: %s", user_id, exc)
+            raise CopilotRequestError(f"Failed to fetch available Copilot models: {exc}") from exc
 
     @property
     def default_model_id(self) -> str:
