@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from polragion.models.work_item import PolarionWorkItem
+from polragion.models.work_item import WorkItemSearchHit
 
 
 class IngestResponse(BaseModel):
@@ -8,14 +8,6 @@ class IngestResponse(BaseModel):
 
     status: str
     ingested_items: int = Field(ge=0)
-
-
-class WorkItemSearchHit(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    work_item: PolarionWorkItem
-    score: float
-    point_id: str
 
 
 class WorkItemSearchResponse(BaseModel):

@@ -9,7 +9,7 @@ dependencies = [
     "cryptography==49.0.0",
     "fastapi>=0.115,<1.0",
     "fastembed>=0.5,<1.0",
-    "github-copilot-sdk==1.0.8",
+    "github-copilot-sdk==1.0.13",
     "itsdangerous>=2.2.0",
     "markdownify==1.2.3",
     "polarion>=1.4.0",

@@ -8,11 +8,11 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import httpx
-from copilot import CopilotClient, RuntimeConnection, define_tool
+from copilot import CopilotClient, RuntimeConnection
 from copilot._jsonrpc import JsonRpcError
 from copilot.generated.rpc import ModelsListRequest
-from copilot.generated.session_events import UserMessageData
-from copilot.session import CopilotSession, PermissionHandler
+from copilot.generated.session_events import UserMessageData, ToolExecutionStartData
+from copilot.session import CopilotSession, PermissionHandler, PreToolUseHookOutput, PreToolUseHookInput, SessionHooks
 from copilot.session_events import (
     AssistantMessageData,
     AssistantMessageDeltaData,
@@ -23,6 +23,8 @@ from cryptography.fernet import InvalidToken
 
 from polragion.application.ai_service import AiServiceError, AiService, MessageResponseHandler, ChatHistoryMessage
 from polragion.database.repository import GitHubCredentialsRepository
+from polragion.infrastructure.copilot_tools import CopilotTools, ToolCallBudget, check_tool_budget
+from polragion.application.prompt_builder import get_initial_system_prompt
 from polragion.models.ai_message import (
     CopilotMessageEvent,
     CopilotResponseMessage,
@@ -50,27 +52,6 @@ class CopilotRequestError(AiServiceError):
     """A request to the Copilot runtime failed."""
 
 
-# TODO: Create Tool that queries the vector database for more information
-# class LookupIssueParams(BaseModel):
-#     id: str = Field(description="Issue identifier")
-#
-# @define_tool(description="Fetch issue details from our tracker")
-# async def lookup_issue(params: LookupIssueParams) -> str:
-#     issue = await fetch_issue(params.id)
-#     return issue.summary
-#
-# Set skip_permission=True on a tool definition to allow it to execute without triggering a permission prompt:
-# @define_tool(name="safe_lookup", description="A read-only lookup that needs no confirmation", skip_permission=True)
-# async def safe_lookup(params: LookupParams) -> str:
-#     # your logic
-#
-# async with await client.create_session(
-#     on_permission_request=PermissionHandler.approve_all,
-#     model="gpt-5",
-#     tools=[lookup_issue],
-# ) as session:
-#     ...
-
 # TODO: Schedule session cleanup every x minutes like in
 # https://python.plainenglish.io/mastering-background-jobs-in-python-41730daf8c74
 # import threading
@@ -87,26 +68,22 @@ class CopilotRequestError(AiServiceError):
 # print("Main program continues running...")
 # time.sleep(10)
 
-# class WorkItemSearchParams(BaseModel):
-#     project_id: str = Field(description="Issue identifier")
-#
-# @define_tool(name="work_item_search", description="Search work items from the vector database.", skip_permission=True)
-# async def safe_lookup(params: WorkItemSearchParams) -> str:
-#
 
 class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, CopilotMessageEvent, CopilotModel]):
     TOKEN_EXPIRY_SKEW = timedelta(minutes=5)
-    REQUEST_TIMEOUT_SECONDS = 120.0
+    REQUEST_TIMEOUT_SECONDS = 600.0
 
     def __init__(
             self,
             settings: Settings,
+            copilot_tools: CopilotTools,
             github_credentials_repository: GitHubCredentialsRepository,
             *,
             runtime_url: str = "localhost:4321",
             runtime_connection_token: str | None = None,
     ) -> None:
         self.settings = settings
+        self.copilot_tools = copilot_tools
         self.credentials_repository = github_credentials_repository
 
         self._user_models: dict[UUID, str] = {}
@@ -118,6 +95,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         self._lifecycle_lock = asyncio.Lock()
         self._initialized = False
         self._event_tasks: set[asyncio.Task[None]] = set()
+        self._tool_call_budgets: dict[UUID, ToolCallBudget] = {}
 
         self.message_response_handlers: list[MessageResponseHandler] = []
 
@@ -249,6 +227,15 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def _create_user_session(self, user_id: UUID) -> CopilotSession:
         access_token, access_token_expires_at = (await self._get_valid_access_token(user_id))
 
+        self._tool_call_budgets[user_id] = ToolCallBudget(max_calls=self.settings.max_allowed_tool_calls)
+
+        async def on_pre_tool_use(input_data: PreToolUseHookInput, invocation: dict[str, str]) -> PreToolUseHookOutput:
+            return await check_tool_budget(input_data, self._tool_call_budgets[user_id], user_id)
+
+        hooks: SessionHooks = {
+            "on_pre_tool_use": on_pre_tool_use,
+        }
+
         try:
             session = await self.client.create_session(
                 on_permission_request=PermissionHandler.approve_all,
@@ -256,8 +243,18 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 reasoning_effort=self._user_reasoning_efforts.get(user_id, None),
                 session_id=f"user-{user_id}-{uuid4()}",
                 github_token=access_token,
-                available_tools=["custom:*"],
+                available_tools=[
+                    "custom:*",
+                    "builtin:web_search",
+                    "builtin:web_fetch",
+                ],
                 streaming=False,
+                tools=self.copilot_tools.create_tools(),
+                hooks=hooks,
+                system_message={
+                    "mode": "append",
+                    "content": get_initial_system_prompt(),
+                },
             )
         except JsonRpcError as exc:
             if "401" in str(exc) or "Unauthorized" in str(exc) or "Bad credentials" in str(exc):
@@ -289,6 +286,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                             is_final=True,
                         ),
                     )
+                case ToolExecutionStartData() as data:
+                    pass
                 case SessionErrorData() as data:
                     logger.error(
                     "Copilot session error for user %s: type=%s code=%s message=%s",
@@ -333,6 +332,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def _disconnect_user_session(self, user_id: UUID) -> None:
         session = self.user_sessions.pop(user_id, None)
         self._session_token_expirations.pop(user_id, None)
+        self._tool_call_budgets.pop(user_id, None)
 
         if session is None:
             return
@@ -375,6 +375,9 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             if session is None:
                 session = await self._create_user_session(message.user_id)
 
+            budget = self._tool_call_budgets[message.user_id]
+            await budget.start_request()
+
             try:
                 response_event = await session.send_and_wait(
                     prompt=message.text,
@@ -388,6 +391,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 # Recreate the possibly broken session on the next request.
                 await self._disconnect_user_session(message.user_id)
                 raise CopilotRequestError("The Copilot request failed") from exc
+            finally:
+                number_of_tool_calls = await budget.finish_request()
 
         if response_event is None:
             raise CopilotRequestError("Copilot finished without returning an assistant message")
@@ -419,6 +424,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             self.user_sessions.clear()
             self._session_token_expirations.clear()
             self._user_locks.clear()
+            self._tool_call_budgets.clear()
 
             results = await asyncio.gather(*(session.disconnect() for _, session in sessions), return_exceptions=True)
             for (user_id, _), result in zip(sessions, results, strict=True):

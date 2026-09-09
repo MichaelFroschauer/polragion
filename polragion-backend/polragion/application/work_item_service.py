@@ -1,16 +1,8 @@
 from collections.abc import Iterable
-from dataclasses import dataclass
 
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.domain.vector_store import VectorStore
-from polragion.models.work_item import PolarionWorkItem
-
-
-@dataclass(frozen=True, slots=True)
-class WorkItemSearchResult:
-    work_item: PolarionWorkItem
-    score: float
-    point_id: str
+from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 
 
 class WorkItemService:
@@ -35,7 +27,7 @@ class WorkItemService:
         project_id: str | None = None,
         score_threshold: float | None = None,
         **kwargs
-    ) -> list[WorkItemSearchResult]:
+    ) -> list[WorkItemSearchHit]:
         hits = self._vector_store.search(
             query,
             limit=limit,
@@ -45,7 +37,7 @@ class WorkItemService:
         )
 
         return [
-            WorkItemSearchResult(
+            WorkItemSearchHit(
                 work_item=PolarionWorkItem.model_validate(hit.metadata),
                 score=hit.score,
                 point_id=hit.point_id,

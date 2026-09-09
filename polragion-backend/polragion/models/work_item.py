@@ -68,3 +68,11 @@ class ReducedWorkItem(BaseModel):
             )
         )
         return reduced
+
+
+class WorkItemSearchHit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    work_item: PolarionWorkItem
+    score: float
+    point_id: str

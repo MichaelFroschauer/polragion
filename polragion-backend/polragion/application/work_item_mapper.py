@@ -1,7 +1,9 @@
+import json
 import logging
+from typing import Collection
 
 from polragion.domain.vector_store import VectorDocument
-from polragion.models.work_item import PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem, ReducedWorkItem, WorkItemSearchHit
 from polragion.utils.text_sanitizer import ParsedDocument, html_to_document
 
 logger = logging.getLogger(__name__)
@@ -58,3 +60,35 @@ class WorkItemIndexMapper:
             reranker_text=reranker_text,
             metadata=work_item.model_dump(mode="json"),
         )
+
+
+def work_item_search_hit_to_json_str(work_items: Collection[WorkItemSearchHit]) -> str:
+
+    retrieved_work_items = [
+        {
+            "retrieval_rank": index,
+            "similarity_score": round(hit.score, 6),
+            "id": str(f"{hit.work_item.project_id}:{hit.work_item.work_item_id}"),
+            "work_item": ReducedWorkItem.from_work_item(hit.work_item).model_dump(
+                mode="json",
+                by_alias=True,
+            ),
+        }
+        for index, hit in enumerate(work_items, start=1)
+    ]
+
+    context_json = json.dumps(
+        retrieved_work_items,
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    # Prevent work-item text from accidentally closing one of the XML sections.
+    # These replacements keep the content valid JSON.
+    context_json = (
+        context_json
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+    return context_json
