@@ -67,12 +67,13 @@ def create_app(
 
         app.state.settings = app_settings
         app.state.vector_store = vector_store
-        app.state.work_item_service = WorkItemService(
+        work_item_service = WorkItemService(
             vector_store=vector_store,
             mapper=WorkItemIndexMapper(),
         )
+        app.state.work_item_service = work_item_service
         app.state.data_fetcher = data_fetcher_factory(app_settings)
-        app.state.data_worker = data_worker_factory(app_settings, app.state.work_item_service)
+        app.state.data_worker = data_worker_factory(app_settings, work_item_service)
 
         #session_repository = InMemorySessionRepository()
         #user_repository = InMemoryUserRepository()
@@ -86,7 +87,7 @@ def create_app(
         app.state.user_repository = user_repository
         app.state.github_credentials_repository = github_credentials_repository
 
-        app.state.ai_tools = CopilotTools(app_settings, app.state.work_item_service)
+        app.state.ai_tools = CopilotTools(app_settings, work_item_service, vector_store)
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
         app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, runtime_url=app_settings.copilot_url)
 

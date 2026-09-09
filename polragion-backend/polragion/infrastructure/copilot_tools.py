@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field
 
 from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
 from polragion.application.work_item_service import WorkItemService
-from polragion.models.work_item import WorkItemSearchHit
+from polragion.domain.vector_store import VectorStore
+from polragion.models.work_item import WorkItemSearchHit, ReducedWorkItem, PolarionWorkItem
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -19,13 +20,17 @@ class CopilotTools:
             self,
             settings: Settings,
             work_item_service: WorkItemService,
+            vector_store: VectorStore,
     ) -> None:
         self.settings = settings
         self.work_item_service = work_item_service
+        self._vector_store = vector_store
 
     def create_tools(self) -> list:
         return [
-            self._create_work_item_vector_search_tool()
+            self._create_work_item_vector_search_tool(),
+            self._create_work_item_id_search_tool(),
+            self._create_distinct_project_id_fetcher_tool(),
         ]
 
     def _create_work_item_vector_search_tool(self) -> Tool:
@@ -39,7 +44,7 @@ class CopilotTools:
             polarion_project_id: str | None = Field(default=None, description="Optional Polarion project ID.")
 
         @define_tool(description="Fetch information details from the vector database that contains all polarion work items.")
-        async def lookup_work_items(params: SearchWorkItemsParams) -> str:
+        async def vector_db_work_items_search(params: SearchWorkItemsParams) -> str:
             limit = params.search_limit if params.search_limit is not None else self.settings.search_default_limit
             limit = min(limit, self.settings.search_max_limit)
 
@@ -61,7 +66,7 @@ class CopilotTools:
             json_str = work_item_search_hit_to_json_str(results)
             return json_str
 
-        return lookup_work_items
+        return vector_db_work_items_search
 
 
     def _create_work_item_id_search_tool(self) -> Tool:
@@ -69,7 +74,51 @@ class CopilotTools:
         service = self.work_item_service
 
         class LookupWorkItemsParams(BaseModel):
-            pass
+            polarion_project_id: str | None = Field(default=None, description="Polarion project ID.")
+            polarion_work_item_id: str | None = Field(default=None, description="Polarion work item ID (Like: PREFIX-12345).")
+
+        @define_tool(description="Fetch a specific polarion work items via its ID.")
+        async def find_work_item_by_id(params: LookupWorkItemsParams) -> str:
+
+            if params.polarion_project_id is None:
+                return "Polarion project ID not provided"
+
+            if params.polarion_work_item_id is None:
+                return "Polarion work item ID not provided"
+
+            results: list[WorkItemSearchHit] = service.search(
+                "",
+                limit=1,
+                score_threshold=0.0,
+                project_id=params.polarion_project_id,
+                work_item_id=params.polarion_work_item_id,
+            )
+
+            if len(results) == 0:
+                return (f"Work item for project ID: {params.polarion_project_id} "
+                        f"work item ID: {params.polarion_work_item_id} not found.")
+
+            found_work_item: PolarionWorkItem = results[0].work_item
+            work_item = ReducedWorkItem.from_work_item(found_work_item).model_dump(mode="json", by_alias=True)
+
+            return work_item
+
+        return find_work_item_by_id
+
+
+    def _create_distinct_project_id_fetcher_tool(self) -> Tool:
+
+        service = self.work_item_service
+
+        @define_tool(description="Get a list of distinct available Polarion project IDs in the vector database.")
+        async def get_distinct_polarion_projects() -> str:
+
+            project_ids = self._vector_store.get_facet("project_id")
+            project_ids_str = ' '.join([str(project_id) for project_id in project_ids])
+
+            return project_ids_str
+
+        return get_distinct_polarion_projects
 
 
 @dataclass

@@ -25,6 +25,7 @@ class WorkItemService:
         *,
         limit: int,
         project_id: str | None = None,
+        work_item_id: str | None = None,
         score_threshold: float | None = None,
         **kwargs
     ) -> list[WorkItemSearchHit]:
@@ -32,6 +33,7 @@ class WorkItemService:
             query,
             limit=limit,
             project_id=project_id,
+            item_id=work_item_id,
             score_threshold=score_threshold,
             **kwargs
         )

@@ -45,10 +45,15 @@ class VectorStore(Protocol):
         *,
         limit: int,
         project_id: str | None = None,
+        item_id: str | None = None,
         score_threshold: float | None = None,
         **kwargs
     ) -> list[VectorSearchHit]:
         """Find documents ordered by descending semantic similarity."""
+        ...
+
+    def get_facet(self, key: str) -> list[str]:
+        """Find facet of the vector database by key."""
         ...
 
     def is_ready(self) -> bool:

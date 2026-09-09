@@ -202,6 +202,7 @@ class QdrantHybridVectorStore:
         *,
         limit: int,
         project_id: str | None = None,
+        item_id: str | None = None,
         score_threshold: float | None = None,
         **kwargs
     ) -> list[VectorSearchHit]:
@@ -210,8 +211,15 @@ class QdrantHybridVectorStore:
 
         self._ensure_initialized()
 
+        if project_id is not None and item_id is not None:
+            # If the project id and the item id is given return only the exact datapoint and don't do a vector search.
+            document_id = f"{project_id}:{item_id}"
+            hit = self._search_by_document_id(document_id)
+            return [hit] if hit else []
+
         query_filter = None
         if project_id is not None:
+            # Add a filter for the project ID if the project ID is set
             query_filter = models.Filter(
                 must=[
                     models.FieldCondition(
@@ -338,6 +346,26 @@ class QdrantHybridVectorStore:
             raise VectorStoreUnavailableError("Qdrant search failed") from exc
         except Exception as exc:
             raise VectorStoreUnavailableError("Qdrant search failed") from exc
+
+    def get_facet(self, key: str) -> list[str]:
+
+        self._ensure_initialized()
+
+        # TODO: This is required to get a facet
+        # self._client.create_payload_index(
+        #     collection_name=self._collection_name,
+        #     field_name="project_id",
+        #     field_schema=models.PayloadSchemaType.KEYWORD,
+        # )
+
+        result = self._client.facet(
+            collection_name=self._collection_name,
+            key=key,
+            limit=1000,
+            exact=True,
+        )
+
+        return [str(hit.value) for hit in result.hits]
 
     def _make_sparse_passage_embeddings(
         self, texts: Iterable[str]
@@ -543,6 +571,34 @@ class QdrantHybridVectorStore:
         if self._reranker is None:
             raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must be called first")
         return self._reranker
+
+    def _search_by_document_id(self, document_id: str) -> VectorSearchHit | None:
+        points, _ = self._client.scroll(
+            collection_name=self._collection_name,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="_polragion_document_id",
+                        match=models.MatchValue(value=document_id),
+                    ),
+                ]
+            ),
+            limit=1,
+            with_payload=True,
+            with_vectors=False,
+        )
+        if not points:
+            return None
+
+        point = points[0]
+        payload = self._as_json_mapping(dict(point.payload)) if point.payload else dict()
+        return VectorSearchHit(
+                    document_id=document_id,
+                    point_id=str(point.id),
+                    score=1.0,
+                    reranker_score=1.0,
+                    metadata=payload,
+                )
 
     @staticmethod
     def _as_json_mapping(payload: Mapping[str, Any]) -> dict[str, JsonValue]:
