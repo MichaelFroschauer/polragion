@@ -24,6 +24,7 @@ from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
 from polragion.infrastructure.copilot_service import CopilotService
+from polragion.application.user_request_manager import UserRequestManager
 from polragion.infrastructure.copilot_tools import CopilotTools
 from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
@@ -87,9 +88,11 @@ def create_app(
         app.state.user_repository = user_repository
         app.state.github_credentials_repository = github_credentials_repository
 
-        app.state.ai_tools = CopilotTools(app_settings, work_item_service, vector_store)
+        user_request_manager = UserRequestManager(app_settings)
+        app.state.user_request_manager = user_request_manager
+        app.state.ai_tools = CopilotTools(app_settings, work_item_service, user_request_manager, vector_store)
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
-        app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, runtime_url=app_settings.copilot_url)
+        app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
 
         # TODO Message response handler for streaming
         # def ai_message_event(event: AiMessageEventT) -> None:

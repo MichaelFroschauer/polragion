@@ -196,7 +196,16 @@ async def ask_work_item_with_initial_search(
         )
     )
 
-    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=hits.work_items)
+    # Combine the initially searched hits with any the AI fetched via tools.
+    seen_point_ids = {hit.point_id for hit in hits.work_items}
+    combined_work_items = list(hits.work_items)
+    work_items_of_context = response.request_context.collected_work_items() if response.request_context else []
+    for hit in work_items_of_context:
+        if hit.point_id not in seen_point_ids:
+            seen_point_ids.add(hit.point_id)
+            combined_work_items.append(hit)
+
+    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=combined_work_items)
 
 
 @router.post(
@@ -231,7 +240,8 @@ async def ask_work_item(
         )
     )
 
-    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=[])
+    work_items = response.request_context.collected_work_items() if response.request_context else []
+    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=work_items)
 
 
 @router.get(

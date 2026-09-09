@@ -1,4 +1,6 @@
 from uuid import UUID
+
+from polragion.application.user_request_manager import RequestContext
 from polragion.utils.general import StrictModel
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, BeforeValidator
 
@@ -9,9 +11,13 @@ class CopilotSendMessage(StrictModel):
     display_text: str | None = None
 
 class CopilotResponseMessage(StrictModel):
+    # RequestContext is a plain dataclass, so it needs arbitrary_types_allowed
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
     text: str
     message_id: str | None = None
     is_final: bool = True
+    request_context: RequestContext | None = None
 
 class CopilotMessageEvent(StrictModel):
     user_id: UUID

@@ -22,8 +22,9 @@ from copilot.session_events import (
 from cryptography.fernet import InvalidToken
 
 from polragion.application.ai_service import AiServiceError, AiService, MessageResponseHandler, ChatHistoryMessage
+from polragion.application.user_request_manager import UserRequestManager
 from polragion.database.repository import GitHubCredentialsRepository
-from polragion.infrastructure.copilot_tools import CopilotTools, ToolCallBudget, check_tool_budget
+from polragion.infrastructure.copilot_tools import CopilotTools, check_tool_budget
 from polragion.application.prompt_builder import get_initial_system_prompt
 from polragion.models.ai_message import (
     CopilotMessageEvent,
@@ -78,6 +79,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             settings: Settings,
             copilot_tools: CopilotTools,
             github_credentials_repository: GitHubCredentialsRepository,
+            user_request_manager: UserRequestManager,
             *,
             runtime_url: str = "localhost:4321",
             runtime_connection_token: str | None = None,
@@ -95,7 +97,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
         self._lifecycle_lock = asyncio.Lock()
         self._initialized = False
         self._event_tasks: set[asyncio.Task[None]] = set()
-        self._tool_call_budgets: dict[UUID, ToolCallBudget] = {}
+
+        self._user_request_manager = user_request_manager
 
         self.message_response_handlers: list[MessageResponseHandler] = []
 
@@ -227,10 +230,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def _create_user_session(self, user_id: UUID) -> CopilotSession:
         access_token, access_token_expires_at = (await self._get_valid_access_token(user_id))
 
-        self._tool_call_budgets[user_id] = ToolCallBudget(max_calls=self.settings.max_allowed_tool_calls)
-
         async def on_pre_tool_use(input_data: PreToolUseHookInput, invocation: dict[str, str]) -> PreToolUseHookOutput:
-            return await check_tool_budget(input_data, self._tool_call_budgets[user_id], user_id)
+            return await check_tool_budget(input_data, self._user_request_manager, user_id)
 
         hooks: SessionHooks = {
             "on_pre_tool_use": on_pre_tool_use,
@@ -249,7 +250,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                     "builtin:web_fetch",
                 ],
                 streaming=False,
-                tools=self.copilot_tools.create_tools(),
+                tools=self.copilot_tools.create_tools(user_id),
                 hooks=hooks,
                 system_message={
                     "mode": "append",
@@ -332,7 +333,6 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def _disconnect_user_session(self, user_id: UUID) -> None:
         session = self.user_sessions.pop(user_id, None)
         self._session_token_expirations.pop(user_id, None)
-        self._tool_call_budgets.pop(user_id, None)
 
         if session is None:
             return
@@ -375,8 +375,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             if session is None:
                 session = await self._create_user_session(message.user_id)
 
-            budget = self._tool_call_budgets[message.user_id]
-            await budget.start_request()
+            request_context = self._user_request_manager.start_request(message.user_id)
 
             try:
                 response_event = await session.send_and_wait(
@@ -392,14 +391,19 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 await self._disconnect_user_session(message.user_id)
                 raise CopilotRequestError("The Copilot request failed") from exc
             finally:
-                number_of_tool_calls = await budget.finish_request()
+                self._user_request_manager.finish_request(message.user_id)
 
         if response_event is None:
             raise CopilotRequestError("Copilot finished without returning an assistant message")
 
         match response_event.data:
             case AssistantMessageData() as data:
-                return CopilotResponseMessage(text=data.content, message_id=data.message_id, is_final=True)
+                return CopilotResponseMessage(
+                    text=data.content,
+                    message_id=data.message_id,
+                    is_final=True,
+                    request_context=request_context,
+                )
             case _:
                 raise CopilotRequestError("Copilot returned an unexpected response event")
 
@@ -424,7 +428,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             self.user_sessions.clear()
             self._session_token_expirations.clear()
             self._user_locks.clear()
-            self._tool_call_budgets.clear()
+            self._user_request_manager.shutdown()
 
             results = await asyncio.gather(*(session.disconnect() for _, session in sessions), return_exceptions=True)
             for (user_id, _), result in zip(sessions, results, strict=True):
