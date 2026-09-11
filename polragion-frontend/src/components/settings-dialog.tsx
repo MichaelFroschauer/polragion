@@ -1,7 +1,7 @@
 "use client"
 
 import {type ComponentProps, type ReactElement, useMemo, useState} from "react"
-import {RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
+import {InfoIcon, MessageSquareTextIcon, RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
 
 import {Button} from "@/components/ui/button.tsx"
 import {
@@ -29,6 +29,7 @@ import {
     SliderSetting, SwitchSetting,
     TextareaSetting,
 } from "@/components/settings/setting-fields.tsx"
+import {APP_INFO, copyrightNotice} from "@/lib/app-info.ts"
 
 type SettingsDialogProps = ComponentProps<typeof Dialog> & {
     /**
@@ -38,6 +39,8 @@ type SettingsDialogProps = ComponentProps<typeof Dialog> & {
      * Omit it to drive the dialog with `open` / `onOpenChange`.
      */
     trigger?: ReactElement
+    /** Category that is selected whenever the dialog opens. */
+    defaultCategory?: (typeof CATEGORIES)[number]["id"]
 }
 
 /**
@@ -58,10 +61,18 @@ const CATEGORIES = [
         icon: SparklesIcon,
         paths: ["aiSearch.", "customUserSystemPrompt"],
     },
+    {
+        id: "about",
+        label: "About",
+        icon: InfoIcon,
+        /** Informational only - holds no editable settings. */
+        paths: [],
+    },
 ] as const
 
 export function SettingsDialog({
     trigger,
+    defaultCategory = CATEGORIES[0].id,
     open: openProp,
     onOpenChange,
     ...props
@@ -73,7 +84,7 @@ export function SettingsDialog({
 
     /** Pending changes - they only reach the app once "Save changes" is pressed. */
     const [draft, setDraft] = useState<AppSettings>(settings)
-    const [activeCategory, setActiveCategory] = useState<string>(CATEGORIES[0].id)
+    const [activeCategory, setActiveCategory] = useState<string>(defaultCategory)
 
     // Every time the dialog opens, editing starts from the persisted settings,
     // so a previously cancelled draft is discarded.
@@ -82,6 +93,7 @@ export function SettingsDialog({
         setWasOpen(open)
         if (open) {
             setDraft(settings)
+            setActiveCategory(defaultCategory)
         }
     }
 
@@ -262,20 +274,81 @@ export function SettingsDialog({
                                 />
                             </SettingsSection>
                         </TabsContent>
+
+                        <TabsContent value="about">
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="flex aspect-square size-10 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                                        <MessageSquareTextIcon className="size-5"/>
+                                    </div>
+                                    <div className="grid leading-tight">
+                                        <span className="font-medium text-sm">{APP_INFO.name}</span>
+                                        <span className="text-muted-foreground text-xs">{APP_INFO.tagline}</span>
+                                    </div>
+                                    <span className="ml-auto text-muted-foreground text-xs tabular-nums">
+                                        Version {APP_INFO.version}
+                                    </span>
+                                </div>
+
+                                <dl className="grid gap-3 border-t pt-5 text-sm">
+                                    <div className="flex items-baseline gap-4">
+                                        <dt className="w-28 shrink-0 text-muted-foreground text-xs">Copyright</dt>
+                                        <dd>{copyrightNotice()}</dd>
+                                    </div>
+                                    <div className="flex items-baseline gap-4">
+                                        <dt className="w-28 shrink-0 text-muted-foreground text-xs">License</dt>
+                                        <dd>
+                                            <a
+                                                className="underline underline-offset-4 hover:text-primary"
+                                                href={APP_INFO.licenseUrl}
+                                                rel="noreferrer"
+                                                target="_blank"
+                                            >
+                                                {APP_INFO.license}
+                                            </a>
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-baseline gap-4">
+                                        <dt className="w-28 shrink-0 text-muted-foreground text-xs">Source code</dt>
+                                        <dd>
+                                            <a
+                                                className="underline underline-offset-4 hover:text-primary"
+                                                href={APP_INFO.repositoryUrl}
+                                                rel="noreferrer"
+                                                target="_blank"
+                                            >
+                                                {APP_INFO.repositoryUrl.replace("https://", "")}
+                                            </a>
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                <p className="border-t pt-5 text-muted-foreground text-xs leading-relaxed">
+                                    {APP_INFO.attribution} This program comes with absolutely no warranty. It is free
+                                    software, and you are welcome to redistribute it under the conditions of the{" "}
+                                    {APP_INFO.license}.
+                                </p>
+                            </div>
+                        </TabsContent>
                     </div>
                 </Tabs>
 
                 <DialogFooter className="mx-0 mb-0 items-center rounded-b-xl px-6 py-4 sm:justify-between">
-                    <Button
-                        className="sm:mr-auto"
-                        disabled={isDefault}
-                        onClick={() => setDraft(DEFAULT_SETTINGS)}
-                        type="button"
-                        variant="ghost"
-                    >
-                        <RotateCcwIcon/>
-                        Restore defaults
-                    </Button>
+                    {activeCategory === "about" ? (
+                        <span className="sm:mr-auto"/>
+                    ) : (
+                        <Button
+                            className="sm:mr-auto"
+                            disabled={isDefault}
+                            onClick={() => setDraft(DEFAULT_SETTINGS)}
+                            type="button"
+                            variant="ghost"
+                        >
+                            <RotateCcwIcon/>
+                            Restore defaults
+                        </Button>
+                    )}
 
                     <div className="flex items-center justify-end gap-2">
                         {!isValid ? (

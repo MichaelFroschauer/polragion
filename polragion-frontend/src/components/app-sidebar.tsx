@@ -6,6 +6,8 @@ import {NavMain} from "@/components/nav-main"
 import {NavFilter} from "@/components/nav-filter.tsx"
 import {NavSecondary} from "@/components/nav-secondary"
 import {NavUser} from "@/components/nav-user"
+import {SettingsDialog} from "@/components/settings-dialog.tsx"
+import {APP_INFO, copyrightNotice} from "@/lib/app-info.ts"
 import {
     Sidebar,
     SidebarContent,
@@ -126,6 +128,18 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
             <SidebarFooter>
                 <NavUser/>
             </SidebarFooter>
+            <SettingsDialog
+                defaultCategory="about"
+                trigger={
+                    <button
+                        className="px-4 text-left text-[0.6rem] text-sidebar-foreground/40 transition-colors hover:text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden"
+                        title={`About ${APP_INFO.name}`}
+                        type="button"
+                    >
+                        {copyrightNotice()} · {APP_INFO.license}
+                    </button>
+                }
+            />
         </Sidebar>
     )
 }
