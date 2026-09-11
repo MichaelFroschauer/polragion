@@ -9,17 +9,18 @@ interface WorkItemSearchSettings {
 
 interface AiSearchSettings {
     maxResultsForAi: number
+    useAgenticAiMode: boolean
 }
 
 export interface AppSettings {
-    version: 1
+    version: 2
     workItemSearch: WorkItemSearchSettings
     aiSearch: AiSearchSettings
     customUserSystemPrompt?: string
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-    version: 1,
+    version: 2,
 
     workItemSearch: {
         maxResults: 200,
@@ -29,6 +30,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
     aiSearch: {
         maxResultsForAi: 100,
+        useAgenticAiMode: true,
     },
 
     customUserSystemPrompt: undefined,
@@ -56,6 +58,7 @@ export type SettingsFieldPath =
     | "workItemSearch.minScore"
     | "workItemSearch.doReranking"
     | "aiSearch.maxResultsForAi"
+    | "aiSearch.useAgenticAiMode"
     | "customUserSystemPrompt"
 
 export type SettingsErrors = Partial<Record<SettingsFieldPath, string>>
@@ -152,7 +155,7 @@ function loadSettings(): AppSettings {
                 ...stored.aiSearch,
             },
 
-            version: 1,
+            version: 2,
         }
     } catch {
         return DEFAULT_SETTINGS

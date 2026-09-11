@@ -191,7 +191,7 @@ export function SettingsDialog({
                                     description=""
                                     error={errors["workItemSearch.minScore"]}
                                     format={(value) => value.toFixed(2)}
-                                    hint="Only results with at least this similarity score are returned. 0.00 keeps every match, 1.00 only near-identical ones. A good starting point is around 0.30."
+                                    hint="Only results with at least this similarity score are returned. 0.00 keeps every match, 1.00 only near-identical ones."
                                     id="work-item-min-score"
                                     label="Minimum search score"
                                     max={limits.workItemSearch.minScore.max}
@@ -221,18 +221,31 @@ export function SettingsDialog({
                                 title="AI Assistant"
                                 description="Controls what the assistant receives and how it behaves."
                             >
-                                <NumberSetting
-                                    error={errors["aiSearch.maxResultsForAi"]}
-                                    hint="How many of the found work items are passed to the model as context. Cannot exceed the work item result limit."
-                                    id="ai-max-results"
-                                    label="Results sent to the AI"
-                                    max={limits.aiSearch.maxResultsForAi.max}
-                                    min={limits.aiSearch.maxResultsForAi.min}
-                                    onChange={(maxResultsForAi) => setAiSearch({maxResultsForAi})}
-                                    step={limits.aiSearch.maxResultsForAi.step}
-                                    unit="items"
-                                    value={draft.aiSearch.maxResultsForAi}
+                                {/*TODO: This setting is currently not used, because the agentic AI mode is always enabled.*/}
+                                <SwitchSetting
+                                    hint="If enabled, the assistant will operate in agentic AI mode, allowing it to take more autonomous actions. For example searching the work item index. This improves the results drastically, but it also increases the search time and cost."
+                                    id="ai-use-agentic-ai-mode"
+                                    label="Use agentic AI mode"
+                                    onChange={function (checked: boolean): void {
+                                        setAiSearch({useAgenticAiMode: checked})
+                                    }}
+                                    checked={draft.aiSearch.useAgenticAiMode}
                                 />
+
+                                {!draft.aiSearch.useAgenticAiMode && (
+                                    <NumberSetting
+                                        error={errors["aiSearch.maxResultsForAi"]}
+                                        hint="How many of the found work items are passed to the model as context. Cannot exceed the work item result limit. This setting is only relevant if agentic AI mode is disabled."
+                                        id="ai-max-results"
+                                        label="Results sent to the AI"
+                                        max={limits.aiSearch.maxResultsForAi.max}
+                                        min={limits.aiSearch.maxResultsForAi.min}
+                                        onChange={(maxResultsForAi) => setAiSearch({maxResultsForAi})}
+                                        step={limits.aiSearch.maxResultsForAi.step}
+                                        unit="items"
+                                        value={draft.aiSearch.maxResultsForAi}
+                                    />
+                                )}
 
                                 <TextareaSetting
                                     description=""

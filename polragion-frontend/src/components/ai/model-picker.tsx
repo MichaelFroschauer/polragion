@@ -273,10 +273,10 @@ export function ModelPicker() {
         <ModelSelectorTrigger
           render={
             <Button
-              className="w-[210px] justify-between"
-              disabled={!isAuthenticated || models.length === 0}
-              size="sm"
-              variant="outline"
+                className="w-[210px] justify-between text-sm font-normal"
+                disabled={!isAuthenticated || models.length === 0}
+                size="sm"
+                variant="outline"
             />
           }
         >
