@@ -2,15 +2,16 @@ import logging
 from collections.abc import Iterable, Mapping
 from itertools import batched
 from time import perf_counter
-from typing import Any, Final
+from typing import Any, Final, Collection
 
 from fastembed import SparseEmbedding, SparseTextEmbedding, TextEmbedding
 from fastembed.rerank.cross_encoder import TextCrossEncoder
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
-from qdrant_client.http.models import CollectionInfo
+from qdrant_client.http.models import CollectionInfo, Filter
 
 from polragion.domain.vector_store import JsonValue, VectorDocument, VectorSearchHit
+from polragion.infrastructure.db_filter import DbFilter, FilterType
 from polragion.infrastructure.errors import (
     VectorStoreConfigurationError,
     VectorStoreUnavailableError,
@@ -29,6 +30,30 @@ logger = logging.getLogger(__name__)
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
 _DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
+
+
+def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter:
+
+    if db_filters is None or len(db_filters) <= 0:
+        return models.Filter()
+
+    def _get_condition(db_filter: DbFilter) -> models.FieldCondition:
+        match db_filter.filter_type:
+            case FilterType.MUST_MATCH:
+                return models.FieldCondition(
+                    key=db_filter.key,
+                    match=models.MatchValue(value=db_filter.value),
+                )
+
+            case _:
+                raise ValueError(f"Unsupported filter type: {db_filter.filter_type}")
+
+    return models.Filter(
+        must=[
+            _get_condition(db_filter)
+            for db_filter in db_filters
+        ]
+    )
 
 
 class QdrantHybridVectorStore:
@@ -201,8 +226,8 @@ class QdrantHybridVectorStore:
         query: str,
         *,
         limit: int,
-        project_id: str | None = None,
-        item_id: str | None = None,
+        db_filters: Collection[DbFilter] | None = None,
+        exact_search: bool = False,
         score_threshold: float | None = None,
         **kwargs
     ) -> list[VectorSearchHit]:
@@ -211,23 +236,10 @@ class QdrantHybridVectorStore:
 
         self._ensure_initialized()
 
-        if project_id is not None and item_id is not None:
-            # If the project id and the item id is given return only the exact datapoint and don't do a vector search.
-            document_id = f"{project_id}:{item_id}"
-            hit = self._search_by_document_id(document_id)
-            return [hit] if hit else []
-
-        query_filter = None
-        if project_id is not None:
-            # Add a filter for the project ID if the project ID is set
-            query_filter = models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="project_id",
-                        match=models.MatchValue(value=project_id),
-                    )
-                ]
-            )
+        db_filter = _get_qdrant_filter(db_filters)
+        if exact_search:
+            hits = self._exact_search_by_filter(db_filter)
+            return hits
 
         candidate_limit = max(limit, self._candidate_limit)
 
@@ -250,7 +262,7 @@ class QdrantHybridVectorStore:
                     ),
                 ],
                 query=models.FusionQuery(fusion=models.Fusion.RRF),
-                query_filter=query_filter,
+                query_filter=db_filter,
                 limit=candidate_limit,
                 score_threshold=score_threshold,
                 with_payload=True,
@@ -572,33 +584,38 @@ class QdrantHybridVectorStore:
             raise VectorStoreConfigurationError("QdrantHybridVectorStore.initialize() must be called first")
         return self._reranker
 
-    def _search_by_document_id(self, document_id: str) -> VectorSearchHit | None:
+    def _exact_search_by_filter(self, db_filter: Filter) -> list[VectorSearchHit]:
         points, _ = self._client.scroll(
             collection_name=self._collection_name,
-            scroll_filter=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="_polragion_document_id",
-                        match=models.MatchValue(value=document_id),
-                    ),
-                ]
-            ),
-            limit=1,
+            scroll_filter=db_filter,
             with_payload=True,
             with_vectors=False,
         )
-        if not points:
-            return None
 
-        point = points[0]
-        payload = self._as_json_mapping(dict(point.payload)) if point.payload else dict()
-        return VectorSearchHit(
+        results = []
+
+        for point in points:
+            payload = (
+                self._as_json_mapping(dict(point.payload))
+                if point.payload
+                else {}
+            )
+            document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
+
+            for key in _RESERVED_PAYLOAD_KEYS:
+                payload.pop(key, None)
+
+            results.append(
+                VectorSearchHit(
                     document_id=document_id,
                     point_id=str(point.id),
                     score=1.0,
                     reranker_score=1.0,
                     metadata=payload,
                 )
+            )
+
+        return results
 
     @staticmethod
     def _as_json_mapping(payload: Mapping[str, Any]) -> dict[str, JsonValue]:

@@ -62,14 +62,20 @@ class WorkItemIndexMapper:
         )
 
 
-def work_item_search_hit_to_json_str(work_items: Collection[WorkItemSearchHit]) -> str:
+def work_item_search_hit_to_json_str(work_items: Collection[WorkItemSearchHit], *, reduced_information: bool = True) -> str:
+
+    def _convert_work_item(work_item: PolarionWorkItem) -> PolarionWorkItem | ReducedWorkItem:
+        if reduced_information:
+            return ReducedWorkItem.from_work_item(work_item)
+        else:
+            return work_item
 
     retrieved_work_items = [
         {
             "retrieval_rank": index,
             "similarity_score": round(hit.score, 6),
             "id": str(f"{hit.work_item.project_id}:{hit.work_item.work_item_id}"),
-            "work_item": ReducedWorkItem.from_work_item(hit.work_item).model_dump(
+            "work_item": _convert_work_item(hit.work_item).model_dump(
                 mode="json",
                 by_alias=True,
             ),

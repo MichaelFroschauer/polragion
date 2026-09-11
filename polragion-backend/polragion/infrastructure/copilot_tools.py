@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.vector_store import VectorStore
-from polragion.models.work_item import WorkItemSearchHit, ReducedWorkItem, PolarionWorkItem
+from polragion.models.work_item import WorkItemSearchHit
 from polragion.settings import Settings
 
 # Imported only for type hints; a runtime import would create a circular
@@ -53,6 +53,7 @@ class CopilotTools:
             search_limit: int | None = Field(default=None, description="Optional limit for the number of results to return.")
             search_score_threshold: float | None = Field(default=None, gt=0, le=1, description="Optional score threshold for the search results (Must be between 0 and 1).")
             polarion_project_id: str | None = Field(default=None, description=f"Optional Polarion project ID. Available project IDs: {project_ids_str}")
+            reduced_work_item_size: bool = Field(default=False, description=f"Optional: If False every available information and field is shown for the work item. This is not needed if only the content and general information is required.")
 
         @define_tool(description="Fetch information details from the vector database that contains all polarion work items.")
         async def vector_db_work_items_search(params: SearchWorkItemsParams) -> str:
@@ -76,7 +77,8 @@ class CopilotTools:
 
             await self.user_request_manager.add_searched_work_items(user_id, results)
 
-            json_str = work_item_search_hit_to_json_str(results)
+            json_str = work_item_search_hit_to_json_str(results, reduced_information=params.reduced_work_item_size)
+
             return json_str
 
         return vector_db_work_items_search
@@ -91,20 +93,18 @@ class CopilotTools:
         project_ids_str = ", ".join(str(project_id) for project_id in project_ids)
 
         class LookupWorkItemsParams(BaseModel):
-            polarion_project_id: str | None = Field(default=None, description=f"Polarion project ID. Available project IDs: {project_ids_str}")
+            polarion_project_id: str | None = Field(default=None, description=f"Optional Polarion project ID. Available project IDs: {project_ids_str}")
             polarion_work_item_id: str | None = Field(default=None, description="Polarion work item ID (Like: PREFIX-12345).")
+            reduced_work_item_size: bool = Field(default=False, description=f"Optional: If False every available information and field is shown for the work item. This is not needed if only the content and general information is required.")
 
         @define_tool(description="Fetch a specific polarion work items via its ID.")
         async def find_work_item_by_id(params: LookupWorkItemsParams) -> str:
-
-            if params.polarion_project_id is None:
-                return "Polarion project ID not provided"
 
             if params.polarion_work_item_id is None:
                 return "Polarion work item ID not provided"
 
             results: list[WorkItemSearchHit] = service.search(
-                "Query will be ignored ...",
+                "",
                 limit=1,
                 score_threshold=0.0,
                 project_id=params.polarion_project_id,
@@ -117,10 +117,9 @@ class CopilotTools:
 
             await self.user_request_manager.add_searched_work_items(user_id, results)
 
-            found_work_item: PolarionWorkItem = results[0].work_item
-            work_item = ReducedWorkItem.from_work_item(found_work_item).model_dump(mode="json", by_alias=True)
+            json_str = work_item_search_hit_to_json_str(results, reduced_information=params.reduced_work_item_size)
 
-            return work_item
+            return json_str
 
         return find_work_item_by_id
 
