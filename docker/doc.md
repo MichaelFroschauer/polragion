@@ -10,7 +10,7 @@ cp .env.example .env
 
 ### Build the docker images and start the containers
 ```bash
-docker compose -f docker-compose.yaml up -d --build
+docker compose -f docker-compose.yaml --env-file .env.backend --env-file .env.frontend up -d --build
 ```
 
 ### See the logs of the containers
@@ -25,7 +25,12 @@ docker compose ps
 
 ### Stop the containers, the data is saved in the host volumes
 ```bash
-docker compose  -f docker-compose.yaml down
+docker compose -f docker-compose.yaml down
+```
+
+### Check the config of the docker compose file
+```bash
+docker compose --env-file .env.backend --env-file .env.frontend config
 ```
 
 ### Check the used system ressources of the docker containers

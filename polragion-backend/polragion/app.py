@@ -130,6 +130,7 @@ def create_app(
         "http://localhost:5173",
         "http://127.0.0.1",
         "http://127.0.0.1:5173",
+        "http://10.150.5.129",
 
         "https://localhost",
         "https://localhost:5173",
@@ -137,6 +138,7 @@ def create_app(
         "https://127.0.0.1:5173",
         "https://192.168.178.51:5173",
         "https://192.168.178.124:5173",
+        "https://10.150.5.129",
     ]
     app.add_middleware(
         CORSMiddleware,
