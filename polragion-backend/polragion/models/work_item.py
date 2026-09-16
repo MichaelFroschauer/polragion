@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,14 +9,6 @@ class LinkedWorkItem(BaseModel):
     id: str = Field(min_length=1, max_length=128)
     role: str = Field(min_length=1, max_length=128)
     direction: Literal["outgoing", "incoming"]
-
-
-class CustomFields(BaseModel):
-    # Polarion installations often have additional custom fields. Unknown fields
-    # are intentionally ignored here so the API remains forwards-compatible.
-    model_config = ConfigDict(extra="ignore")
-
-    safety_requirement: str | None = Field(default=None, max_length=128)
 
 
 class PolarionWorkItem(BaseModel):
@@ -45,9 +37,7 @@ class PolarionWorkItem(BaseModel):
         max_length=1_000,
     )
 
-    custom_fields: CustomFields = Field(
-        default_factory=CustomFields
-    )
+    additional_fields: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReducedWorkItem(BaseModel):

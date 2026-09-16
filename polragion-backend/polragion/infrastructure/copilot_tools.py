@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -6,10 +7,12 @@ from uuid import UUID
 
 from copilot import define_tool, Tool, PreToolUseHookOutput, PreToolUseHookInput
 from pydantic import BaseModel, Field
+from starlette.datastructures import State
 
 from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.vector_store import VectorStore
+from polragion.models.polarion_config import PolarionImportConfig, ProjectImportConfig
 from polragion.models.work_item import WorkItemSearchHit
 from polragion.settings import Settings
 
@@ -27,17 +30,21 @@ class CopilotTools:
             work_item_service: WorkItemService,
             user_request_manager: "UserRequestManager",
             vector_store: VectorStore,
+            app_state: State,
     ) -> None:
         self.settings = settings
         self.work_item_service = work_item_service
         self.user_request_manager = user_request_manager
         self._vector_store = vector_store
+        self._app_state = app_state
+        self._polarion_config: PolarionImportConfig = app_state.polarion_config
 
     def create_tools(self, user_id: UUID) -> list:
         return [
             self._create_work_item_vector_search_tool(user_id),
             self._create_work_item_id_search_tool(user_id),
-            self._create_distinct_project_id_fetcher_tool(),
+            self._create_project_fetcher_tool(),
+            self._create_document_fetcher_tool(),
         ]
 
     def _create_work_item_vector_search_tool(self, user_id: UUID) -> Tool:
@@ -124,17 +131,64 @@ class CopilotTools:
         return find_work_item_by_id
 
 
-    def _create_distinct_project_id_fetcher_tool(self) -> Tool:
+    def _create_project_fetcher_tool(self) -> Tool:
 
-        @define_tool(description="Get a list of distinct available Polarion project IDs in the vector database.")
-        async def get_distinct_polarion_projects() -> str:
+        @define_tool(description="Get a list of available Polarion projects and their responding information (mostly for further tool calls).")
+        async def get_polarion_projects() -> str:
 
-            project_ids = self._vector_store.get_facet("project_id")
-            project_ids_str = ' '.join([str(project_id) for project_id in project_ids])
+            project_desc: list[dict] = []
+            for project_id in self._vector_store.get_facet("project_id"):
+                p = self._polarion_config.get_project_by_id(project_id)
+                description: str = p.description if p else ""
+                context: str = p.project_context if p else ""
 
-            return project_ids_str
+                project_desc.append({
+                    "project_id": project_id,
+                    "project_description": description,
+                    "project_context":  context,
+                })
+            return json.dumps(project_desc)
 
-        return get_distinct_polarion_projects
+            # TODO: Old code, remove after new code is tested
+            # project_ids = self._vector_store.get_facet("project_id")
+            # project_ids_str = ' '.join([str(project_id) for project_id in project_ids])
+            #
+            # return project_ids_str
+
+        return get_polarion_projects
+
+
+    def _create_document_fetcher_tool(self) -> Tool:
+
+        service = self.work_item_service
+
+        # TODO: Only captured once at tool-creation time as closure vars (not model fields).
+        project_ids = self._vector_store.get_facet("project_id")
+        project_ids_str = ", ".join(str(project_id) for project_id in project_ids)
+
+        class LookupDocumentsParams(BaseModel):
+            polarion_project_id: str | None = Field(default=None, description=f"Optional Polarion project ID. Available project IDs: {project_ids_str}")
+
+        @define_tool(description="Get a list of available Polarion documents and their responding information (mostly for further tool calls).")
+        async def get_polarion_documents(params: LookupDocumentsParams) -> str:
+
+            projects: list[ProjectImportConfig] = self._polarion_config.projects
+            if params.polarion_project_id:
+                p = self._polarion_config.get_project_by_id(params.polarion_project_id)
+                if p:
+                    projects = [p]
+
+            project_docs: list[dict] = []
+            for project in projects:
+                project_docs.append({
+                    "project_id": project.project_id,
+                    "project_context": project.project_context,
+                    "documents": project.documents,
+                })
+
+            return json.dumps(project_docs)
+
+        return get_polarion_documents
 
 
 @dataclass

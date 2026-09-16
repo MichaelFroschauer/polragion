@@ -30,6 +30,7 @@ from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
 from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
+from polragion.models.polarion_config import load_import_config, PolarionImportConfig
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -63,10 +64,14 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        vector_store = vector_store_factory(app_settings)
-        vector_store.initialize()
 
         app.state.settings = app_settings
+
+        polarion_config: PolarionImportConfig = load_import_config(app_settings.polarion_import_config_path)
+        app.state.polarion_config = polarion_config
+
+        vector_store = vector_store_factory(app_settings)
+        vector_store.initialize()
         app.state.vector_store = vector_store
         work_item_service = WorkItemService(
             vector_store=vector_store,
@@ -90,7 +95,7 @@ def create_app(
 
         user_request_manager = UserRequestManager(app_settings)
         app.state.user_request_manager = user_request_manager
-        app.state.ai_tools = CopilotTools(app_settings, work_item_service, user_request_manager, vector_store)
+        app.state.ai_tools = CopilotTools(app_settings, work_item_service, user_request_manager, vector_store, app.state)
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
         app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
 

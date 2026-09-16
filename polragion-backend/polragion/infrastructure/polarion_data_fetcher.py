@@ -9,69 +9,12 @@ import certifi
 from polarion import polarion
 from polarion.project import Project
 
-from polragion.models.work_item import PolarionWorkItem, CustomFields, LinkedWorkItem
+from polragion.models.polarion_config import PolarionImportConfig, WorkItemImportConfig, ProjectImportConfig
+from polragion.models.work_item import PolarionWorkItem, LinkedWorkItem
 from polragion.settings import Settings
-from polragion.utils.general import StrictModel
-from pydantic import Field
 from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
-
-class RelationsConfig(StrictModel):
-    fields: list[str] = Field(
-        default_factory=lambda: [
-            "linkedWorkItems",
-            "linkedWorkItemsDerived",
-        ]
-    )
-
-
-class WorkItemImportConfig(StrictModel):
-    query: str | None = None
-
-    common_fields: list[str]
-    fields_by_type: dict[str, list[str]] = Field(default_factory=dict)
-    relations: RelationsConfig = Field(default_factory=RelationsConfig)
-
-    def requested_fields(self) -> list[str]:
-        """Fields for all work items requested."""
-
-        fields = list(self.common_fields)
-
-        for type_fields in self.fields_by_type.values():
-            fields.extend(type_fields)
-
-        fields.extend(self.relations.fields)
-
-        # Remove duplicates
-        return list(dict.fromkeys(fields))
-
-    def fields_for_type(self, work_item_type: str) -> list[str]:
-        """Fields for a specific work item type."""
-
-        fields = [
-            *self.common_fields,
-            *self.fields_by_type.get(work_item_type, []),
-            *self.relations.fields,
-        ]
-
-        return list(dict.fromkeys(fields))
-
-class ProjectDocument(StrictModel):
-    name: str
-    category: str
-
-class ProjectImportConfig(StrictModel):
-    project_id: str
-    enabled: bool = True
-    documents: list[ProjectDocument]
-    work_items: WorkItemImportConfig
-
-
-class PolarionImportConfig(StrictModel):
-    schema_version: int = 1
-    projects: list[ProjectImportConfig]
-
 
 def create_ca_bundle(company_ca_path: Path, output_path: Path) -> Path:
 
@@ -102,6 +45,7 @@ class PolarionDataFetcher:
         "description",
         "status",
         "location",
+        "revision",
         "linkedWorkItems",
         "linkedWorkItemsDerived",
     )
@@ -208,6 +152,7 @@ class PolarionDataFetcher:
                         project_id=project_config.project_id,
                         project_name=polarion_project.name,
                         document_category=document_category,
+                        project_config=project_config,
                     )
                     batch.append(converted)
                     fetched += 1
@@ -226,15 +171,15 @@ class PolarionDataFetcher:
                     return
 
 
-    def _convert_work_item(self, raw_work_item: Any, project_id: str, project_name: str | None, document_category: str | None) -> PolarionWorkItem:
+    def _convert_work_item(self, raw_work_item: Any, project_id: str, project_name: str | None, document_category: str | None, project_config: ProjectImportConfig) -> PolarionWorkItem:
 
         work_item_id = self._required_text(getattr(raw_work_item, "id", None), field_name="id")
 
         # work item type
         type_attr = getattr(raw_work_item, "type", None)
-        type_value_id = self._required_text(value=self._enum_id(type_attr), field_name="type.id", work_item_id=work_item_id)
-        type_value_name = self._to_text(self._enum_name(work_item_uri=raw_work_item.uri, field_key="type", enum_value=type_attr))
-        work_item_type = type_value_name if type_value_name is not None and len(type_value_name) > 0 else type_value_id
+        work_item_type_id = self._required_text(value=self._enum_id(type_attr), field_name="type.id", work_item_id=work_item_id)
+        work_item_type_value = self._to_text(self._enum_name(work_item_uri=raw_work_item.uri, field_key="type", enum_value=type_attr))
+        work_item_type = work_item_type_value if work_item_type_value is not None and len(work_item_type_value) > 0 else work_item_type_id
 
         # work item status
         status_attr = getattr(raw_work_item, "status", None)
@@ -244,6 +189,11 @@ class PolarionDataFetcher:
 
         title: str | None = self._to_text(getattr(raw_work_item, "title", ""))
         uri = self._required_text(getattr(raw_work_item, "uri", None), field_name="uri", work_item_id=work_item_id)
+
+        additional_fields: dict[str, Any] = {
+            field_name: self._get_additional_field(raw_work_item=raw_work_item, key=field_name)
+            for field_name in project_config.work_items.fields_for_type(work_item_type_id)
+        }
 
         return PolarionWorkItem(
             project_id=project_id,
@@ -258,12 +208,7 @@ class PolarionDataFetcher:
             status=work_item_status,
             location=self._text_value(getattr(raw_work_item, "location", None)),
             linked_work_items=self._get_linked_work_items(raw_work_item=raw_work_item, source_work_item_id=work_item_id),
-            custom_fields=CustomFields(
-                safety_requirement=self._get_custom_field(
-                    raw_work_item=raw_work_item,
-                    key="safetyrequirement",
-                )
-            ),
+            additional_fields=additional_fields,
         )
 
 
@@ -340,23 +285,31 @@ class PolarionDataFetcher:
         return result
 
 
-    def _get_custom_field(self, raw_work_item: Any, key: str) -> str | None:
+    def _get_additional_field(self, raw_work_item: Any, key: str) -> Any | None:
 
-        custom_fields = getattr(raw_work_item, "customFields", None)
-        if custom_fields is None:
-            return None
+        if key.lower().startswith("customfields"):
+            custom_fields = getattr(raw_work_item, "customFields", None)
+            if custom_fields is None:
+                return None
 
-        raw_custom_fields = getattr(custom_fields, "Custom", None)
-        if raw_custom_fields is None:
-            return None
+            raw_custom_fields = getattr(custom_fields, "Custom", None)
+            if raw_custom_fields is None:
+                return None
 
-        for custom_field in raw_custom_fields:
+            if isinstance(raw_custom_fields, Iterable):
+                for custom_field in raw_custom_fields:
 
-            custom_field_key = getattr(custom_field, "key", None)
-            if custom_field_key != key:
-                continue
+                    custom_field_key = getattr(custom_field, "key", None)
+                    if custom_field_key != key:
+                        continue
 
-            return self._text_value(getattr(custom_field, "value", None))
+                    return self._text_value(getattr(custom_field, "value", None))
+        else:
+            field = getattr(raw_work_item, key, None)
+            if field is None:
+                return None
+
+            return self._text_value(getattr(field, "value", None))
 
         return None
 

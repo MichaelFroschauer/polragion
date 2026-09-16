@@ -13,15 +13,43 @@ from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
-from polragion.infrastructure.polarion_data_fetcher import PolarionImportConfig, PolarionDataFetcher
+from polragion.infrastructure.polarion_data_fetcher import PolarionDataFetcher
 from polragion.application.prompt_builder import AnswerDetail, get_prompt_message, get_prompt_message_with_work_items
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
+from polragion.models.polarion_config import load_import_config, PolarionImportConfig
 from polragion.models.user import User
 from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/work-items", tags=["work-items"])
+
+
+@router.post(
+    "/load-config",
+    status_code=status.HTTP_200_OK,
+)
+def load_polarion_import_config(
+    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> PolarionImportConfig:
+
+    # TODO: Maybe change this so that there exists an ingested version of the polarion import config file which is updated if a new ingest happens
+    polarion_config: PolarionImportConfig = load_import_config(settings.polarion_import_config_path)
+    request.app.state.polarion_config = polarion_config
+
+    return polarion_config
+
+
+@router.get(
+    "/get-config",
+    status_code=status.HTTP_200_OK,
+)
+def get_import_config(
+    request: Request,
+) -> PolarionImportConfig:
+
+    return request.app.state.polarion_config
 
 
 @router.post(
@@ -71,10 +99,6 @@ def ingest_work_items_from_json_data_source(
     count = data_worker.work(data_fetcher.fetch_data(limit))
     return IngestResponse(status="ok", ingested_items=count)
 
-
-def load_import_config(path: Path) -> PolarionImportConfig:
-    config_text = path.read_text(encoding="utf-8")
-    return PolarionImportConfig.model_validate_json(config_text)
 
 
 @router.post(

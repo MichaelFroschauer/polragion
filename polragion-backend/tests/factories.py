@@ -1,4 +1,4 @@
-from polragion.models.work_item import CustomFields, PolarionWorkItem
+from polragion.models.work_item import PolarionWorkItem
 
 
 def make_work_item(
@@ -8,14 +8,15 @@ def make_work_item(
 ) -> PolarionWorkItem:
     return PolarionWorkItem(
         project_id=project_id,
-        workitem_id=workitem_id,
+        work_item_id=workitem_id,
+        work_item_type="requirement",
         title="The system shall authenticate users",
-        text="Users must authenticate before accessing protected resources.",
+        description="Users must authenticate before accessing protected resources.",
         revision=1,
         status="open",
-        custom_fields=CustomFields(
-            workitem_type="requirement",
-            priority="high",
-            tags=["security"],
-        ),
+        additional_fields={
+            "work_item_type": "requirement",
+            "priority": "high",
+            "tags": ["secruity"]
+        }
     )
