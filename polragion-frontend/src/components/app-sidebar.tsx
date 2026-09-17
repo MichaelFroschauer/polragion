@@ -128,7 +128,7 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
             <SidebarFooter>
                 <NavUser/>
             </SidebarFooter>
-            <SettingsDialog
+            {/* <SettingsDialog
                 defaultCategory="about"
                 trigger={
                     <button
@@ -139,7 +139,7 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
                         {copyrightNotice()} · {APP_INFO.license}
                     </button>
                 }
-            />
+            /> */}
         </Sidebar>
     )
 }
