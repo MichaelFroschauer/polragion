@@ -12,7 +12,7 @@ export function GitHubAuthButton() {
 
   if (!user) {
     return (
-      <Button onClick={login} size="sm" variant="outline">
+      <Button onClick={login} size="sm" variant="outline" className="text-sm font-normal">
         <LogInIcon className="size-4" />
         Sign in with GitHub
       </Button>

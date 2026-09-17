@@ -208,30 +208,32 @@ export function ModelPicker() {
   return (
     <div className="flex items-center gap-2">
 
-      <Select
-        items={Object.values(AnswerDetail).map(detail => ({ label: responseLengthLabel(detail), value: detail }))}
-        onValueChange={(value) => setAnswerDetailSelection(value as AnswerDetail)}
-        value={answerDetailSelection ?? AnswerDetail.Auto}
-      >
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <SelectTrigger aria-label="Reasoning effort" size="sm">
-                <Layers2 className="size-3.5 text-muted-foreground" />
-                <SelectValue />
-              </SelectTrigger>
-            }
-          />
-          <TooltipContent>Model response length</TooltipContent>
-        </Tooltip>
-        <SelectContent>
-          {Object.values(AnswerDetail).map(detail => (
-            <SelectItem key={detail} value={detail}>
-              {responseLengthLabel(detail)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {isAuthenticated &&
+        <Select
+          items={Object.values(AnswerDetail).map(detail => ({ label: responseLengthLabel(detail), value: detail }))}
+          onValueChange={(value) => setAnswerDetailSelection(value as AnswerDetail)}
+          value={answerDetailSelection ?? AnswerDetail.Auto}
+        >
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <SelectTrigger aria-label="Reasoning effort" size="sm">
+                  <Layers2 className="size-3.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+              }
+            />
+            <TooltipContent>Model response length</TooltipContent>
+          </Tooltip>
+          <SelectContent>
+            {Object.values(AnswerDetail).map(detail => (
+              <SelectItem key={detail} value={detail}>
+                {responseLengthLabel(detail)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
 
       {supportsEffort && (
         <Select
