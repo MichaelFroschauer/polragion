@@ -9,7 +9,8 @@ import certifi
 from polarion import polarion
 from polarion.project import Project
 
-from polragion.models.polarion_config import PolarionImportConfig, WorkItemImportConfig, ProjectImportConfig
+from polragion.models.polarion_config import PolarionImportConfig, WorkItemImportConfig, ProjectImportConfig, \
+    load_import_config
 from polragion.models.work_item import PolarionWorkItem, LinkedWorkItem
 from polragion.settings import Settings
 from urllib.parse import unquote
@@ -50,20 +51,20 @@ class PolarionDataFetcher:
         "linkedWorkItemsDerived",
     )
 
-    def __init__(self, settings: Settings, import_config: PolarionImportConfig) -> None:
+    def __init__(self, settings: Settings) -> None:
 
-        if settings.max_ingest_batch_size <= 0:
+        self._settings = settings
+        if self._settings.max_ingest_batch_size <= 0:
             raise ValueError("max_ingest_batch_size must be greater than zero")
 
-        self._batch_size = settings.max_ingest_batch_size
-        self._import_config = import_config
+        self._batch_size = self._settings.max_ingest_batch_size
 
-        verify_certificate = self._configure_ca_trust(settings)
+        verify_certificate = self._configure_ca_trust(self._settings)
 
         self._client = polarion.Polarion(
-            polarion_url=settings.polarion_host,
-            user=settings.polarion_user,
-            password=settings.polarion_password,
+            polarion_url=self._settings.polarion_host,
+            user=self._settings.polarion_user,
+            password=self._settings.polarion_password,
             verify_certificate=verify_certificate,
         )
         self._tracker_service = self._client.getService("Tracker")
@@ -113,7 +114,9 @@ class PolarionDataFetcher:
 
         fetched = 0
 
-        for project_config in self._import_config.projects:
+        _import_config: PolarionImportConfig = load_import_config(self._settings.polarion_import_config_path)
+
+        for project_config in _import_config.projects:
             if not project_config.enabled:
                 continue
 
@@ -132,6 +135,8 @@ class PolarionDataFetcher:
                 remaining = -1 if limit is None else limit - fetched
 
                 requested_work_item_field_keys = self._requested_fields(project_config.work_items)
+
+                # These fields must be handled differently because they can only be retrieved by the polarion tracker service
                 requested_work_item_field_keys.remove("revision")
                 requested_work_item_field_keys.remove("uri")
 
@@ -151,6 +156,7 @@ class PolarionDataFetcher:
                         raw_work_item=raw_work_item,
                         project_id=project_config.project_id,
                         project_name=polarion_project.name,
+                        project_context=project_config.project_context,
                         document_category=document_category,
                         project_config=project_config,
                     )
@@ -171,7 +177,14 @@ class PolarionDataFetcher:
                     return
 
 
-    def _convert_work_item(self, raw_work_item: Any, project_id: str, project_name: str | None, document_category: str | None, project_config: ProjectImportConfig) -> PolarionWorkItem:
+    def _convert_work_item(self, *,
+            raw_work_item: Any,
+            project_id: str,
+            project_name: str | None,
+            project_context: list[str],
+            document_category: str | None,
+            project_config: ProjectImportConfig
+    ) -> PolarionWorkItem:
 
         work_item_id = self._required_text(getattr(raw_work_item, "id", None), field_name="id")
 
@@ -190,14 +203,15 @@ class PolarionDataFetcher:
         title: str | None = self._to_text(getattr(raw_work_item, "title", ""))
         uri = self._required_text(getattr(raw_work_item, "uri", None), field_name="uri", work_item_id=work_item_id)
 
-        additional_fields: dict[str, Any] = {
-            field_name: self._get_additional_field(raw_work_item=raw_work_item, key=field_name)
-            for field_name in project_config.work_items.fields_for_type(work_item_type_id)
-        }
+        additional_fields: dict[str, Any] = {}
+        for field_name in project_config.work_items.fields_for_type(work_item_type_id):
+            if (field_value := self._get_additional_field(raw_work_item=raw_work_item, key=field_name)) is not None:
+                additional_fields[field_name] = field_value
 
         return PolarionWorkItem(
             project_id=project_id,
             project_name=project_name,
+            project_context=project_context,
             document_name=self._get_document_name(raw_work_item=raw_work_item),
             document_category=document_category,
             work_item_id=work_item_id,
@@ -287,6 +301,10 @@ class PolarionDataFetcher:
 
     def _get_additional_field(self, raw_work_item: Any, key: str) -> Any | None:
 
+        if key in self._REQUIRED_FIELDS:
+            # This key is not an additional field and already handled elsewhere
+            return None
+
         if key.lower().startswith("customfields"):
             custom_fields = getattr(raw_work_item, "customFields", None)
             if custom_fields is None:
@@ -300,7 +318,7 @@ class PolarionDataFetcher:
                 for custom_field in raw_custom_fields:
 
                     custom_field_key = getattr(custom_field, "key", None)
-                    if custom_field_key != key:
+                    if custom_field_key != key.removeprefix("customFields."):
                         continue
 
                     return self._text_value(getattr(custom_field, "value", None))

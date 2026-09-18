@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from time import perf_counter
 from typing import Annotated, Iterable
 
@@ -7,16 +6,16 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Requ
 
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
-    get_ai_service
+    get_ai_service, get_polarion_descriptor
 from polragion.api.models import IngestResponse, WorkItemAskResponse, WorkItemSearchResponse
 from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
-from polragion.infrastructure.polarion_data_fetcher import PolarionDataFetcher
+from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.application.prompt_builder import AnswerDetail, get_prompt_message, get_prompt_message_with_work_items
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
-from polragion.models.polarion_config import load_import_config, PolarionImportConfig
+from polragion.models.polarion_config import PolarionImportConfig, load_import_config
 from polragion.models.user import User
 from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 from polragion.settings import Settings
@@ -30,13 +29,13 @@ router = APIRouter(prefix="/v1/work-items", tags=["work-items"])
     status_code=status.HTTP_200_OK,
 )
 def load_polarion_import_config(
-    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
+    polarion_descriptor: Annotated[PolarionDescriptor, Depends(get_polarion_descriptor)],
 ) -> PolarionImportConfig:
 
     # TODO: Maybe change this so that there exists an ingested version of the polarion import config file which is updated if a new ingest happens
+    polarion_descriptor.update_data()
     polarion_config: PolarionImportConfig = load_import_config(settings.polarion_import_config_path)
-    request.app.state.polarion_config = polarion_config
 
     return polarion_config
 
@@ -46,10 +45,10 @@ def load_polarion_import_config(
     status_code=status.HTTP_200_OK,
 )
 def get_import_config(
-    request: Request,
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> PolarionImportConfig:
 
-    return request.app.state.polarion_config
+    return load_import_config(settings.polarion_import_config_path)
 
 
 @router.post(
@@ -107,16 +106,13 @@ def ingest_work_items_from_json_data_source(
     status_code=status.HTTP_200_OK,
 )
 def ingest_work_items_from_polarion_data_source(
-    settings: Annotated[Settings, Depends(get_settings)],
+    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
     data_worker: Annotated[DataWorker, Depends(get_data_worker)],
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
 
-    config = load_import_config(Path(settings.polarion_import_config_path))
-
-    data_fetcher = PolarionDataFetcher(settings, config)
     data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
-    count = data_worker.work(data)
+    count: int = data_worker.work(data)
 
     return IngestResponse(status="ok", ingested_items=count)
 
@@ -126,7 +122,6 @@ def ingest_work_items_from_polarion_data_source(
     response_model=WorkItemSearchResponse,
 )
 def search_work_items(
-    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
@@ -194,7 +189,6 @@ async def ask_work_item_with_initial_search(
 ) -> WorkItemAskResponse:
 
     hits: WorkItemSearchResponse = search_work_items(
-        request=request,
         settings=settings,
         prompt=prompt,
         work_item_service=work_item_service,

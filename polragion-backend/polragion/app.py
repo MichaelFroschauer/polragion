@@ -12,25 +12,24 @@ from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.api.auth import router as auth_router
 from polragion.api.ai_models import router as ai_models_router
-from polragion.application.ai_service import AiMessageEventT
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
-from polragion.database.memory_repository import InMemorySessionRepository, InMemoryUserRepository, \
-    InMemoryGitHubCredentialsRepository
 from polragion.database.sqlite_repository import SqliteUserRepository, SqliteGitHubCredentialsRepository, \
     SqliteSessionRepository, SQLiteDatabase
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
+from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.infrastructure.copilot_service import CopilotService
 from polragion.application.user_request_manager import UserRequestManager
 from polragion.infrastructure.copilot_tools import CopilotTools
 from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
+from polragion.infrastructure.polarion_data_fetcher import PolarionDataFetcher
+from polragion.infrastructure.polarion_import_config_descriptor import PolarionImportConfigDescriptor
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
-from polragion.infrastructure.qdrant_vector_store import QdrantVectorStore
-from polragion.models.polarion_config import load_import_config, PolarionImportConfig
+from polragion.models.polarion_config import PolarionImportConfig
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ def create_app(
     *,
     settings: Settings | None = None,
     vector_store_factory: VectorStoreFactory = QdrantHybridVectorStore,
-    data_fetcher_factory: DataFetcherFactory = JsonDataFetcher,
+    data_fetcher_factory: DataFetcherFactory = PolarionDataFetcher,
     data_worker_factory: DataWorkerFactory = QdrantDataWorker,
 ) -> FastAPI:
     app_settings = settings or Settings()
@@ -67,8 +66,8 @@ def create_app(
 
         app.state.settings = app_settings
 
-        polarion_config: PolarionImportConfig = load_import_config(app_settings.polarion_import_config_path)
-        app.state.polarion_config = polarion_config
+        polarion_descriptor: PolarionDescriptor = PolarionImportConfigDescriptor(app_settings, app_settings.polarion_import_config_path)
+        app.state.polarion_descriptor = polarion_descriptor
 
         vector_store = vector_store_factory(app_settings)
         vector_store.initialize()
@@ -95,7 +94,13 @@ def create_app(
 
         user_request_manager = UserRequestManager(app_settings)
         app.state.user_request_manager = user_request_manager
-        app.state.ai_tools = CopilotTools(app_settings, work_item_service, user_request_manager, vector_store, app.state)
+        app.state.ai_tools = CopilotTools(
+            settings=app_settings,
+            work_item_service=work_item_service,
+            user_request_manager=user_request_manager,
+            vector_store=vector_store,
+            polarion_descriptor=polarion_descriptor
+        )
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
         app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
 

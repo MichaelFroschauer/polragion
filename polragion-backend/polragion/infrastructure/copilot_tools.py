@@ -7,12 +7,11 @@ from uuid import UUID
 
 from copilot import define_tool, Tool, PreToolUseHookOutput, PreToolUseHookInput
 from pydantic import BaseModel, Field
-from starlette.datastructures import State
 
 from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
 from polragion.application.work_item_service import WorkItemService
+from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.domain.vector_store import VectorStore
-from polragion.models.polarion_config import PolarionImportConfig, ProjectImportConfig
 from polragion.models.work_item import WorkItemSearchHit
 from polragion.settings import Settings
 
@@ -25,19 +24,18 @@ logger = logging.getLogger(__name__)
 class CopilotTools:
 
     def __init__(
-            self,
+            self, *,
             settings: Settings,
             work_item_service: WorkItemService,
             user_request_manager: "UserRequestManager",
             vector_store: VectorStore,
-            app_state: State,
+            polarion_descriptor: PolarionDescriptor,
     ) -> None:
         self.settings = settings
         self.work_item_service = work_item_service
         self.user_request_manager = user_request_manager
         self._vector_store = vector_store
-        self._app_state = app_state
-        self._polarion_config: PolarionImportConfig = app_state.polarion_config
+        self._polarion_descriptor: PolarionDescriptor = polarion_descriptor
 
     def create_tools(self, user_id: UUID) -> list:
         return [
@@ -137,16 +135,16 @@ class CopilotTools:
         async def get_polarion_projects() -> str:
 
             project_desc: list[dict] = []
-            for project_id in self._vector_store.get_facet("project_id"):
-                p = self._polarion_config.get_project_by_id(project_id)
-                description: str = p.description if p else ""
-                context: str = p.project_context if p else ""
+            for project_id in self._polarion_descriptor.get_project_ids():
+                p_description: str = self._polarion_descriptor.get_project_description(project_id) or ""
+                p_context: list[str] = self._polarion_descriptor.get_project_context(project_id)
 
                 project_desc.append({
                     "project_id": project_id,
-                    "project_description": description,
-                    "project_context":  context,
+                    "project_description": p_description,
+                    "project_context": p_context,
                 })
+
             return json.dumps(project_desc)
 
             # TODO: Old code, remove after new code is tested
@@ -172,18 +170,20 @@ class CopilotTools:
         @define_tool(description="Get a list of available Polarion documents and their responding information (mostly for further tool calls).")
         async def get_polarion_documents(params: LookupDocumentsParams) -> str:
 
-            projects: list[ProjectImportConfig] = self._polarion_config.projects
+            project_ids: list[str] = []
             if params.polarion_project_id:
-                p = self._polarion_config.get_project_by_id(params.polarion_project_id)
-                if p:
-                    projects = [p]
+                project_ids.append(params.polarion_project_id)
+            else:
+                project_ids = self._polarion_descriptor.get_project_ids()
 
             project_docs: list[dict] = []
-            for project in projects:
+            for project_id in project_ids:
+                project_context = self._polarion_descriptor.get_project_context(project_id)
+                document_names = self._polarion_descriptor.get_documents(project_id)
                 project_docs.append({
-                    "project_id": project.project_id,
-                    "project_context": project.project_context,
-                    "documents": project.documents,
+                    "project_id": project_id,
+                    "project_context": project_context,
+                    "documents": document_names,
                 })
 
             return json.dumps(project_docs)

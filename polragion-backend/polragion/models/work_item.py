@@ -18,6 +18,7 @@ class PolarionWorkItem(BaseModel):
 
     project_id: str = Field(min_length=1, max_length=128)
     project_name: str | None = Field(default=None, max_length=128)
+    project_context: list[str] = Field(default_factory=list, max_length=10)
 
     work_item_id: str = Field(min_length=1, max_length=128)
     work_item_type:  str = Field(min_length=1, max_length=128)
@@ -32,10 +33,7 @@ class PolarionWorkItem(BaseModel):
     status: str | None = Field(default=None, max_length=128)
     location: str | None = Field(default=None, max_length=1024)
 
-    linked_work_items: list[LinkedWorkItem] = Field(
-        default_factory=list,
-        max_length=1_000,
-    )
+    linked_work_items: list[LinkedWorkItem] = Field(default_factory=list, max_length=1_000)
 
     additional_fields: dict[str, Any] = Field(default_factory=dict)
 

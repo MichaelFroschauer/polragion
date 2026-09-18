@@ -5,7 +5,7 @@
       "project_id": "Project_1",
       "enabled": true,
       "description": "",
-      "project_context": "My_system_containing_this_project",
+      "project_context": ["My_system_containing_this_project"],
       "documents": [
         {
           "name": "My_fancy_test_document",

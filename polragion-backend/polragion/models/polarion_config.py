@@ -68,7 +68,7 @@ class ProjectImportConfig(StrictModel):
     project_id: str
     enabled: bool = True
     description: str
-    project_context: str
+    project_context: list[str]
     documents: list[ProjectDocument]
     work_items: WorkItemImportConfig
 
@@ -77,8 +77,3 @@ class PolarionImportConfig(StrictModel):
     schema_version: int = 1
     projects: list[ProjectImportConfig]
 
-    def get_project_by_id(self, project_id: str) -> ProjectImportConfig | None:
-        for project in self.projects:
-            if project.project_id == project_id:
-                return project
-        return None
