@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
+from polragion.infrastructure.errors import ConfigurationError
 from polragion.utils.general import StrictModel
 
 def load_import_config(path: Path | str) -> PolarionImportConfig:
@@ -12,8 +13,11 @@ def load_import_config(path: Path | str) -> PolarionImportConfig:
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    config_text = path.read_text(encoding="utf-8")
-    return PolarionImportConfig.model_validate_json(config_text)
+    try:
+        config_text = path.read_text(encoding="utf-8")
+        return PolarionImportConfig.model_validate_json(config_text)
+    except ValidationError as exc:
+        raise ConfigurationError(f"Invalid Polarion import config in file: {path}", errors=exc.errors()) from exc
 
 
 class RelationsConfig(StrictModel):

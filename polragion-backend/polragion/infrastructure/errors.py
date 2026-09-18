@@ -8,3 +8,10 @@ class VectorStoreUnavailableError(VectorStoreError):
 
 class VectorStoreConfigurationError(VectorStoreError):
     """Existing vector-store infrastructure is incompatible with the app."""
+
+
+class ConfigurationError(Exception):
+    """Base error raised by a configuration adapter."""
+    def __init__(self, message: str, errors: list[dict] | None = None) -> None:
+        super().__init__(message)
+        self.errors = errors

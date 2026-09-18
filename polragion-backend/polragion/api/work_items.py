@@ -3,6 +3,7 @@ from time import perf_counter
 from typing import Annotated, Iterable
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Request
+from pydantic import ValidationError
 
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
@@ -14,6 +15,7 @@ from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.application.prompt_builder import AnswerDetail, get_prompt_message, get_prompt_message_with_work_items
+from polragion.infrastructure.errors import ConfigurationError
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
 from polragion.models.polarion_config import PolarionImportConfig, load_import_config
 from polragion.models.user import User
@@ -34,70 +36,35 @@ def load_polarion_import_config(
 ) -> PolarionImportConfig:
 
     # TODO: Maybe change this so that there exists an ingested version of the polarion import config file which is updated if a new ingest happens
-    polarion_descriptor.update_data()
-    polarion_config: PolarionImportConfig = load_import_config(settings.polarion_import_config_path)
-
-    return polarion_config
+    try:
+        polarion_descriptor.update_data()
+        return load_import_config(settings.polarion_import_config_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={ "message": str(exc), "errors": exc.errors },
+        ) from exc
 
 
 @router.get(
     "/get-config",
     status_code=status.HTTP_200_OK,
 )
-def get_import_config(
+def get_polarion_import_config(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> PolarionImportConfig:
 
-    return load_import_config(settings.polarion_import_config_path)
-
-
-@router.post(
-    "/ingest",
-    response_model=IngestResponse,
-    status_code=status.HTTP_200_OK,
-)
-def ingest_work_items(
-    data: Annotated[
-        list[PolarionWorkItem],
-        Body(min_length=1, max_length=50_000),
-    ],
-    service: Annotated[WorkItemService, Depends(get_work_item_service)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> IngestResponse:
-    if len(data) > settings.max_ingest_batch_size:
-        # The OpenAPI-level maximum is deliberately conservative. This runtime
-        # check allows deployments to configure an even smaller limit.
+    try:
+        return load_import_config(settings.polarion_import_config_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ConfigurationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                f"At most {settings.max_ingest_batch_size} work items may be ingested per request."
-            ),
-        )
-
-    started_at = perf_counter()
-    count = service.ingest(data)
-    logger.info(
-        "Ingested %d work items in %.3f seconds",
-        count,
-        perf_counter() - started_at,
-    )
-    return IngestResponse(status="ok", ingested_items=count)
-
-
-@router.post(
-    "/ingest/import-json",
-    response_model=IngestResponse,
-    status_code=status.HTTP_200_OK,
-)
-def ingest_work_items_from_json_data_source(
-    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
-    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
-    limit: Annotated[int | None, Query(ge=1)] = None,
-) -> IngestResponse:
-
-    count = data_worker.work(data_fetcher.fetch_data(limit))
-    return IngestResponse(status="ok", ingested_items=count)
-
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={ "message": str(exc), "errors": exc.errors },
+        ) from exc
 
 
 @router.post(
@@ -111,8 +78,16 @@ def ingest_work_items_from_polarion_data_source(
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
 
-    data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
-    count: int = data_worker.work(data)
+    try:
+        data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
+        count: int = data_worker.work(data)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={ "message": str(exc), "errors": exc.errors },
+        ) from exc
 
     return IngestResponse(status="ok", ingested_items=count)
 
@@ -283,3 +258,55 @@ async def reset_user_session(
     ai_service: Annotated[AiService, Depends(get_ai_service)],
 ) -> None:
     await ai_service.close_user_session(current_user.id)
+
+
+
+#############################################################################
+# Test Endpoints
+
+@router.post(
+    "/ingest",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items(
+    data: Annotated[
+        list[PolarionWorkItem],
+        Body(min_length=1, max_length=50_000),
+    ],
+    service: Annotated[WorkItemService, Depends(get_work_item_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> IngestResponse:
+    if len(data) > settings.max_ingest_batch_size:
+        # The OpenAPI-level maximum is deliberately conservative. This runtime
+        # check allows deployments to configure an even smaller limit.
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"At most {settings.max_ingest_batch_size} work items may be ingested per request."
+            ),
+        )
+
+    started_at = perf_counter()
+    count = service.ingest(data)
+    logger.info(
+        "Ingested %d work items in %.3f seconds",
+        count,
+        perf_counter() - started_at,
+    )
+    return IngestResponse(status="ok", ingested_items=count)
+
+
+@router.post(
+    "/ingest/import-json",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items_from_json_data_source(
+    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
+    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
+    limit: Annotated[int | None, Query(ge=1)] = None,
+) -> IngestResponse:
+
+    count = data_worker.work(data_fetcher.fetch_data(limit))
+    return IngestResponse(status="ok", ingested_items=count)
