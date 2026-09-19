@@ -54,13 +54,15 @@ class Settings(BaseSettings):
     # fastembed_reranker_model: str = "jinaai/jina-reranker-v1-turbo-en"
 
     #   Multilingual stack (German + English documents and queries).
-    #   The "-fp32" model is registered by register_custom_fastembed_models(), because FastEmbed's
-    #   built-in fp16 export of jinaai/jina-embeddings-v2-base-de crashes onnxruntime 1.27.
+    #   The "-fp32" model is registered as custom FastEmbed model.
     fastembed_dense_model: str = "jinaai/jina-embeddings-v2-base-de-fp32"
     fastembed_sparse_model: str = "Qdrant/bm25"
-    fastembed_sparse_language: str = "german" # stemmer and stopword list, only consumed by the Qdrant/bm25 sparse model
+    fastembed_sparse_language: str = "german" # stemmer and stopword list (also supports english), only consumed by the Qdrant/bm25 sparse model
     fastembed_reranker_model: str = "BAAI/bge-reranker-base"
     fastembed_reranker_batch_size: int = Field(default=32, ge=1, le=10_000)
+    #   Overrides the tokenizer truncation limit. Attention cost grows quadratically.
+    #   jina-embeddings-v2 handles up to 8192 tokens via ALiBi, but its default tokenizer_config.json caps truncation at 512.
+    fastembed_dense_max_tokens: int | None = Field(default=1024, ge=64, le=8192)
 
     fastembed_cache_path: str = ""
     fastembed_parallel: int | None = Field(default=None, ge=1, le=64)

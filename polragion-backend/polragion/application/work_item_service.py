@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from polragion.application.work_item_mapper import WorkItemIndexMapper
-from polragion.domain.vector_store import VectorStore
+from polragion.domain.vector_store import VectorStore, VectorDocument
 from polragion.infrastructure.db_filter import DbFilter, FilterType
 from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 from polragion.utils.general import field_name
@@ -17,7 +17,7 @@ class WorkItemService:
         self._mapper = mapper
 
     def ingest(self, work_items: Iterable[PolarionWorkItem]) -> int:
-        documents = [self._mapper.to_document(item) for item in work_items]
+        documents: list[VectorDocument] = [self._mapper.to_document(item) for item in work_items]
         self._vector_store.upsert(documents)
         return len(documents)
 

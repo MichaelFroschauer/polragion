@@ -29,7 +29,12 @@ logger = logging.getLogger(__name__)
 
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
+# The revision key MUST be set for every ingested document, otherwise it will not be possible to track changes.
+_REVISION_PAYLOAD_KEY: Final = "revision"
+# These models require a language specification to function correctly.
 _BM25_MODEL_NAME: Final = "Qdrant/bm25"
+# Documents are sorted by length within a window of this many batches before embedding.
+_LENGTH_SORT_WINDOW_BATCHES: Final = 16
 
 
 def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter:
@@ -93,6 +98,7 @@ class QdrantHybridVectorStore:
             logger.info("Loading dense model '%s'...", self._dense_model_name)
             start = perf_counter()
             self._dense_model = TextEmbedding(model_name=self._dense_model_name, cache_dir=self._settings.fastembed_cache_path)
+            self._apply_dense_max_tokens()
             logger.info("Dense model loaded in %.1fs",perf_counter() - start)
 
             logger.info("Loading reranker '%s'...", self._reranker_model_name)
@@ -131,6 +137,7 @@ class QdrantHybridVectorStore:
                         "schema_version": self._settings.index_schema_version,
                         "embedding_models": {
                             "dense_model": self._dense_model_name,
+                            "dense_max_tokens": self._dense_max_tokens(),
                             "sparse_model": self._sparse_model_name,
                             "sparse_language": self._sparse_language(),
                         }
@@ -153,13 +160,17 @@ class QdrantHybridVectorStore:
     def upsert(self, documents: Iterable[VectorDocument]) -> None:
         self._ensure_initialized()
 
-        for document_batch in batched(documents, self._settings.qdrant_batch_size):
+        for document_batch in self._length_sorted_batches(documents):
             document_list = list(document_batch)
             if not document_list:
                 continue
 
             if not self._validate_document_metadata(document_list):
                 logger.error("Discard batch, because items contains reserved key ...")
+                continue
+
+            document_list = self._drop_unchanged_documents(document_list)
+            if not document_list:
                 continue
 
             dense_texts = [document.dense_text for document in document_list]
@@ -506,6 +517,14 @@ class QdrantHybridVectorStore:
                 f"language of collection: '{collection_embedding_info.get("sparse_language")}'."
             )
 
+        expected_dense_max_tokens = self._dense_max_tokens()
+        if expected_dense_max_tokens != collection_embedding_info.get("dense_max_tokens"):
+            raise VectorStoreConfigurationError(
+                f"Collection '{self._collection_name}' uses different dense truncation limit "
+                f"configured in settings: '{expected_dense_max_tokens}' "
+                f"limit of collection: '{collection_embedding_info.get("dense_max_tokens")}'."
+            )
+
         # Validate reranker not needed!
         # Because the ingesting documents does not need the reranker, so the reranker could be changed anytime.
 
@@ -529,6 +548,60 @@ class QdrantHybridVectorStore:
                 contains_reserved_keys = True
 
         return not contains_reserved_keys
+
+
+    def _length_sorted_batches(
+        self, documents: Iterable[VectorDocument]
+    ) -> Iterable[tuple[VectorDocument, ...]]:
+        """Group similar-length documents, FastEmbed pads every batch to its longest sequence."""
+
+        batch_size = self._settings.qdrant_batch_size
+        for window in batched(documents, batch_size * _LENGTH_SORT_WINDOW_BATCHES):
+            ordered = sorted(window, key=lambda document: len(document.dense_text))
+            yield from batched(ordered, batch_size)
+
+
+    def _drop_unchanged_documents(self, documents: list[VectorDocument]) -> list[VectorDocument]:
+        """Skip documents whose indexed revision still matches, embedding dominates ingest cost."""
+
+        point_ids = [qdrant_point_id(document.id) for document in documents]
+        stored_points = self._client.retrieve(
+            collection_name=self._collection_name,
+            ids=point_ids,
+            with_payload=[_REVISION_PAYLOAD_KEY],
+            with_vectors=False,
+        )
+        stored_revisions = {
+            str(point.id): (point.payload or {}).get(_REVISION_PAYLOAD_KEY)
+            for point in stored_points
+        }
+
+        changed_documents = [
+            document
+            for document, point_id in zip(documents, point_ids, strict=True)
+            if document.metadata.get(_REVISION_PAYLOAD_KEY) is None
+            or document.metadata[_REVISION_PAYLOAD_KEY] != stored_revisions.get(point_id)
+        ]
+
+        skipped = len(documents) - len(changed_documents)
+        if skipped:
+            logger.info("Skipping %d of %d document(s) with unchanged revision", skipped, len(documents))
+
+        return changed_documents
+
+
+    def _dense_max_tokens(self) -> int | None:
+        return self._settings.fastembed_dense_max_tokens
+
+
+    def _apply_dense_max_tokens(self) -> None:
+        max_tokens = self._dense_max_tokens()
+        if max_tokens is None:
+            return
+
+        # FastEmbed exposes no public knob, the truncation limit lives on the loaded tokenizer.
+        self._require_dense_model().model.tokenizer.enable_truncation(max_length=max_tokens)
+        logger.info("Dense tokenizer truncation set to %d tokens", max_tokens)
 
 
     def _sparse_language(self) -> str | None:

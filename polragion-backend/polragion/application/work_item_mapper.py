@@ -44,20 +44,10 @@ class WorkItemIndexMapper:
             description_embedding_text,
         ])
 
-        reranker_text = "\n".join([
-            f"Document: {work_item.document_name}",
-            f"ID: {work_item.work_item_id}",
-            f"Type: {work_item.work_item_type}",
-            f"Title: {work_item.title}",
-            "",
-            description_embedding_text,
-        ])
-
         return VectorDocument(
             id=logical_id,
             dense_text=dense_text,
             sparse_text=sparse_text,
-            reranker_text=reranker_text,
             metadata=work_item.model_dump(mode="json"),
         )
 

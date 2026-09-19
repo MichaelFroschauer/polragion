@@ -136,8 +136,9 @@ class PolarionDataFetcher:
 
                 requested_work_item_field_keys = self._requested_fields(project_config.work_items)
 
-                # These fields must be handled differently because they can only be retrieved by the polarion tracker service
+                # These fields must be handled differently because they can only be retrieved by the polarion tracker service.
                 requested_work_item_field_keys.remove("revision")
+                # These fields cannot be requested because they are contained anyway.
                 requested_work_item_field_keys.remove("uri")
 
                 raw_work_items = polarion_project.searchWorkitem(
@@ -147,7 +148,9 @@ class PolarionDataFetcher:
                 )
 
                 if len(raw_work_items) <= 0:
-                    logger.warning(f"No work items found in {document_name} with query: {query}")
+                    logger.warning(f"No work items found in %s with query: %s", document_name, query)
+                else:
+                    logger.info(f"Fetched %d work items with query: %s", len(raw_work_items), query)
 
                 batch: list[PolarionWorkItem] = []
 
@@ -162,6 +165,7 @@ class PolarionDataFetcher:
                     )
                     batch.append(converted)
                     fetched += 1
+                    logger.debug("Converted fetched work item | %s | %s ", converted.project_id, converted.work_item_id)
 
                     if len(batch) >= self._batch_size:
                         yield from batch

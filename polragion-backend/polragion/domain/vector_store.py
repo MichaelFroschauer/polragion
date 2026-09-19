@@ -15,7 +15,6 @@ class VectorDocument:
     id: str
     dense_text: str
     sparse_text: str
-    reranker_text: str
     metadata: Metadata
 
 
