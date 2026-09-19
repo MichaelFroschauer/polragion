@@ -10,6 +10,7 @@ from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import CollectionInfo, Filter
 
+from polragion.application.work_item_mapper import work_item_payload_to_reranker_text
 from polragion.domain.vector_store import JsonValue, VectorDocument, VectorSearchHit
 from polragion.infrastructure.db_filter import DbFilter, FilterType
 from polragion.infrastructure.errors import (
@@ -18,10 +19,9 @@ from polragion.infrastructure.errors import (
 )
 from polragion.infrastructure.qdrant_utils import (
     _DOCUMENT_ID_PAYLOAD_KEY,
-    _INDEX_MODEL_PAYLOAD_KEY,
-    _INDEX_SCHEMA_PAYLOAD_KEY,
     _RESERVED_PAYLOAD_KEYS,
     qdrant_point_id,
+    register_custom_fastembed_models,
 )
 from polragion.settings import Settings
 
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
-_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
+_BM25_MODEL_NAME: Final = "Qdrant/bm25"
 
 
 def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter:
@@ -83,9 +83,11 @@ class QdrantHybridVectorStore:
             if not self._reranker_model_name:
                 raise VectorStoreConfigurationError("fastembed_reranker_model must be configured")
 
+            register_custom_fastembed_models()
+
             logger.info("Loading sparse model '%s'...", self._sparse_model_name)
             start = perf_counter()
-            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name, cache_dir=self._settings.fastembed_cache_path)
+            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name, cache_dir=self._settings.fastembed_cache_path, **self._sparse_model_kwargs())
             logger.info("Sparse model loaded in %.1fs", perf_counter() - start)
 
             logger.info("Loading dense model '%s'...", self._dense_model_name)
@@ -126,10 +128,11 @@ class QdrantHybridVectorStore:
                         )
                     },
                     metadata={
+                        "schema_version": self._settings.index_schema_version,
                         "embedding_models": {
                             "dense_model": self._dense_model_name,
                             "sparse_model": self._sparse_model_name,
-                            "reranker_model": self._reranker_model_name,
+                            "sparse_language": self._sparse_language(),
                         }
                     },
                 )
@@ -178,9 +181,6 @@ class QdrantHybridVectorStore:
                 ):
                     payload = dict(document.metadata)
                     payload[_DOCUMENT_ID_PAYLOAD_KEY] = document.id
-                    payload[_INDEX_MODEL_PAYLOAD_KEY] = self._dense_model_name
-                    payload[_INDEX_SCHEMA_PAYLOAD_KEY] = self._settings.index_schema_version
-                    payload[_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY] = document.reranker_text
 
                     points.append(
                         models.PointStruct(
@@ -299,11 +299,8 @@ class QdrantHybridVectorStore:
                         continue
 
                     payload = dict(point.payload)
-                    document_reranker_text = payload.get(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY)
-                    if not isinstance(document_reranker_text, str):
-                        logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
-                        continue
-
+                    # TODO: Maybe make the reranker text generation more generic and the specific function not a dependency here
+                    document_reranker_text = work_item_payload_to_reranker_text(payload)
                     candidates.append((point, payload, document_reranker_text))
 
                 if not candidates:
@@ -322,10 +319,7 @@ class QdrantHybridVectorStore:
 
                 ranked = sorted(
                     zip(candidates, rerank_scores, strict=True),
-                    key=lambda item: (
-                        float(item[1]),
-                        float(item[0][0].score),
-                    ),
+                    key=lambda item: (float(item[1]), float(item[0][0].score)),
                     reverse=True,
                 )
 
@@ -333,7 +327,6 @@ class QdrantHybridVectorStore:
                 for (point, payload, _), rerank_score in ranked:
 
                     document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
-                    payload.pop(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY, None)
                     for key in _RESERVED_PAYLOAD_KEYS:
                         payload.pop(key, None)
 
@@ -505,17 +498,16 @@ class QdrantHybridVectorStore:
                 f"embedding model of collection: '{collection_embedding_info["sparse_model"]}'."
             )
 
-        if not collection_embedding_info["reranker_model"]:
+        expected_sparse_language = self._sparse_language()
+        if expected_sparse_language != collection_embedding_info.get("sparse_language"):
             raise VectorStoreConfigurationError(
-                f"Collection '{self._collection_name}' was created without saving the used reranker embedding model as metadata."
+                f"Collection '{self._collection_name}' uses different sparse tokenizer language "
+                f"configured in settings: '{expected_sparse_language}' "
+                f"language of collection: '{collection_embedding_info.get("sparse_language")}'."
             )
 
-        if self._settings.fastembed_reranker_model != collection_embedding_info["reranker_model"]:
-            raise VectorStoreConfigurationError(
-                f"Collection '{self._collection_name}' uses different reranker model "
-                f"configured in settings: '{self._settings.fastembed_reranker_model}' "
-                f"model of collection: '{collection_embedding_info["reranker_model"]}'."
-            )
+        # Validate reranker not needed!
+        # Because the ingesting documents does not need the reranker, so the reranker could be changed anytime.
 
 
     def _validate_document_metadata(
@@ -525,9 +517,6 @@ class QdrantHybridVectorStore:
         reserved_keys.update(
             {
                 _DOCUMENT_ID_PAYLOAD_KEY,
-                _INDEX_MODEL_PAYLOAD_KEY,
-                _INDEX_SCHEMA_PAYLOAD_KEY,
-                _DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY,
             }
         )
 
@@ -540,6 +529,18 @@ class QdrantHybridVectorStore:
                 contains_reserved_keys = True
 
         return not contains_reserved_keys
+
+
+    def _sparse_language(self) -> str | None:
+        # Only the BM25 sparse model is language aware, the ONNX models are not.
+        if self._sparse_model_name.lower() != _BM25_MODEL_NAME.lower():
+            return None
+        return self._settings.fastembed_sparse_language
+
+
+    def _sparse_model_kwargs(self) -> dict[str, Any]:
+        language = self._sparse_language()
+        return {} if language is None else {"language": language}
 
 
     def _sparse_modifier(self) -> models.Modifier | None:

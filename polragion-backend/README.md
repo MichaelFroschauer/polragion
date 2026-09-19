@@ -57,8 +57,9 @@ The Qdrant collection name is derived from:
 
 - `QDRANT_COLLECTION_PREFIX`
 - `FASTEMBED_DENSE_MODEL`
-- `FASTEMBED_SPARSE_MODEL`
 - `INDEX_SCHEMA_VERSION`
+
+`FASTEMBED_SPARSE_MODEL`, `FASTEMBED_SPARSE_LANGUAGE` and `FASTEMBED_RERANKER_MODEL` are not part of the name but are stored as collection metadata and validated on startup, so a mismatch fails fast instead of silently corrupting the index.
 
 This prevents vectors produced by different embedding models or schema versions from being mixed. Increment `INDEX_SCHEMA_VERSION` whenever the embedding text strategy changes incompatibly.
 

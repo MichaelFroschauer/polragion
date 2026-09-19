@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Collection
+from typing import Collection, Any
 
 from polragion.domain.vector_store import VectorDocument
 from polragion.models.work_item import PolarionWorkItem, ReducedWorkItem, WorkItemSearchHit
@@ -60,6 +60,18 @@ class WorkItemIndexMapper:
             reranker_text=reranker_text,
             metadata=work_item.model_dump(mode="json"),
         )
+
+
+def work_item_payload_to_reranker_text(work_item: dict[str, Any]) -> str:
+    document_reranker_text: str = "\n".join([
+        f"Document: {work_item.get("document_name")}",
+        f"ID: {work_item.get("work_item_id")}",
+        f"Type: {work_item.get("work_item_type")}",
+        f"Title: {work_item.get("title")}",
+        "",
+        f"{work_item.get("description")}",
+    ])
+    return document_reranker_text
 
 
 def work_item_search_hit_to_json_str(work_items: Collection[WorkItemSearchHit], *, reduced_information: bool = True) -> str:

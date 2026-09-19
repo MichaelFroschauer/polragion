@@ -3,7 +3,6 @@ from time import perf_counter
 from typing import Annotated, Iterable
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Request
-from pydantic import ValidationError
 
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
@@ -77,6 +76,8 @@ def ingest_work_items_from_polarion_data_source(
     data_worker: Annotated[DataWorker, Depends(get_data_worker)],
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
+
+    # TODO: calculate a checksum to verify if the polarion import configuration changed
 
     try:
         data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
