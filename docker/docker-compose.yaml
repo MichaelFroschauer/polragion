@@ -62,7 +62,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 15m   # A cold start downloads ~1.7 GB of embedding models before uvicorn serves.
+      start_interval: 5s
 
   polragion-frontend:
     image: polragion-frontend:latest
