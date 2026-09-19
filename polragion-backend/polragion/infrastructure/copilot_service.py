@@ -375,7 +375,7 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             if session is None:
                 session = await self._create_user_session(message.user_id)
 
-            request_context = self._user_request_manager.start_request(message.user_id)
+            request_context = message.request_context or self._user_request_manager.start_request(message.user_id)
 
             try:
                 response_event = await session.send_and_wait(

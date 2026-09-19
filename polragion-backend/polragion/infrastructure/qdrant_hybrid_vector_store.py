@@ -45,9 +45,22 @@ def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter
     def _get_condition(db_filter: DbFilter) -> models.FieldCondition:
         match db_filter.filter_type:
             case FilterType.MUST_MATCH:
+                if isinstance(db_filter.value, list):
+                    raise ValueError(f"Filter '{db_filter.key}' of type {db_filter.filter_type} needs a single value")
+
                 return models.FieldCondition(
                     key=db_filter.key,
                     match=models.MatchValue(value=db_filter.value),
+                )
+
+            case FilterType.MUST_MATCH_ANY:
+                values = db_filter.value if isinstance(db_filter.value, list) else [db_filter.value]
+                if not values:
+                    raise ValueError(f"Filter '{db_filter.key}' of type {db_filter.filter_type} needs at least one value")
+
+                return models.FieldCondition(
+                    key=db_filter.key,
+                    match=models.MatchAny(any=values),
                 )
 
             case _:
@@ -232,6 +245,23 @@ class QdrantHybridVectorStore:
             except Exception as exc:
                 raise VectorStoreUnavailableError("Qdrant ingestion failed") from exc
 
+    def ensure_payload_indexes(self, keys: Collection[str]) -> None:
+        self._ensure_initialized()
+
+        # The document id backs the exact lookup path and is always indexed.
+        for key in dict.fromkeys((_DOCUMENT_ID_PAYLOAD_KEY, *keys)):
+            try:
+                self._client.create_payload_index(
+                    collection_name=self._collection_name,
+                    field_name=key,
+                    field_schema=models.PayloadSchemaType.KEYWORD,
+                    wait=True,
+                )
+            except Exception as exc:
+                raise VectorStoreUnavailableError(f"Could not create payload index for '{key}'") from exc
+
+        logger.info("Payload indexes ensured for: %s", ", ".join(dict.fromkeys((_DOCUMENT_ID_PAYLOAD_KEY, *keys))))
+
     def search(
         self,
         query: str,
@@ -366,13 +396,6 @@ class QdrantHybridVectorStore:
     def get_facet(self, key: str) -> list[str]:
 
         self._ensure_initialized()
-
-        # TODO: This is required to get a facet
-        # self._client.create_payload_index(
-        #     collection_name=self._collection_name,
-        #     field_name="project_id",
-        #     field_schema=models.PayloadSchemaType.KEYWORD,
-        # )
 
         result = self._client.facet(
             collection_name=self._collection_name,

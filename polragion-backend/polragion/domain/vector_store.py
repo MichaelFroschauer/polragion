@@ -40,6 +40,10 @@ class VectorStore(Protocol):
         """Insert or replace documents using their stable logical IDs."""
         ...
 
+    def ensure_payload_indexes(self, keys: Collection[str]) -> None:
+        """Make the given metadata keys efficiently filterable and facetable."""
+        ...
+
     def search(
         self,
         query: str,

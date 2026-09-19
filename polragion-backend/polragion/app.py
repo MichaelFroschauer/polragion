@@ -12,6 +12,7 @@ from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.api.auth import router as auth_router
 from polragion.api.ai_models import router as ai_models_router
+from polragion.api.polarion_metadata import router as polarion_metadata_router
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
@@ -24,12 +25,10 @@ from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.infrastructure.copilot_service import CopilotService
 from polragion.application.user_request_manager import UserRequestManager
 from polragion.infrastructure.copilot_tools import CopilotTools
-from polragion.infrastructure.json_data_fetcher import JsonDataFetcher
 from polragion.infrastructure.polarion_data_fetcher import PolarionDataFetcher
 from polragion.infrastructure.polarion_import_config_descriptor import PolarionImportConfigDescriptor
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
-from polragion.models.polarion_config import PolarionImportConfig
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -77,6 +76,7 @@ def create_app(
             mapper=WorkItemIndexMapper(),
         )
         app.state.work_item_service = work_item_service
+        work_item_service.ensure_indexes()
         app.state.data_fetcher = data_fetcher_factory(app_settings)
         app.state.data_worker = data_worker_factory(app_settings, work_item_service)
 
@@ -162,6 +162,7 @@ def create_app(
     app.include_router(work_item_router)
     app.include_router(auth_router)
     app.include_router(ai_models_router)
+    app.include_router(polarion_metadata_router)
 
     return app
 

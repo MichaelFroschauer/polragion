@@ -49,3 +49,7 @@ def get_session_service(request: Request) -> SessionService:
 
 def get_ai_service(request: Request) -> AiService:
     return request.app.state.ai_service
+
+
+def get_user_request_manager(request: Request) -> AiService:
+    return request.app.state.user_request_manager

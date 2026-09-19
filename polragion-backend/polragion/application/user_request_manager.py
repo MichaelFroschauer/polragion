@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
+from polragion.application.search_scope import SearchScope
 from polragion.infrastructure.copilot_tools import ToolCallBudget
 from polragion.models.work_item import WorkItemSearchHit
 from polragion.settings import Settings
@@ -19,6 +20,7 @@ class RequestContext:
     request_id: UUID
     user_id: UUID
     tool_call_budget: ToolCallBudget
+    search_scope: SearchScope = field(default_factory=SearchScope)
     _work_items: list[WorkItemSearchHit] = field(default_factory=list)
     _seen_point_ids: set[str] = field(default_factory=set)
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -46,17 +48,22 @@ class UserRequestManager:
         self._settings = settings
         self._active: dict[UUID, RequestContext] = {}
 
-    def start_request(self, user_id: UUID) -> RequestContext:
+    def start_request(self, user_id: UUID, search_scope: SearchScope | None = None) -> RequestContext:
         context = RequestContext(
             request_id=uuid4(),
             user_id=user_id,
             tool_call_budget=ToolCallBudget(max_calls=self._settings.max_allowed_tool_calls),
+            search_scope=search_scope or SearchScope(),
         )
         self._active[user_id] = context
         return context
 
     def get_active(self, user_id: UUID) -> RequestContext | None:
         return self._active.get(user_id)
+
+    def active_search_scope(self, user_id: UUID) -> SearchScope:
+        context = self._active.get(user_id)
+        return context.search_scope if context else SearchScope()
 
     def finish_request(self, user_id: UUID) -> RequestContext | None:
         return self._active.pop(user_id, None)

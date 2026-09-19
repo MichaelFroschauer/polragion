@@ -8,6 +8,7 @@ from uuid import UUID
 from copilot import define_tool, Tool, PreToolUseHookOutput, PreToolUseHookInput
 from pydantic import BaseModel, Field
 
+from polragion.application.search_scope import SearchScope
 from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.polarion_descriptor import PolarionDescriptor
@@ -72,11 +73,23 @@ class CopilotTools:
                 threshold = 0.0
             threshold = min(max(threshold, 0.0), 1.0)
 
+            scope: SearchScope = self.user_request_manager.active_search_scope(user_id)
+
+            if not params.polarion_project_id:
+                scoped_project_ids = list(scope.project_ids)
+            elif scope.project_ids and params.polarion_project_id not in scope.project_ids:
+                return f"Project '{params.polarion_project_id}' is not available in this request."
+            else:
+                scoped_project_ids = [params.polarion_project_id]
+
+
             results: list[WorkItemSearchHit] = service.search(
                 params.search_text,
                 limit=limit,
                 score_threshold=threshold,
-                project_id=params.polarion_project_id,
+                project_ids=scoped_project_ids,
+                project_contexts=list(scope.project_contexts),
+                document_categories=list(scope.document_categories),
                 do_reranking=False,
             )
 
@@ -115,6 +128,11 @@ class CopilotTools:
                 project_id=params.polarion_project_id,
                 work_item_id=params.polarion_work_item_id,
             )
+
+            # TODO: Check if this makes sense - if active the search scope is narrowed down even for a direct lookup
+            # The exact lookup cannot carry the scope filters, so it is enforced afterwards.
+            # scope = self.user_request_manager.active_search_scope(user_id)
+            # results = [hit for hit in results if scope.allows(hit.work_item)]
 
             if len(results) == 0:
                 return (f"Work item for project ID: {params.polarion_project_id} "

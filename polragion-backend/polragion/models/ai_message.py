@@ -6,9 +6,13 @@ from pydantic import AliasPath, BaseModel, ConfigDict, Field, computed_field, Be
 
 
 class CopilotSendMessage(StrictModel):
+    # RequestContext is a plain dataclass, so it needs arbitrary_types_allowed
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+
     user_id: UUID
     text: str
     display_text: str | None = None
+    request_context: RequestContext | None = None
 
 class CopilotResponseMessage(StrictModel):
     # RequestContext is a plain dataclass, so it needs arbitrary_types_allowed

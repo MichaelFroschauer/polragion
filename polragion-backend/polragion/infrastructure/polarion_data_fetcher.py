@@ -408,7 +408,9 @@ class PolarionDataFetcher:
         text = cls._to_text(value)
 
         if text is None or not text.strip():
-            item_context = (f" for work item {work_item_id!r}" if work_item_id is not None else "")
+            item_context = (f" for work item {work_item_id!r}"
+                            if work_item_id is not None
+                            else " or the user has no permission to read the project data.")
             raise ValueError(f"Missing required Polarion field {field_name!r}{item_context}")
 
         return text

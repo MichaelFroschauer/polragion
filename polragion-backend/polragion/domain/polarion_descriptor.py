@@ -11,6 +11,12 @@ class PolarionDescriptor(Protocol):
     def get_project_ids(self) -> list[str]:
         ...
 
+    def get_project_categories(self) -> list[str]:
+        ...
+
+    def get_project_contexts(self) -> list[str]:
+        ...
+
     def get_project_description(self, project_id: str) -> str | None:
         ...
 
@@ -19,3 +25,7 @@ class PolarionDescriptor(Protocol):
 
     def get_documents(self, project_id: str) -> list[str]:
         ...
+
+    def get_document_category(self, project_id: str, document_name: str) -> str | None:
+        ...
+
