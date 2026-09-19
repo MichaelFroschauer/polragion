@@ -22,7 +22,6 @@ class QdrantDataWorker:
         batch: list[PolarionWorkItem] = []
 
         for work_item in data_list:
-            logger.info("Fetched work item with ID: %s", work_item.work_item_id)
             batch.append(work_item)
 
             if len(batch) >= self._batch_size:

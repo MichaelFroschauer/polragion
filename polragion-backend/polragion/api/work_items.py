@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 from time import perf_counter
 from typing import Annotated, Iterable
 
@@ -7,14 +6,16 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Requ
 
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
-    get_ai_service
+    get_ai_service, get_user_request_manager
 from polragion.api.models import IngestResponse, WorkItemAskResponse, WorkItemSearchResponse
 from polragion.application.ai_service import AiService, ChatHistoryMessage
+from polragion.application.search_scope import SearchScope
+from polragion.application.user_request_manager import UserRequestManager
 from polragion.application.work_item_service import WorkItemService
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
-from polragion.infrastructure.polarion_data_fetcher import PolarionImportConfig, PolarionDataFetcher
 from polragion.application.prompt_builder import AnswerDetail, get_prompt_message, get_prompt_message_with_work_items
+from polragion.infrastructure.errors import ConfigurationError
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
 from polragion.models.user import User
 from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
@@ -24,58 +25,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/work-items", tags=["work-items"])
 
 
-@router.post(
-    "/ingest",
-    response_model=IngestResponse,
-    status_code=status.HTTP_200_OK,
-)
-def ingest_work_items(
-    data: Annotated[
-        list[PolarionWorkItem],
-        Body(min_length=1, max_length=50_000),
-    ],
-    service: Annotated[WorkItemService, Depends(get_work_item_service)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> IngestResponse:
-    if len(data) > settings.max_ingest_batch_size:
-        # The OpenAPI-level maximum is deliberately conservative. This runtime
-        # check allows deployments to configure an even smaller limit.
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=(
-                f"At most {settings.max_ingest_batch_size} work items may be ingested per request."
-            ),
-        )
-
-    started_at = perf_counter()
-    count = service.ingest(data)
-    logger.info(
-        "Ingested %d work items in %.3f seconds",
-        count,
-        perf_counter() - started_at,
-    )
-    return IngestResponse(status="ok", ingested_items=count)
-
-
-@router.post(
-    "/ingest/import-json",
-    response_model=IngestResponse,
-    status_code=status.HTTP_200_OK,
-)
-def ingest_work_items_from_json_data_source(
-    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
-    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
-    limit: Annotated[int | None, Query(ge=1)] = None,
-) -> IngestResponse:
-
-    count = data_worker.work(data_fetcher.fetch_data(limit))
-    return IngestResponse(status="ok", ingested_items=count)
-
-
-def load_import_config(path: Path) -> PolarionImportConfig:
-    config_text = path.read_text(encoding="utf-8")
-    return PolarionImportConfig.model_validate_json(config_text)
-
 
 @router.post(
     "/ingest/import-polarion",
@@ -83,16 +32,25 @@ def load_import_config(path: Path) -> PolarionImportConfig:
     status_code=status.HTTP_200_OK,
 )
 def ingest_work_items_from_polarion_data_source(
-    settings: Annotated[Settings, Depends(get_settings)],
+    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
     data_worker: Annotated[DataWorker, Depends(get_data_worker)],
+    work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
 
-    config = load_import_config(Path(settings.polarion_import_config_path))
+    # TODO: calculate a checksum to verify if the polarion import configuration changed
 
-    data_fetcher = PolarionDataFetcher(settings, config)
-    data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
-    count = data_worker.work(data)
+    try:
+        data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
+        count: int = data_worker.work(data)
+        work_item_service.ensure_indexes()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ConfigurationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={ "message": str(exc), "errors": exc.errors },
+        ) from exc
 
     return IngestResponse(status="ok", ingested_items=count)
 
@@ -102,7 +60,6 @@ def ingest_work_items_from_polarion_data_source(
     response_model=WorkItemSearchResponse,
 )
 def search_work_items(
-    request: Request,
     settings: Annotated[Settings, Depends(get_settings)],
     prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
@@ -170,7 +127,6 @@ async def ask_work_item_with_initial_search(
 ) -> WorkItemAskResponse:
 
     hits: WorkItemSearchResponse = search_work_items(
-        request=request,
         settings=settings,
         prompt=prompt,
         work_item_service=work_item_service,
@@ -221,7 +177,11 @@ async def ask_work_item(
     prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
+    user_request_manager: Annotated[UserRequestManager, Depends(get_user_request_manager)],
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
+    project_ids: Annotated[list[str] | None, Query()] = None,
+    project_contexts: Annotated[list[str] | None, Query()] = None,
+    document_categories: Annotated[list[str] | None, Query()] = None,
     limit_work_item_search: Annotated[int | None, Query(ge=1)] = None,
     limit_ai_model_work_items: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
@@ -232,11 +192,22 @@ async def ask_work_item(
 
     ai_prompt = get_prompt_message(user_prompt=prompt, user_system_prompt=user_defined_system_prompt, answer_detail=answer_detail)
 
+    # The scope lives in the request context so every tool call of this request stays filtered.
+    request_context = user_request_manager.start_request(
+        current_user.id,
+        search_scope=SearchScope.create(
+            project_ids=project_ids,
+            project_contexts=project_contexts,
+            document_categories=document_categories,
+        ),
+    )
+
     response: CopilotResponseMessage = await ai_service.send_message(
         CopilotSendMessage(
             user_id=current_user.id,
             text=ai_prompt,
             display_text=prompt,
+            request_context=request_context,
         )
     )
 
@@ -265,3 +236,55 @@ async def reset_user_session(
     ai_service: Annotated[AiService, Depends(get_ai_service)],
 ) -> None:
     await ai_service.close_user_session(current_user.id)
+
+
+
+#############################################################################
+# Test Endpoints
+
+@router.post(
+    "/ingest",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items(
+    data: Annotated[
+        list[PolarionWorkItem],
+        Body(min_length=1, max_length=50_000),
+    ],
+    service: Annotated[WorkItemService, Depends(get_work_item_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> IngestResponse:
+    if len(data) > settings.max_ingest_batch_size:
+        # The OpenAPI-level maximum is deliberately conservative. This runtime
+        # check allows deployments to configure an even smaller limit.
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"At most {settings.max_ingest_batch_size} work items may be ingested per request."
+            ),
+        )
+
+    started_at = perf_counter()
+    count = service.ingest(data)
+    logger.info(
+        "Ingested %d work items in %.3f seconds",
+        count,
+        perf_counter() - started_at,
+    )
+    return IngestResponse(status="ok", ingested_items=count)
+
+
+@router.post(
+    "/ingest/import-json",
+    response_model=IngestResponse,
+    status_code=status.HTTP_200_OK,
+)
+def ingest_work_items_from_json_data_source(
+    data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
+    data_worker: Annotated[DataWorker, Depends(get_data_worker)],
+    limit: Annotated[int | None, Query(ge=1)] = None,
+) -> IngestResponse:
+
+    count = data_worker.work(data_fetcher.fetch_data(limit))
+    return IngestResponse(status="ok", ingested_items=count)

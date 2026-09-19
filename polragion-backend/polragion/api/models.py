@@ -28,3 +28,27 @@ class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: str
+
+
+class PolarionDocumentMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    category: str
+
+
+class PolarionProjectMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    contexts: list[str]
+    documents: list[PolarionDocumentMetadata]
+
+
+class PolarionMetadataResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    project_ids: list[str]
+    project_contexts: list[str]
+    project_categories: list[str]
+    projects: list[PolarionProjectMetadata]

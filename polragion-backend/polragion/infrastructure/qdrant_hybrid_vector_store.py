@@ -10,6 +10,7 @@ from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.http.models import CollectionInfo, Filter
 
+from polragion.application.work_item_mapper import work_item_payload_to_reranker_text
 from polragion.domain.vector_store import JsonValue, VectorDocument, VectorSearchHit
 from polragion.infrastructure.db_filter import DbFilter, FilterType
 from polragion.infrastructure.errors import (
@@ -18,10 +19,9 @@ from polragion.infrastructure.errors import (
 )
 from polragion.infrastructure.qdrant_utils import (
     _DOCUMENT_ID_PAYLOAD_KEY,
-    _INDEX_MODEL_PAYLOAD_KEY,
-    _INDEX_SCHEMA_PAYLOAD_KEY,
     _RESERVED_PAYLOAD_KEYS,
     qdrant_point_id,
+    register_custom_fastembed_models,
 )
 from polragion.settings import Settings
 
@@ -29,7 +29,12 @@ logger = logging.getLogger(__name__)
 
 _DENSE_VECTOR_NAME: Final = "text-dense"
 _SPARSE_VECTOR_NAME: Final = "text-sparse"
-_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY: Final = "_document_reranker_text"
+# The revision key MUST be set for every ingested document, otherwise it will not be possible to track changes.
+_REVISION_PAYLOAD_KEY: Final = "revision"
+# These models require a language specification to function correctly.
+_BM25_MODEL_NAME: Final = "Qdrant/bm25"
+# Documents are sorted by length within a window of this many batches before embedding.
+_LENGTH_SORT_WINDOW_BATCHES: Final = 16
 
 
 def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter:
@@ -40,9 +45,22 @@ def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter
     def _get_condition(db_filter: DbFilter) -> models.FieldCondition:
         match db_filter.filter_type:
             case FilterType.MUST_MATCH:
+                if isinstance(db_filter.value, list):
+                    raise ValueError(f"Filter '{db_filter.key}' of type {db_filter.filter_type} needs a single value")
+
                 return models.FieldCondition(
                     key=db_filter.key,
                     match=models.MatchValue(value=db_filter.value),
+                )
+
+            case FilterType.MUST_MATCH_ANY:
+                values = db_filter.value if isinstance(db_filter.value, list) else [db_filter.value]
+                if not values:
+                    raise ValueError(f"Filter '{db_filter.key}' of type {db_filter.filter_type} needs at least one value")
+
+                return models.FieldCondition(
+                    key=db_filter.key,
+                    match=models.MatchAny(any=values),
                 )
 
             case _:
@@ -83,14 +101,17 @@ class QdrantHybridVectorStore:
             if not self._reranker_model_name:
                 raise VectorStoreConfigurationError("fastembed_reranker_model must be configured")
 
+            register_custom_fastembed_models()
+
             logger.info("Loading sparse model '%s'...", self._sparse_model_name)
             start = perf_counter()
-            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name, cache_dir=self._settings.fastembed_cache_path)
+            self._sparse_model = SparseTextEmbedding(model_name=self._sparse_model_name, cache_dir=self._settings.fastembed_cache_path, **self._sparse_model_kwargs())
             logger.info("Sparse model loaded in %.1fs", perf_counter() - start)
 
             logger.info("Loading dense model '%s'...", self._dense_model_name)
             start = perf_counter()
             self._dense_model = TextEmbedding(model_name=self._dense_model_name, cache_dir=self._settings.fastembed_cache_path)
+            self._apply_dense_max_tokens()
             logger.info("Dense model loaded in %.1fs",perf_counter() - start)
 
             logger.info("Loading reranker '%s'...", self._reranker_model_name)
@@ -126,10 +147,12 @@ class QdrantHybridVectorStore:
                         )
                     },
                     metadata={
+                        "schema_version": self._settings.index_schema_version,
                         "embedding_models": {
                             "dense_model": self._dense_model_name,
+                            "dense_max_tokens": self._dense_max_tokens(),
                             "sparse_model": self._sparse_model_name,
-                            "reranker_model": self._reranker_model_name,
+                            "sparse_language": self._sparse_language(),
                         }
                     },
                 )
@@ -150,13 +173,17 @@ class QdrantHybridVectorStore:
     def upsert(self, documents: Iterable[VectorDocument]) -> None:
         self._ensure_initialized()
 
-        for document_batch in batched(documents, self._settings.qdrant_batch_size):
+        for document_batch in self._length_sorted_batches(documents):
             document_list = list(document_batch)
             if not document_list:
                 continue
 
             if not self._validate_document_metadata(document_list):
                 logger.error("Discard batch, because items contains reserved key ...")
+                continue
+
+            document_list = self._drop_unchanged_documents(document_list)
+            if not document_list:
                 continue
 
             dense_texts = [document.dense_text for document in document_list]
@@ -178,9 +205,6 @@ class QdrantHybridVectorStore:
                 ):
                     payload = dict(document.metadata)
                     payload[_DOCUMENT_ID_PAYLOAD_KEY] = document.id
-                    payload[_INDEX_MODEL_PAYLOAD_KEY] = self._dense_model_name
-                    payload[_INDEX_SCHEMA_PAYLOAD_KEY] = self._settings.index_schema_version
-                    payload[_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY] = document.reranker_text
 
                     points.append(
                         models.PointStruct(
@@ -220,6 +244,23 @@ class QdrantHybridVectorStore:
                 raise
             except Exception as exc:
                 raise VectorStoreUnavailableError("Qdrant ingestion failed") from exc
+
+    def ensure_payload_indexes(self, keys: Collection[str]) -> None:
+        self._ensure_initialized()
+
+        # The document id backs the exact lookup path and is always indexed.
+        for key in dict.fromkeys((_DOCUMENT_ID_PAYLOAD_KEY, *keys)):
+            try:
+                self._client.create_payload_index(
+                    collection_name=self._collection_name,
+                    field_name=key,
+                    field_schema=models.PayloadSchemaType.KEYWORD,
+                    wait=True,
+                )
+            except Exception as exc:
+                raise VectorStoreUnavailableError(f"Could not create payload index for '{key}'") from exc
+
+        logger.info("Payload indexes ensured for: %s", ", ".join(dict.fromkeys((_DOCUMENT_ID_PAYLOAD_KEY, *keys))))
 
     def search(
         self,
@@ -299,11 +340,8 @@ class QdrantHybridVectorStore:
                         continue
 
                     payload = dict(point.payload)
-                    document_reranker_text = payload.get(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY)
-                    if not isinstance(document_reranker_text, str):
-                        logger.warning("Skipping Qdrant point %s because its document text is missing", point.id)
-                        continue
-
+                    # TODO: Maybe make the reranker text generation more generic and the specific function not a dependency here
+                    document_reranker_text = work_item_payload_to_reranker_text(payload)
                     candidates.append((point, payload, document_reranker_text))
 
                 if not candidates:
@@ -322,10 +360,7 @@ class QdrantHybridVectorStore:
 
                 ranked = sorted(
                     zip(candidates, rerank_scores, strict=True),
-                    key=lambda item: (
-                        float(item[1]),
-                        float(item[0][0].score),
-                    ),
+                    key=lambda item: (float(item[1]), float(item[0][0].score)),
                     reverse=True,
                 )
 
@@ -333,7 +368,6 @@ class QdrantHybridVectorStore:
                 for (point, payload, _), rerank_score in ranked:
 
                     document_id = str(payload.pop(_DOCUMENT_ID_PAYLOAD_KEY, point.id))
-                    payload.pop(_DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY, None)
                     for key in _RESERVED_PAYLOAD_KEYS:
                         payload.pop(key, None)
 
@@ -362,13 +396,6 @@ class QdrantHybridVectorStore:
     def get_facet(self, key: str) -> list[str]:
 
         self._ensure_initialized()
-
-        # TODO: This is required to get a facet
-        # self._client.create_payload_index(
-        #     collection_name=self._collection_name,
-        #     field_name="project_id",
-        #     field_schema=models.PayloadSchemaType.KEYWORD,
-        # )
 
         result = self._client.facet(
             collection_name=self._collection_name,
@@ -505,17 +532,24 @@ class QdrantHybridVectorStore:
                 f"embedding model of collection: '{collection_embedding_info["sparse_model"]}'."
             )
 
-        if not collection_embedding_info["reranker_model"]:
+        expected_sparse_language = self._sparse_language()
+        if expected_sparse_language != collection_embedding_info.get("sparse_language"):
             raise VectorStoreConfigurationError(
-                f"Collection '{self._collection_name}' was created without saving the used reranker embedding model as metadata."
+                f"Collection '{self._collection_name}' uses different sparse tokenizer language "
+                f"configured in settings: '{expected_sparse_language}' "
+                f"language of collection: '{collection_embedding_info.get("sparse_language")}'."
             )
 
-        if self._settings.fastembed_reranker_model != collection_embedding_info["reranker_model"]:
+        expected_dense_max_tokens = self._dense_max_tokens()
+        if expected_dense_max_tokens != collection_embedding_info.get("dense_max_tokens"):
             raise VectorStoreConfigurationError(
-                f"Collection '{self._collection_name}' uses different reranker model "
-                f"configured in settings: '{self._settings.fastembed_reranker_model}' "
-                f"model of collection: '{collection_embedding_info["reranker_model"]}'."
+                f"Collection '{self._collection_name}' uses different dense truncation limit "
+                f"configured in settings: '{expected_dense_max_tokens}' "
+                f"limit of collection: '{collection_embedding_info.get("dense_max_tokens")}'."
             )
+
+        # Validate reranker not needed!
+        # Because the ingesting documents does not need the reranker, so the reranker could be changed anytime.
 
 
     def _validate_document_metadata(
@@ -525,9 +559,6 @@ class QdrantHybridVectorStore:
         reserved_keys.update(
             {
                 _DOCUMENT_ID_PAYLOAD_KEY,
-                _INDEX_MODEL_PAYLOAD_KEY,
-                _INDEX_SCHEMA_PAYLOAD_KEY,
-                _DOCUMENT_RERANKER_TEXT_PAYLOAD_KEY,
             }
         )
 
@@ -540,6 +571,72 @@ class QdrantHybridVectorStore:
                 contains_reserved_keys = True
 
         return not contains_reserved_keys
+
+
+    def _length_sorted_batches(
+        self, documents: Iterable[VectorDocument]
+    ) -> Iterable[tuple[VectorDocument, ...]]:
+        """Group similar-length documents, FastEmbed pads every batch to its longest sequence."""
+
+        batch_size = self._settings.qdrant_batch_size
+        for window in batched(documents, batch_size * _LENGTH_SORT_WINDOW_BATCHES):
+            ordered = sorted(window, key=lambda document: len(document.dense_text))
+            yield from batched(ordered, batch_size)
+
+
+    def _drop_unchanged_documents(self, documents: list[VectorDocument]) -> list[VectorDocument]:
+        """Skip documents whose indexed revision still matches, embedding dominates ingest cost."""
+
+        point_ids = [qdrant_point_id(document.id) for document in documents]
+        stored_points = self._client.retrieve(
+            collection_name=self._collection_name,
+            ids=point_ids,
+            with_payload=[_REVISION_PAYLOAD_KEY],
+            with_vectors=False,
+        )
+        stored_revisions = {
+            str(point.id): (point.payload or {}).get(_REVISION_PAYLOAD_KEY)
+            for point in stored_points
+        }
+
+        changed_documents = [
+            document
+            for document, point_id in zip(documents, point_ids, strict=True)
+            if document.metadata.get(_REVISION_PAYLOAD_KEY) is None
+            or document.metadata[_REVISION_PAYLOAD_KEY] != stored_revisions.get(point_id)
+        ]
+
+        skipped = len(documents) - len(changed_documents)
+        if skipped:
+            logger.info("Skipping %d of %d document(s) with unchanged revision", skipped, len(documents))
+
+        return changed_documents
+
+
+    def _dense_max_tokens(self) -> int | None:
+        return self._settings.fastembed_dense_max_tokens
+
+
+    def _apply_dense_max_tokens(self) -> None:
+        max_tokens = self._dense_max_tokens()
+        if max_tokens is None:
+            return
+
+        # FastEmbed exposes no public knob, the truncation limit lives on the loaded tokenizer.
+        self._require_dense_model().model.tokenizer.enable_truncation(max_length=max_tokens)
+        logger.info("Dense tokenizer truncation set to %d tokens", max_tokens)
+
+
+    def _sparse_language(self) -> str | None:
+        # Only the BM25 sparse model is language aware, the ONNX models are not.
+        if self._sparse_model_name.lower() != _BM25_MODEL_NAME.lower():
+            return None
+        return self._settings.fastembed_sparse_language
+
+
+    def _sparse_model_kwargs(self) -> dict[str, Any]:
+        language = self._sparse_language()
+        return {} if language is None else {"language": language}
 
 
     def _sparse_modifier(self) -> models.Modifier | None:

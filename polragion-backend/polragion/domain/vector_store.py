@@ -15,7 +15,6 @@ class VectorDocument:
     id: str
     dense_text: str
     sparse_text: str
-    reranker_text: str
     metadata: Metadata
 
 
@@ -39,6 +38,10 @@ class VectorStore(Protocol):
 
     def upsert(self, documents: Iterable[VectorDocument]) -> None:
         """Insert or replace documents using their stable logical IDs."""
+        ...
+
+    def ensure_payload_indexes(self, keys: Collection[str]) -> None:
+        """Make the given metadata keys efficiently filterable and facetable."""
         ...
 
     def search(

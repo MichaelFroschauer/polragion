@@ -1,9 +1,10 @@
 import json
 import logging
-from typing import Collection
+from typing import Collection, Any
 
 from polragion.domain.vector_store import VectorDocument
 from polragion.models.work_item import PolarionWorkItem, ReducedWorkItem, WorkItemSearchHit
+from polragion.utils.general import field_name
 from polragion.utils.text_sanitizer import ParsedDocument, html_to_document
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,16 @@ class WorkItemIndexMapper:
     Keeping embedding text construction outside the domain model makes it easy
     to version, replace, and test indexing strategies independently.
     """
+
+    def filterable_payload_keys(self) -> tuple[str, ...]:
+        """Metadata keys that searches filter or facet on, the mapper owns the payload shape."""
+
+        return (
+            field_name(PolarionWorkItem, "project_id"),
+            field_name(PolarionWorkItem, "project_context"),
+            field_name(PolarionWorkItem, "document_category"),
+            field_name(PolarionWorkItem, "work_item_id"),
+        )
 
     def to_document(self, work_item: PolarionWorkItem) -> VectorDocument:
         logical_id = f"{work_item.project_id}:{work_item.work_item_id}"
@@ -44,22 +55,24 @@ class WorkItemIndexMapper:
             description_embedding_text,
         ])
 
-        reranker_text = "\n".join([
-            f"Document: {work_item.document_name}",
-            f"ID: {work_item.work_item_id}",
-            f"Type: {work_item.work_item_type}",
-            f"Title: {work_item.title}",
-            "",
-            description_embedding_text,
-        ])
-
         return VectorDocument(
             id=logical_id,
             dense_text=dense_text,
             sparse_text=sparse_text,
-            reranker_text=reranker_text,
             metadata=work_item.model_dump(mode="json"),
         )
+
+
+def work_item_payload_to_reranker_text(work_item: dict[str, Any]) -> str:
+    document_reranker_text: str = "\n".join([
+        f"Document: {work_item.get("document_name")}",
+        f"ID: {work_item.get("work_item_id")}",
+        f"Type: {work_item.get("work_item_type")}",
+        f"Title: {work_item.get("title")}",
+        "",
+        f"{work_item.get("description")}",
+    ])
+    return document_reranker_text
 
 
 def work_item_search_hit_to_json_str(work_items: Collection[WorkItemSearchHit], *, reduced_information: bool = True) -> str:

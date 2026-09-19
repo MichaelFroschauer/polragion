@@ -6,6 +6,7 @@ from polragion.application.work_item_service import WorkItemService
 from polragion.database.repository import UserRepository, GitHubCredentialsRepository
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
+from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.domain.vector_store import VectorStore
 from polragion.settings import Settings
 
@@ -30,6 +31,10 @@ def get_data_worker(request: Request) -> DataWorker:
     return request.app.state.data_worker
 
 
+def get_polarion_descriptor(request: Request) -> PolarionDescriptor:
+    return request.app.state.polarion_descriptor
+
+
 def get_user_repository(request: Request) -> UserRepository:
     return request.app.state.user_repository
 
@@ -41,5 +46,10 @@ def get_github_credentials_repository(request: Request) -> GitHubCredentialsRepo
 def get_session_service(request: Request) -> SessionService:
     return request.app.state.session_service
 
+
 def get_ai_service(request: Request) -> AiService:
     return request.app.state.ai_service
+
+
+def get_user_request_manager(request: Request) -> AiService:
+    return request.app.state.user_request_manager
