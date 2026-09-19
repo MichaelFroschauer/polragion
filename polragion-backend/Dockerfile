@@ -45,7 +45,8 @@ WORKDIR /app
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/app/cache/huggingface
 
 # Take the finished venv from the build stage + the application code.
 COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
@@ -54,8 +55,8 @@ COPY --chown=appuser:appuser polragion ./polragion
 # The SSL certificates for HTTPS are mounted at runtime (see docker-compose.yaml)
 # into /app/certs, a directory readable by the non-root appuser.
 
-# Writable data directory for the SQLite database (owned by the non-root user).
-RUN mkdir -p /app/data /app/certs && chown appuser:appuser /app/data /app/certs
+# Writable data and cache directory for the SQLite database and Hugging Face cache (owned by the non-root user).
+RUN mkdir -p /app/data /app/certs /app/cache && chown appuser:appuser /app/data /app/certs /app/cache
 
 USER appuser
 

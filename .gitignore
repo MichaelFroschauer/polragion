@@ -1,6 +1,9 @@
 **/qdrant_storage/
 **/qdrant_storage*/
-**/cache/
+# Keep the directory itself in the repo: Docker creates a missing bind mount target
+# as root, which the non-root container user cannot write to.
+**/cache/*
+!**/cache/.gitkeep
 **/.env
 **/.env*
 !**/.env*.example

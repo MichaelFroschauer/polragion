@@ -39,6 +39,7 @@ services:
       - DEBUG=False
       - QDRANT_URL=http://vector-db:6333
       - FASTEMBED_CACHE_PATH=/app/cache/fastembed
+      - HF_HOME=/app/cache/huggingface
       - COPILOT_URL=copilot-cli:4321
       - GITHUB_REDIRECT_URI=https://${HOST_IP:-localhost}:${FRONTEND_PORT:-443}/api/auth/github/callback  # can be the same IP as the frontend URL because nginx will route the request to the backend
       - FRONTEND_URL=https://${HOST_IP:-localhost}:${FRONTEND_PORT:-443}/
