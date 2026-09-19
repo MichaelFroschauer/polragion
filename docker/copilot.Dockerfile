@@ -1,6 +1,7 @@
 FROM debian:bookworm-slim
 
-ARG COPILOT_VERSION=1.0.71
+# Must match CLI_VERSION pinned by github-copilot-sdk (copilot/_cli_version.py).
+ARG COPILOT_VERSION=1.0.83
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates wget \
