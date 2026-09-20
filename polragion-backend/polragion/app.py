@@ -8,6 +8,7 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+from polragion.api.exception_middleware import register_exception_handlers
 from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
 from polragion.api.auth import router as auth_router
@@ -125,6 +126,8 @@ def create_app(
         generate_unique_id_function=custom_generate_unique_id,
         root_path="/api",
     )
+
+    register_exception_handlers(app)
 
     app.add_middleware(
         SessionMiddleware,

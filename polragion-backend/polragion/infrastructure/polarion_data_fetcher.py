@@ -7,8 +7,10 @@ from typing import Any, Literal
 
 import certifi
 from polarion import polarion
+from polarion.polarion import Polarion
 from polarion.project import Project
 
+from polragion.infrastructure.errors import PolarionDataFetcherError
 from polragion.models.polarion_config import PolarionImportConfig, WorkItemImportConfig, ProjectImportConfig, \
     load_import_config
 from polragion.models.work_item import PolarionWorkItem, LinkedWorkItem
@@ -59,15 +61,9 @@ class PolarionDataFetcher:
 
         self._batch_size = self._settings.max_ingest_batch_size
 
-        verify_certificate = self._configure_ca_trust(self._settings)
-
-        self._client = polarion.Polarion(
-            polarion_url=self._settings.polarion_host,
-            user=self._settings.polarion_user,
-            password=self._settings.polarion_password,
-            verify_certificate=verify_certificate,
-        )
-        self._tracker_service = self._client.getService("Tracker")
+        self._verify_certificate = self._configure_ca_trust(self._settings)
+        self._client: Polarion | None = None
+        self._tracker_service: object | None = None
 
 
     @staticmethod
@@ -97,9 +93,28 @@ class PolarionDataFetcher:
         return str(bundle)
 
 
-    def fetch_data(self, limit: int | None = None) -> Iterable[PolarionWorkItem]:
+    def _ensure_client(self) -> None:
+        """Ensures that polarion client and the tracker service is set before accessing it.
+        This method must be called in every method where the polarion client is used.
         """
-        Yield work items individually while buffering them internally
+        if self._client is not None:
+            return
+
+        try:
+            self._client = polarion.Polarion(
+                polarion_url=self._settings.polarion_host,
+                user=self._settings.polarion_user,
+                password=self._settings.polarion_password,
+                verify_certificate=self._verify_certificate,
+            )
+
+            self._tracker_service = self._client.getService("Tracker")
+        except Exception as exc:
+            raise PolarionDataFetcherError("Connecting to Polarion failed") from exc
+
+
+    def fetch_data(self, limit: int | None = None) -> Iterable[PolarionWorkItem]:
+        """Yield work items individually while buffering them internally
         in batches.
 
         The limit applies globally across projects and documents.
@@ -115,6 +130,8 @@ class PolarionDataFetcher:
         fetched = 0
 
         _import_config: PolarionImportConfig = load_import_config(self._settings.polarion_import_config_path)
+
+        self._ensure_client()
 
         for project_config in _import_config.projects:
             if not project_config.enabled:

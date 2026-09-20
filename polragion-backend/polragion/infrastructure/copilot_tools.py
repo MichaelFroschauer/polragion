@@ -194,6 +194,7 @@ class CopilotTools:
             else:
                 project_ids = self._polarion_descriptor.get_project_ids()
 
+            # TODO: Add document descriptions to the output
             project_docs: list[dict] = []
             for project_id in project_ids:
                 project_context = self._polarion_descriptor.get_project_context(project_id)
