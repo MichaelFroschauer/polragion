@@ -6,8 +6,7 @@ import {NavMain} from "@/components/nav-main"
 import {NavFilter} from "@/components/nav-filter.tsx"
 import {NavSecondary} from "@/components/nav-secondary"
 import {NavUser} from "@/components/nav-user"
-import {SettingsDialog} from "@/components/settings-dialog.tsx"
-import {APP_INFO, copyrightNotice} from "@/lib/app-info.ts"
+
 import {
     Sidebar,
     SidebarContent,
@@ -18,11 +17,12 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx"
 import {
-    ListMinus,
-    ListTodo,
-    TableRowsSplit,
-    MessageSquareTextIcon, LibraryBig,
+    MessageSquareTextIcon,  Book, BookCopy, FileText, TableProperties,
 } from "lucide-react"
+import {polarionMetadataApi} from "@/api/client.ts";
+import {useEffect, useState} from "react";
+import type {PolarionMetadataResponse} from "@/api";
+
 
 const data = {
     navSecondary: [
@@ -43,65 +43,143 @@ const data = {
     ],
     filter: [
         {
-            title: "Projects",
-            url: "#",
+            id: "project-contexts",
+            title: "Project Contexts",
             icon: (
-                <LibraryBig />
+                <BookCopy />
             ),
             isActive: false,
             items: [
                 {
                     title: "Work in Progress",
-                    url: "#",
                 },
             ],
         },
         {
+            id: "polarion-projects",
+            title: "Polarion Projects",
+            icon: (
+                <Book />
+            ),
+            isActive: false,
+            items: [
+                {
+                    title: "Work in Progress",
+                },
+            ],
+        },
+        {
+            id: "documents",
             title: "Documents",
-            url: "#",
             icon: (
-                <ListMinus/>
+                <FileText />
             ),
             isActive: false,
             items: [
                 {
                     title: "Work in Progress",
-                    url: "#",
                 },
             ],
         },
         {
-            title: "Properties",
-            url: "#",
-            icon: (
-                <ListTodo/>
-            ),
-            isActive: false,
-            items: [
-                {
-                    title: "Work in Progress",
-                    url: "#",
-                },
-            ],
-        },
-        {
+            id: "category",
             title: "Category",
-            url: "#",
             icon: (
-                <TableRowsSplit/>
+                <TableProperties />
             ),
             isActive: false,
             items: [
                 {
                     title: "Work in Progress",
-                    url: "#",
                 },
             ],
         },
+        // {
+        //     title: "Properties",
+        //     url: "#",
+        //     icon: (
+        //         <ListTodo/>
+        //     ),
+        //     isActive: false,
+        //     items: [
+        //         {
+        //             title: "Work in Progress",
+        //             url: "#",
+        //         },
+        //     ],
+        // },
     ],
 }
 
 export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
+
+    const [searchScopes, setSearchScopes] = useState<PolarionMetadataResponse | null>(null)
+
+    useEffect(() => {
+        const loadSearchScopes = async () => {
+            try {
+                const scopes = await polarionMetadataApi.getPolarionSearchScopes()
+                setSearchScopes(scopes)
+            } catch (error) {
+                console.error("Error fetching search scopes:", error)
+            }
+        }
+
+        void loadSearchScopes()
+    }, [])
+
+    function capitalizeFirstLetter(str: string): string {
+        if (str.length === 0) {
+            return str;
+        }
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function formatCategoryName(category: string): string {
+        // Remove the specified pre- and postfixes
+        const cleanedCategory = category.replace(/-specification|system-|product-|software-/g, "");
+        return capitalizeFirstLetter(cleanedCategory) + "s";
+    }
+
+    const filters = data.filter.map(filter => {
+        switch (filter.id) {
+            case "project-contexts":
+                return {
+                    ...filter,
+                    items: searchScopes?.projectContexts.map(context => ({
+                        title: context,
+                    })) ?? [],
+                }
+
+            case "polarion-projects":
+                return {
+                    ...filter,
+                    items: searchScopes?.projectIds.map(projectId => ({
+                        title: projectId,
+                    })) ?? [],
+                }
+
+            case "category": {
+                const uniqueCategories = [
+                    ...new Set(
+                        searchScopes?.projectCategories.map(formatCategoryName) ?? []
+                    ),
+                ]
+
+                return {
+                    ...filter,
+                    items: uniqueCategories.map(category => ({
+                        title: category,
+                    })),
+                }
+            }
+
+            default:
+                return filter
+        }
+    })
+
+
     return (
         <Sidebar variant="floating" collapsible="offcanvas" {...props}>
             <SidebarHeader>
@@ -122,7 +200,7 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
             </SidebarHeader>
             <SidebarContent>
                 <NavMain />
-                <NavFilter items={data.filter}/>
+                <NavFilter items={filters}/>
                 <NavSecondary items={data.navSecondary} className="mt-auto"/>
             </SidebarContent>
             <SidebarFooter>
