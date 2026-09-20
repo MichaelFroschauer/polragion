@@ -1,6 +1,6 @@
 # HealthApi
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *https://localhost:8000/api*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|

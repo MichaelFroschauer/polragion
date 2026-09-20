@@ -9,16 +9,18 @@ Name | Type
 ------------ | -------------
 `projectId` | string
 `projectName` | string
+`projectContext` | Array&lt;string&gt;
 `workItemId` | string
 `workItemType` | string
 `documentName` | string
+`documentCategory` | string
 `title` | string
 `description` | string
 `revision` | number
 `status` | string
 `location` | string
 `linkedWorkItems` | [Array&lt;LinkedWorkItem&gt;](LinkedWorkItem.md)
-`customFields` | [CustomFields](CustomFields.md)
+`additionalFields` | { [key: string]: any; }
 
 ## Example
 
@@ -29,16 +31,18 @@ import type { PolarionWorkItem } from ''
 const example = {
   "projectId": null,
   "projectName": null,
+  "projectContext": null,
   "workItemId": null,
   "workItemType": null,
   "documentName": null,
+  "documentCategory": null,
   "title": null,
   "description": null,
   "revision": null,
   "status": null,
   "location": null,
   "linkedWorkItems": null,
-  "customFields": null,
+  "additionalFields": null,
 } satisfies PolarionWorkItem
 
 console.log(example)

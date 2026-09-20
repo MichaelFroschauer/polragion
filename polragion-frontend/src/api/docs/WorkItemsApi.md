@@ -1,10 +1,11 @@
 # WorkItemsApi
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *https://localhost:8000/api*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**askWorkItem**](WorkItemsApi.md#askworkitem) | **POST** /v1/work-items/ask | Ask Work Item |
+| [**askWorkItemWithInitialSearch**](WorkItemsApi.md#askworkitemwithinitialsearch) | **POST** /v1/work-items/ask-with-search | Ask Work Item With Initial Search |
 | [**getChatHistory**](WorkItemsApi.md#getchathistory) | **GET** /v1/work-items/ask/history | Get Chat History |
 | [**ingestWorkItems**](WorkItemsApi.md#ingestworkitems) | **POST** /v1/work-items/ingest | Ingest Work Items |
 | [**ingestWorkItemsFromJsonDataSource**](WorkItemsApi.md#ingestworkitemsfromjsondatasource) | **POST** /v1/work-items/ingest/import-json | Ingest Work Items From Json Data Source |
@@ -16,7 +17,7 @@ All URIs are relative to *http://localhost*
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
+> WorkItemAskResponse askWorkItem(prompt, projectIds, projectContexts, documentCategories, limitWorkItemSearch, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
 
 Ask Work Item
 
@@ -28,6 +29,96 @@ import {
   WorkItemsApi,
 } from '';
 import type { AskWorkItemRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new WorkItemsApi();
+
+  const body = {
+    // string
+    prompt: prompt_example,
+    // Array<string> (optional)
+    projectIds: ...,
+    // Array<string> (optional)
+    projectContexts: ...,
+    // Array<string> (optional)
+    documentCategories: ...,
+    // number (optional)
+    limitWorkItemSearch: 56,
+    // number (optional)
+    scoreThreshold: 8.14,
+    // boolean (optional)
+    doReranking: true,
+    // string (optional)
+    userDefinedSystemPrompt: userDefinedSystemPrompt_example,
+    // AnswerDetail (optional)
+    answerDetail: ...,
+  } satisfies AskWorkItemRequest;
+
+  try {
+    const data = await api.askWorkItem(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **prompt** | `string` |  | [Defaults to `undefined`] |
+| **projectIds** | `Array<string>` |  | [Optional] |
+| **projectContexts** | `Array<string>` |  | [Optional] |
+| **documentCategories** | `Array<string>` |  | [Optional] |
+| **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **userDefinedSystemPrompt** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
+
+### Return type
+
+[**WorkItemAskResponse**](WorkItemAskResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+| **422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## askWorkItemWithInitialSearch
+
+> WorkItemAskResponse askWorkItemWithInitialSearch(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
+
+Ask Work Item With Initial Search
+
+### Example
+
+```ts
+import {
+  Configuration,
+  WorkItemsApi,
+} from '';
+import type { AskWorkItemWithInitialSearchRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -50,10 +141,10 @@ async function example() {
     userDefinedSystemPrompt: userDefinedSystemPrompt_example,
     // AnswerDetail (optional)
     answerDetail: ...,
-  } satisfies AskWorkItemRequest;
+  } satisfies AskWorkItemWithInitialSearchRequest;
 
   try {
-    const data = await api.askWorkItem(body);
+    const data = await api.askWorkItemWithInitialSearch(body);
     console.log(data);
   } catch (error) {
     console.error(error);
