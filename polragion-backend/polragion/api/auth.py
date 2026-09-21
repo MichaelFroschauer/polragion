@@ -120,8 +120,9 @@ async def github_callback(
     user = await user_repository.upsert_from_github(
         github_user_id=str(github_data["id"]),
         username=github_data["login"],
-        name=github_data["name"],
-        avatar_url=github_data["avatar_url"],
+        # GitHub returns null for accounts without a display name.
+        name=github_data.get("name") or github_data["login"],
+        avatar_url=github_data.get("avatar_url") or "",
     )
 
     token_cipher = TokenCipher(settings.encryption_secret)
