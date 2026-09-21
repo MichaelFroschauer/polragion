@@ -13,13 +13,6 @@
  */
 
 import { mapValues } from '../runtime';
-import type { CustomFields } from './CustomFields';
-import {
-    CustomFieldsFromJSON,
-    CustomFieldsFromJSONTyped,
-    CustomFieldsToJSON,
-    CustomFieldsToJSONTyped,
-} from './CustomFields';
 import type { LinkedWorkItem } from './LinkedWorkItem';
 import {
     LinkedWorkItemFromJSON,
@@ -48,6 +41,12 @@ export interface PolarionWorkItem {
     projectName?: string | null;
     /**
      * 
+     * @type {Array<string>}
+     * @memberof PolarionWorkItem
+     */
+    projectContext?: Array<string>;
+    /**
+     * 
      * @type {string}
      * @memberof PolarionWorkItem
      */
@@ -64,6 +63,12 @@ export interface PolarionWorkItem {
      * @memberof PolarionWorkItem
      */
     documentName?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof PolarionWorkItem
+     */
+    documentCategory?: string | null;
     /**
      * 
      * @type {string}
@@ -102,10 +107,10 @@ export interface PolarionWorkItem {
     linkedWorkItems?: Array<LinkedWorkItem>;
     /**
      * 
-     * @type {CustomFields}
+     * @type {{ [key: string]: any; }}
      * @memberof PolarionWorkItem
      */
-    customFields?: CustomFields;
+    additionalFields?: { [key: string]: any; };
 }
 
 /**
@@ -131,16 +136,18 @@ export function PolarionWorkItemFromJSONTyped(json: any, ignoreDiscriminator: bo
         
         'projectId': json['project_id'],
         'projectName': json['project_name'] === undefined ? undefined : json['project_name'] === null ? null : json['project_name'],
+        'projectContext': json['project_context'] == null ? undefined : json['project_context'],
         'workItemId': json['work_item_id'],
         'workItemType': json['work_item_type'],
         'documentName': json['document_name'] === undefined ? undefined : json['document_name'] === null ? null : json['document_name'],
+        'documentCategory': json['document_category'] === undefined ? undefined : json['document_category'] === null ? null : json['document_category'],
         'title': json['title'] == null ? undefined : json['title'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'revision': json['revision'],
         'status': json['status'] === undefined ? undefined : json['status'] === null ? null : json['status'],
         'location': json['location'] === undefined ? undefined : json['location'] === null ? null : json['location'],
         'linkedWorkItems': json['linked_work_items'] == null ? undefined : ((json['linked_work_items'] as Array<any>).map(LinkedWorkItemFromJSON)),
-        'customFields': json['custom_fields'] == null ? undefined : CustomFieldsFromJSON(json['custom_fields']),
+        'additionalFields': json['additional_fields'] == null ? undefined : json['additional_fields'],
     };
 }
 
@@ -157,16 +164,18 @@ export function PolarionWorkItemToJSONTyped(value?: PolarionWorkItem | null, ign
         
         'project_id': value['projectId'],
         'project_name': value['projectName'],
+        'project_context': value['projectContext'],
         'work_item_id': value['workItemId'],
         'work_item_type': value['workItemType'],
         'document_name': value['documentName'],
+        'document_category': value['documentCategory'],
         'title': value['title'],
         'description': value['description'],
         'revision': value['revision'],
         'status': value['status'],
         'location': value['location'],
         'linked_work_items': value['linkedWorkItems'] == null ? undefined : ((value['linkedWorkItems'] as Array<any>).map(LinkedWorkItemToJSON)),
-        'custom_fields': CustomFieldsToJSON(value['customFields']),
+        'additional_fields': value['additionalFields'],
     };
 }
 

@@ -8,16 +8,16 @@ import {
 } from "@/components/ui/sidebar.tsx"
 import {ArrowUpNarrowWide, ChevronRightIcon} from "lucide-react"
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible.tsx";
+import {Field, FieldLabel} from "./ui/field";
+import {Checkbox} from "@/components/ui/checkbox.tsx";
 
 export function NavFilter({items,}: {
     items: {
         title: string
-        url: string
         icon: React.ReactNode
         isActive?: boolean
         items?: {
             title: string
-            url: string
         }[]
     }[]
 }) {
@@ -54,9 +54,18 @@ export function NavFilter({items,}: {
                                         {item.items.map((subItem) => (
                                             <SidebarMenuSubItem key={subItem.title}>
                                                 <SidebarMenuSubButton
-                                                    render={<a href={subItem.url}/>}
+                                                     render={<a />}
                                                 >
-                                                    <span>{subItem.title}</span>
+
+                                                    {/*<FieldGroup className="mx-auto w-56">*/}
+                                                        <Field orientation="horizontal">
+                                                            <Checkbox id={subItem.title} name={subItem.title} />
+                                                            <FieldLabel htmlFor={subItem.title}>
+                                                                {subItem.title}
+                                                            </FieldLabel>
+                                                        </Field>
+                                                    {/*</FieldGroup>*/}
+
                                                 </SidebarMenuSubButton>
                                             </SidebarMenuSubItem>
                                         ))}
@@ -66,7 +75,7 @@ export function NavFilter({items,}: {
                         ) : (
                             <SidebarMenuButton
                                 tooltip={item.title}
-                                render={<a href={item.url}/>}
+                                render={<a />}
                             >
                                 {item.icon}
                                 <span>{item.title}</span>

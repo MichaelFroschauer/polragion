@@ -1,36 +1,36 @@
-# GitHubModelsApi
+# PolarionMetadataApi
 
 All URIs are relative to *https://localhost:8000/api*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
-| [**getModel**](GitHubModelsApi.md#getmodel) | **GET** /ai/github/model | Get Model |
-| [**getUserModels**](GitHubModelsApi.md#getusermodels) | **GET** /ai/github/models | Get User Models |
-| [**setUserModel**](GitHubModelsApi.md#setusermodel) | **PUT** /ai/github/model | Set User Model |
+| [**getPolarionImportConfig**](PolarionMetadataApi.md#getpolarionimportconfig) | **GET** /v1/polarion-metadata/get-config | Get Polarion Import Config |
+| [**getPolarionSearchScopes**](PolarionMetadataApi.md#getpolarionsearchscopes) | **GET** /v1/polarion-metadata/get-search-scopes | Get Polarion Search Scopes |
+| [**loadPolarionImportConfig**](PolarionMetadataApi.md#loadpolarionimportconfig) | **POST** /v1/polarion-metadata/load-config | Load Polarion Import Config |
 
 
 
-## getModel
+## getPolarionImportConfig
 
-> CopilotModelSelection getModel()
+> PolarionImportConfig getPolarionImportConfig()
 
-Get Model
+Get Polarion Import Config
 
 ### Example
 
 ```ts
 import {
   Configuration,
-  GitHubModelsApi,
+  PolarionMetadataApi,
 } from '';
-import type { GetModelRequest } from '';
+import type { GetPolarionImportConfigRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new GitHubModelsApi();
+  const api = new PolarionMetadataApi();
 
   try {
-    const data = await api.getModel();
+    const data = await api.getPolarionImportConfig();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -47,7 +47,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**CopilotModelSelection**](CopilotModelSelection.md)
+[**PolarionImportConfig**](PolarionImportConfig.md)
 
 ### Authorization
 
@@ -67,27 +67,27 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## getUserModels
+## getPolarionSearchScopes
 
-> Array&lt;CopilotModel&gt; getUserModels()
+> PolarionMetadataResponse getPolarionSearchScopes()
 
-Get User Models
+Get Polarion Search Scopes
 
 ### Example
 
 ```ts
 import {
   Configuration,
-  GitHubModelsApi,
+  PolarionMetadataApi,
 } from '';
-import type { GetUserModelsRequest } from '';
+import type { GetPolarionSearchScopesRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new GitHubModelsApi();
+  const api = new PolarionMetadataApi();
 
   try {
-    const data = await api.getUserModels();
+    const data = await api.getPolarionSearchScopes();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -104,7 +104,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**Array&lt;CopilotModel&gt;**](CopilotModel.md)
+[**PolarionMetadataResponse**](PolarionMetadataResponse.md)
 
 ### Authorization
 
@@ -124,34 +124,27 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## setUserModel
+## loadPolarionImportConfig
 
-> CopilotModelSelection setUserModel(modelId, reasoningEffort)
+> PolarionImportConfig loadPolarionImportConfig()
 
-Set User Model
+Load Polarion Import Config
 
 ### Example
 
 ```ts
 import {
   Configuration,
-  GitHubModelsApi,
+  PolarionMetadataApi,
 } from '';
-import type { SetUserModelRequest } from '';
+import type { LoadPolarionImportConfigRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
-  const api = new GitHubModelsApi();
-
-  const body = {
-    // string
-    modelId: modelId_example,
-    // string (optional)
-    reasoningEffort: reasoningEffort_example,
-  } satisfies SetUserModelRequest;
+  const api = new PolarionMetadataApi();
 
   try {
-    const data = await api.setUserModel(body);
+    const data = await api.loadPolarionImportConfig();
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -164,15 +157,11 @@ example().catch(console.error);
 
 ### Parameters
 
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **modelId** | `string` |  | [Defaults to `undefined`] |
-| **reasoningEffort** | `string` |  | [Optional] [Defaults to `undefined`] |
+This endpoint does not need any parameter.
 
 ### Return type
 
-[**CopilotModelSelection**](CopilotModelSelection.md)
+[**PolarionImportConfig**](PolarionImportConfig.md)
 
 ### Authorization
 
@@ -188,7 +177,6 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Successful Response |  -  |
-| **422** | Validation Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

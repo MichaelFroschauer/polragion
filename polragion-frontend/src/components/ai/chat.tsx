@@ -61,6 +61,53 @@ const loadingQuotes = [
     "Doing some very serious computing...",
     "Turning it off and on again...",
     "Preparing a suspiciously confident answer...",
+    "Excavating ancient work items...",
+    "Asking Polragion nicely...",
+    "Untangling some suspicious requirements...",
+    "Searching for the work item everyone remembers but nobody can find...",
+    "Searching across projects like I know what I'm doing...",
+    "Turning work items into wisdom...",
+    "Looking for the requirement behind the requirement...",
+    "Finding three contradictory specifications...",
+    "Determining which specification is the specification...",
+    "Consulting the Polragion gods...",
+    "Trying to remember where I put that answer...",
+    "Asking the intern...",
+    "Deleting the database...",
+    "Ignoring several warning messages...",
+    "Searching for the person who wrote this...",
+    "Copying the question into Google...",
+    "Asking another AI for help...",
+    "Performing highly scientific clicking...",
+    "Calculating an answer with unnecessary precision...",
+    "Scheduling a meeting about the answer...",
+    "Creating a PowerPoint about the problem...",
+    "Interpreting the requirements creatively...",
+    "Searching through ancient work items...",
+    "Performing a controlled amount of panic...",
+    "Turning requirements into floating-point numbers...",
+    "Compressing years of engineering pain into a vector...",
+    "Trying to save you from opening the document manually...",
+    "Doing the reading so you don't have to...",
+    "Translating Polragion-to-human...",
+    "Running advanced bureaucracy retrieval...",
+    "Trying not to hallucinate a work item...",
+    "Putting the 'RAG' in PolRAGion...",
+    "Opening 47 linked work items...",
+    "Checking if the answer is hidden in a custom field...",
+    "Crossing project boundaries without a visa...",
+    "Trying to explain Polragion metadata to the vector database...",
+    "Embedding knowledge into 1536 dimensions...",
+    "Calculating cosine similarity between two questionable requirements...",
+    "Verifying that the work items exist outside my imagination...",
+    "Adding citations so nobody has to trust me...",
+    "Converting chaos into markdown...",
+    "Trying to fit 8 years of project history into one answer...",
+    "Dusting off an old project context...",
+    "Trying not to wake the legacy requirements...",
+    "Waiting for answers from people who are currently on vacation...",
+    "Finding the answer hidden in an attachment named image001.png...",
+    "Searching smarter than Ctrl+F...",
 ]
 
 function AskMessageResponse({response}: {response: WorkItemAskResponse}) {
@@ -112,11 +159,22 @@ export function Chat() {
         lastEntryRef.current?.scrollIntoView({behavior: "smooth", block: "start"})
     }, [entries, status])
 
+
     useEffect(() => {
-        if (status === "submitted") {
+        if (status === "ready") {
+            return
+        }
+
+        const updateQuote = () => {
             setLoadingQuote(loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)])
         }
+
+        updateQuote() // Change immediately when loading starts
+        const interval = setInterval(updateQuote, 4000) // Then change every 4 seconds
+
+        return () => clearInterval(interval)
     }, [status])
+
 
     function getMessageResponse(contentType: ChatContentType, response: WorkItemSearchResponse | WorkItemAskResponse | string) {
         if (contentType === "ask") {

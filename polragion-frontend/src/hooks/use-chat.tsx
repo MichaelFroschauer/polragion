@@ -94,11 +94,13 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                     msg_mode === "ask"
                         ? await workItemsApi.askWorkItem({
                             prompt,
-                            projectId: null,
-                            limitWorkItemSearch: settings.workItemSearch.maxResults,
-                            limitAiModelWorkItems: settings.aiSearch.maxResultsForAi,
-                            scoreThreshold: settings.workItemSearch.minScore,
-                            doReranking: settings.workItemSearch.doReranking,
+                            projectIds: null, // TODO: support project id filter
+                            projectContexts: null, // TODO: support project context filter
+                            documentCategories: null, // TODO: support project categories filter
+                            // limitWorkItemSearch: settings.workItemSearch.maxResults, // TODO: not used anymore
+                            // limitAiModelWorkItems: settings.aiSearch.maxResultsForAi, // TODO: not used anymore
+                            // scoreThreshold: settings.workItemSearch.minScore, // TODO: not used anymore
+                            // doReranking: settings.workItemSearch.doReranking,  // TODO: not used anymore
                             userDefinedSystemPrompt: settings.customUserSystemPrompt,
                             answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
