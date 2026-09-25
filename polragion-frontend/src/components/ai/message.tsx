@@ -265,7 +265,17 @@ const disabledLinkSafety = { enabled: false }
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
-      className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+      className={cn(
+        "size-full text-sm leading-6 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "[&_p]:my-3 [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4",
+        "[&_h1]:mt-6 [&_h1]:mb-3 [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:leading-7",
+        "[&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:leading-6",
+        "[&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:font-semibold [&_h3]:leading-6",
+        "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:ps-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:ps-6 [&_li]:my-0 [&_li]:leading-4 [&_li_p]:my-0",
+        "[&_code]:rounded-sm [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]",
+        "[&_pre]:my-4 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0",
+        className,
+      )}
       linkSafety={disabledLinkSafety}
       {...props}
     />
