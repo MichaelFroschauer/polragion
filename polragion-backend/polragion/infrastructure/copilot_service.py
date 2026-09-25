@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import httpx
-from copilot import CopilotClient, RuntimeConnection
+from copilot import CopilotClient, RuntimeConnection, SessionEventType
 from copilot._jsonrpc import JsonRpcError
 from copilot.generated.rpc import ModelsListRequest
-from copilot.generated.session_events import UserMessageData, ToolExecutionStartData
+from copilot.generated.session_events import UserMessageData, ToolExecutionStartData, SystemMessageData
 from copilot.session import CopilotSession, PermissionHandler, PreToolUseHookOutput, PreToolUseHookInput, SessionHooks
 from copilot.session_events import (
     AssistantMessageData,
@@ -253,7 +253,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 tools=self.copilot_tools.create_tools(user_id),
                 hooks=hooks,
                 system_message={
-                    "mode": "append",
+                    "mode": "replace",
+                    #"mode": "append",
                     "content": get_initial_system_prompt(),
                 },
             )
@@ -266,6 +267,11 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
 
         def on_event(event: SessionEvent) -> None:
             message_event: CopilotMessageEvent | None = None
+
+            # Print complete ai system message
+            # if event.type == SessionEventType.SYSTEM_MESSAGE:
+            #     d: SystemMessageData = event.data
+            #     print(d.content)
 
             match event.data:
                 case AssistantMessageDeltaData() as data:
@@ -388,7 +394,6 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
 
             try:
                 metrics_before = await session.rpc.usage.get_metrics()
-                credits_before = (metrics_before.total_nano_aiu or 0) / 1e9
 
                 response_event = await session.send_and_wait(
                     prompt=message.text,
@@ -397,6 +402,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 )
 
                 metrics_after = await session.rpc.usage.get_metrics()
+
+                credits_before = (metrics_before.total_nano_aiu or 0) / 1e9
                 credits_after = (metrics_after.total_nano_aiu or 0) / 1e9
                 request_credits = credits_after - credits_before
 
