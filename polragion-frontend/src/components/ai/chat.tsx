@@ -1,5 +1,5 @@
 import {Fragment, useEffect, useRef, useState} from "react"
-import {LogInIcon, Minus, Plus} from "lucide-react"
+import {Check, Copy, LogInIcon, Minus, Plus} from "lucide-react"
 import {
     Message,
     MessageContent,
@@ -110,6 +110,51 @@ const loadingQuotes = [
     "Searching smarter than Ctrl+F...",
 ]
 
+function MessageFooterRight({
+    message,
+    usedCredits,
+}: {
+    message: string
+    usedCredits: number | null
+}) {
+    const [copied, setCopied] = useState(false)
+
+    const copyAnswer = async () => {
+        await navigator.clipboard.writeText(message)
+        setCopied(true)
+        setTimeout(() => { setCopied(false)}, 2000)
+    }
+
+    if (!message) {
+        return null
+    }
+
+    return (
+        <div className="flex shrink-0 items-center gap-3 text-sm text-muted-foreground">
+            {usedCredits !== null && (
+                <span className="mr-2">
+                    {usedCredits < 10
+                        ? usedCredits.toFixed(1)
+                        : usedCredits.toFixed(0)}{" "}
+                    credits
+                </span>
+            )}
+
+            <button
+                type="button"
+                onClick={copyAnswer}
+                className="flex items-center gap-1 hover:text-foreground"
+            >
+                {copied ? (
+                    <Check className="h-4 w-4" />
+                ) : (
+                    <Copy className="h-4 w-4" />
+                )}
+            </button>
+        </div>
+    )
+}
+
 function AskMessageResponse({response}: {response: WorkItemAskResponse}) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -121,14 +166,22 @@ function AskMessageResponse({response}: {response: WorkItemAskResponse}) {
                 open={isOpen}
                 onOpenChange={setIsOpen}
             >
-                <CollapsibleTrigger className="flex items-center gap-2 font-medium text-sm hover:underline">
-                    {isOpen ? (
-                        <Minus className="h-4 w-4" />
-                    ) : (
-                        <Plus className="h-4 w-4" />
+                <div className={"flex items-center justify-between" +  (!isOpen ? " opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" : "")}>
+                    {response.workItems.length > 0 && (
+                        <CollapsibleTrigger className="flex items-center gap-2 font-medium text-sm hover:underline">
+                            {isOpen ? (
+                                <Minus className="h-4 w-4" />
+                            ) : (
+                                <Plus className="h-4 w-4" />
+                            )}
+                            {isOpen ? "Hide used work items" : `Show ${response.workItems.length} used work item${response.workItems.length > 1 ? "s" : ""}`}
+                        </CollapsibleTrigger>
                     )}
-                    {isOpen ? "Hide used work items" : "Show used work items"}
-                </CollapsibleTrigger>
+                    {response.workItems.length == 0 && (
+                        <div className="flex items-center gap-2 font-medium text-sm hover:underline"></div>
+                    )}
+                    <MessageFooterRight message={response.answer} usedCredits={response.creditsSpent} />
+                </div>
                 <CollapsibleContent className="space-y-2">
                     {response.workItems.map((wi, index) =>
                             <div className="divide-y" key={wi.workItem.workItemId}>
@@ -191,7 +244,12 @@ export function Chat() {
                 </div>
             )
         } else if (contentType === "string") {
-            return <MessageResponse>{linkifyWorkItemReferences(response as string)}</MessageResponse>
+            return <>
+                <MessageResponse>{linkifyWorkItemReferences(response as string)}</MessageResponse>
+                <div className="flex justify-end opacity-0 transition-opacity pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
+                    <MessageFooterRight message={response as string} usedCredits={null} />
+                </div>
+            </>
         }
 
         return <MessageResponse>Error: Unknown response content type</MessageResponse>
@@ -214,9 +272,8 @@ export function Chat() {
                         entries.map((entry, index) => (
                             <div ref={index === entries.length - 1 ? lastEntryRef : null}>
                                 <Message from={entry.role} key={entry.id}>
-                                <MessageContent>
+                                <MessageContent className={entry.role === "assistant" ? "w-full max-w-none" : undefined}>
                                     {entry.role === "assistant" ? (
-                                        // <MessageResponse>{entry.content}</MessageResponse>
                                         getMessageResponse(entry.contentType, entry.content)
                                     ) : (
                                         <p className="whitespace-pre-wrap">{entry.content as string}</p>

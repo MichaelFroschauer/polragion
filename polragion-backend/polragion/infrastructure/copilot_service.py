@@ -29,7 +29,7 @@ from polragion.application.prompt_builder import get_initial_system_prompt
 from polragion.models.ai_message import (
     CopilotMessageEvent,
     CopilotResponseMessage,
-    CopilotSendMessage, CopilotModel,
+    CopilotSendMessage, CopilotModel, CopilotMetrics,
 )
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
@@ -287,6 +287,14 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                             is_final=True,
                         ),
                     )
+                # case SessionUsageInfoData() as data:
+                #     logger.info("conversation_tokens=%s current_tokens=%s system_tokens=%s token_limit=%s tool_definitions_tokens=%s",
+                #                 data.conversation_tokens,
+                #                 data.current_tokens,
+                #                 data.system_tokens,
+                #                 data.token_limit,
+                #                 data.tool_definitions_tokens)
+                # context_percent = round(data.current_tokens / data.token_limit * 100)
                 case ToolExecutionStartData() as data:
                     pass
                 case SessionErrorData() as data:
@@ -376,13 +384,22 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 session = await self._create_user_session(message.user_id)
 
             request_context = message.request_context or self._user_request_manager.start_request(message.user_id)
+            request_credits: float = None
 
             try:
+                metrics_before = await session.rpc.usage.get_metrics()
+                credits_before = (metrics_before.total_nano_aiu or 0) / 1e9
+
                 response_event = await session.send_and_wait(
                     prompt=message.text,
                     display_prompt=message.display_text,
                     timeout=self.REQUEST_TIMEOUT_SECONDS
                 )
+
+                metrics_after = await session.rpc.usage.get_metrics()
+                credits_after = (metrics_after.total_nano_aiu or 0) / 1e9
+                request_credits = credits_after - credits_before
+
             except TimeoutError as exc:
                 await self._disconnect_user_session(message.user_id)
                 raise CopilotRequestError("Copilot did not finish the response before the timeout") from exc
@@ -402,6 +419,9 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                     text=data.content,
                     message_id=data.message_id,
                     is_final=True,
+                    metrics=CopilotMetrics(
+                        credits_for_message=request_credits,
+                    ),
                     request_context=request_context,
                 )
             case _:

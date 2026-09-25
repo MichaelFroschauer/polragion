@@ -7,7 +7,7 @@
 Name | Type
 ------------ | -------------
 `answer` | string
-`tokensSpent` | number
+`creditsSpent` | number
 `workItems` | [Array&lt;WorkItemSearchHit&gt;](WorkItemSearchHit.md)
 
 ## Example
@@ -18,7 +18,7 @@ import type { WorkItemAskResponse } from ''
 // TODO: Update the object below with actual values
 const example = {
   "answer": null,
-  "tokensSpent": null,
+  "creditsSpent": null,
   "workItems": null,
 } satisfies WorkItemAskResponse
 

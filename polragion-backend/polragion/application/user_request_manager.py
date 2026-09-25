@@ -21,6 +21,11 @@ class RequestContext:
     user_id: UUID
     tool_call_budget: ToolCallBudget
     search_scope: SearchScope = field(default_factory=SearchScope)
+
+    # TODO: Set them to show the model context window
+    # max_model_context_tokens: int = 0
+    # current_model_context_tokens: int = 0
+
     _work_items: list[WorkItemSearchHit] = field(default_factory=list)
     _seen_point_ids: set[str] = field(default_factory=set)
     _lock: asyncio.Lock = field(default_factory=asyncio.Lock)

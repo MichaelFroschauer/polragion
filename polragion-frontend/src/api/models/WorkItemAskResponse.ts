@@ -38,7 +38,7 @@ export interface WorkItemAskResponse {
      * @type {number}
      * @memberof WorkItemAskResponse
      */
-    tokensSpent: number;
+    creditsSpent: number;
     /**
      * 
      * @type {Array<WorkItemSearchHit>}
@@ -52,7 +52,7 @@ export interface WorkItemAskResponse {
  */
 export function instanceOfWorkItemAskResponse(value: object): value is WorkItemAskResponse {
     if (!('answer' in value) || value['answer'] === undefined) return false;
-    if ((!('tokensSpent' in (value as Record<string, any>)) && !('tokens_spent' in (value as Record<string, any>))) || ((value as Record<string, any>)['tokensSpent'] === undefined && (value as Record<string, any>)['tokens_spent'] === undefined)) return false;
+    if ((!('creditsSpent' in (value as Record<string, any>)) && !('credits_spent' in (value as Record<string, any>))) || ((value as Record<string, any>)['creditsSpent'] === undefined && (value as Record<string, any>)['credits_spent'] === undefined)) return false;
     if ((!('workItems' in (value as Record<string, any>)) && !('work_items' in (value as Record<string, any>))) || ((value as Record<string, any>)['workItems'] === undefined && (value as Record<string, any>)['work_items'] === undefined)) return false;
     return true;
 }
@@ -68,7 +68,7 @@ export function WorkItemAskResponseFromJSONTyped(json: any, ignoreDiscriminator:
     return {
         
         'answer': json['answer'],
-        'tokensSpent': json['tokens_spent'],
+        'creditsSpent': json['credits_spent'],
         'workItems': ((json['work_items'] as Array<any>).map(WorkItemSearchHitFromJSON)),
     };
 }
@@ -85,7 +85,7 @@ export function WorkItemAskResponseToJSONTyped(value?: WorkItemAskResponse | nul
     return {
         
         'answer': value['answer'],
-        'tokens_spent': value['tokensSpent'],
+        'credits_spent': value['creditsSpent'],
         'work_items': ((value['workItems'] as Array<any>).map(WorkItemSearchHitToJSON)),
     };
 }

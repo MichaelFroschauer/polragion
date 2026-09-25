@@ -20,7 +20,7 @@ class WorkItemAskResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     answer: str
-    tokens_spent: int
+    credits_spent: float
     work_items: list[WorkItemSearchHit]
 
 

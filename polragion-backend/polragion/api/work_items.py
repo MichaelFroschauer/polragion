@@ -208,7 +208,7 @@ async def ask_work_item(
     )
 
     work_items = response.request_context.collected_work_items() if response.request_context else []
-    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=work_items)
+    return WorkItemAskResponse(answer=response.text, credits_spent=response.metrics.credits_for_message, work_items=work_items)
 
 
 @router.get(

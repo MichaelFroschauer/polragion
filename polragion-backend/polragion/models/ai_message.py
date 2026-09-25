@@ -14,6 +14,13 @@ class CopilotSendMessage(StrictModel):
     display_text: str | None = None
     request_context: RequestContext | None = None
 
+class CopilotMetrics(StrictModel):
+    credits_for_message: float  = 0.0
+
+    # TODO: Set them to show the model context window
+    # current_context_tokens: int | None = None
+    # max_context_tokens: int | None = None
+
 class CopilotResponseMessage(StrictModel):
     # RequestContext is a plain dataclass, so it needs arbitrary_types_allowed
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
@@ -21,6 +28,7 @@ class CopilotResponseMessage(StrictModel):
     text: str
     message_id: str | None = None
     is_final: bool = True
+    metrics: CopilotMetrics = CopilotMetrics()
     request_context: RequestContext | None = None
 
 class CopilotMessageEvent(StrictModel):
