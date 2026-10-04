@@ -202,14 +202,26 @@ export function Chat() {
     const {isAuthenticated, isLoading: isAuthLoading, login} = useGitHubAuth()
     const bottomRef = useRef<HTMLDivElement | null>(null)
     const lastEntryRef = useRef<HTMLDivElement | null>(null)
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null)
     const {entries, status, mode, setMode, handleSubmit} = useChat()
 
     const [loadingQuote, setLoadingQuote] = useState(
         () => loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)],
     )
 
+    // Scroll the message list directly instead of scrollIntoView, which also scrolls
+    // ancestor containers (even overflow-hidden ones) and would drag the whole layout up.
     useEffect(() => {
-        lastEntryRef.current?.scrollIntoView({behavior: "smooth", block: "start"})
+        const container = scrollContainerRef.current
+        const lastEntry = lastEntryRef.current
+        if (!container || !lastEntry) {
+            return
+        }
+
+        const top =
+            container.scrollTop +
+            (lastEntry.getBoundingClientRect().top - container.getBoundingClientRect().top)
+        container.scrollTo({top, behavior: "smooth"})
     }, [entries, status])
 
 
@@ -257,7 +269,7 @@ export function Chat() {
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
                     {entries.length === 0 ? (
                         <div className="flex flex-col items-center gap-2 py-24 text-center">
@@ -270,8 +282,8 @@ export function Chat() {
                         </div>
                     ) : (
                         entries.map((entry, index) => (
-                            <div ref={index === entries.length - 1 ? lastEntryRef : null}>
-                                <Message from={entry.role} key={entry.id}>
+                            <div ref={index === entries.length - 1 ? lastEntryRef : null} key={entry.id}>
+                                <Message from={entry.role}>
                                 <MessageContent className={entry.role === "assistant" ? "w-full max-w-none" : undefined}>
                                     {entry.role === "assistant" ? (
                                         getMessageResponse(entry.contentType, entry.content)

@@ -12,7 +12,7 @@ export default function Page({ children }: PageProps) {
     return (
         <SidebarProvider className="h-svh overflow-hidden">
             <AppSidebar />
-            <SidebarInset className="min-h-0 overflow-hidden">
+            <SidebarInset className="min-h-0 overflow-clip">
                 <header className="flex h-14 shrink-0 items-center gap-2 px-4">
                     <SidebarTrigger className="-ml-1" />
 
