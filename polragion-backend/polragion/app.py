@@ -125,6 +125,9 @@ def create_app(
         lifespan=lifespan,
         generate_unique_id_function=custom_generate_unique_id,
         root_path="/api",
+        docs_url="/docs" if app_settings.debug else None,
+        redoc_url="/redoc" if app_settings.debug else None,
+        openapi_url="/openapi.json" if app_settings.debug else None,
     )
 
     register_exception_handlers(app)
