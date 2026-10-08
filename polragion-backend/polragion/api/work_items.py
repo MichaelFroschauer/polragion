@@ -173,7 +173,7 @@ async def ask_work_item_with_initial_search(
 async def ask_work_item(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
-    prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
+    prompt: Annotated[str, Query(min_length=1, max_length=100_000)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
     user_request_manager: Annotated[UserRequestManager, Depends(get_user_request_manager)],
     project_ids: Annotated[list[str] | None, Query()] = None,
