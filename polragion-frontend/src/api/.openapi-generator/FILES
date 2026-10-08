@@ -18,6 +18,7 @@ docs/LinkedWorkItem.md
 docs/LocationInner.md
 docs/PolarionDocumentMetadata.md
 docs/PolarionImportConfig.md
+docs/PolarionImportStatus.md
 docs/PolarionMetadataApi.md
 docs/PolarionMetadataResponse.md
 docs/PolarionProjectMetadata.md
@@ -44,6 +45,7 @@ models/LinkedWorkItem.ts
 models/LocationInner.ts
 models/PolarionDocumentMetadata.ts
 models/PolarionImportConfig.ts
+models/PolarionImportStatus.ts
 models/PolarionMetadataResponse.ts
 models/PolarionProjectMetadata.ts
 models/PolarionWorkItem.ts

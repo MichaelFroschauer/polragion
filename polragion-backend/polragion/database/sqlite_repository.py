@@ -4,8 +4,10 @@ from datetime import datetime
 from typing import Iterator
 from uuid import UUID
 
-from polragion.database.repository import UserRepository, GitHubCredentialsRepository, SessionRepository
+from polragion.database.repository import UserRepository, GitHubCredentialsRepository, SessionRepository, \
+    ImportStatusRepository
 from polragion.models.user import User, GitHubCredentials, UserSession
+from polragion.models.work_item import PolarionImportStatus
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
 
@@ -64,6 +66,14 @@ class SQLiteDatabase:
                 
             CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id
             ON user_sessions (user_id);
+
+            CREATE TABLE IF NOT EXISTS import_status (
+                source TEXT NOT NULL,
+                collection_name TEXT NOT NULL,
+                completed_at TEXT NOT NULL,
+                processed_items INTEGER NOT NULL,
+                PRIMARY KEY (source, collection_name)
+            );
         """
         with self.transaction() as conn:
             conn.executescript(commands)
@@ -77,6 +87,37 @@ class SQLiteDatabase:
                 yield conn
         finally:
             conn.close()
+
+
+class SqliteImportStatusRepository(ImportStatusRepository):
+    def __init__(self, db: SQLiteDatabase) -> None:
+        self._db = db
+
+    def get_last_successful(self, collection_name: str) -> PolarionImportStatus | None:
+        with self._db.transaction() as conn:
+            row = conn.execute(
+                "SELECT collection_name, completed_at, processed_items FROM import_status "
+                "WHERE source = ? AND collection_name = ?",
+                ("polarion", collection_name),
+            ).fetchone()
+
+        if row is None:
+            return None
+
+        return PolarionImportStatus(
+            collection_name=row["collection_name"],
+            completed_at=datetime.fromisoformat(row["completed_at"]),
+            processed_items=row["processed_items"],
+        )
+
+    def record_success(self, status: PolarionImportStatus) -> None:
+        with self._db.transaction() as conn:
+            conn.execute(
+                "INSERT INTO import_status (source, collection_name, completed_at, processed_items) "
+                "VALUES (?, ?, ?, ?) ON CONFLICT(source, collection_name) DO UPDATE SET "
+                "completed_at = excluded.completed_at, processed_items = excluded.processed_items",
+                ("polarion", status.collection_name, status.completed_at.isoformat(), status.processed_items),
+            )
 
 
 class SqliteUserRepository(UserRepository):

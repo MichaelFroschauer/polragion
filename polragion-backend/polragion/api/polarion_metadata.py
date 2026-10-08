@@ -5,11 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
 
 from polragion.api.auth import get_current_user
-from polragion.api.dependencies import get_settings, get_polarion_descriptor
+from polragion.api.dependencies import get_settings, get_polarion_descriptor, get_import_status_repository
 from polragion.api.models import PolarionMetadataResponse, PolarionProjectMetadata, PolarionDocumentMetadata
+from polragion.database.repository import ImportStatusRepository
 from polragion.domain.polarion_descriptor import PolarionDescriptor
 from polragion.infrastructure.errors import ConfigurationError
 from polragion.models.polarion_config import PolarionImportConfig, load_import_config
+from polragion.models.work_item import PolarionImportStatus
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,14 @@ router = APIRouter(
     tags=["polarion-metadata"],
     dependencies=[Depends(get_current_user)],
 )
+
+
+@router.get("/import-status", response_model=PolarionImportStatus | None)
+def get_polarion_import_status(
+    settings: Annotated[Settings, Depends(get_settings)],
+    import_status_repository: Annotated[ImportStatusRepository, Depends(get_import_status_repository)],
+) -> PolarionImportStatus | None:
+    return import_status_repository.get_last_successful(settings.qdrant_collection_name)
 
 
 @router.post(

@@ -6,20 +6,22 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Requ
 
 from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_work_item_service, get_data_fetcher, get_data_worker, \
-    get_ai_service, get_user_request_manager
+    get_ai_service, get_user_request_manager, get_import_status_repository
 from polragion.api.models import IngestResponse, WorkItemAskResponse, WorkItemSearchResponse
 from polragion.application.ai_service import AiService, ChatHistoryMessage
 from polragion.application.search_scope import SearchScope
 from polragion.application.user_request_manager import UserRequestManager
 from polragion.application.work_item_service import WorkItemService
+from polragion.database.repository import ImportStatusRepository
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.application.prompt_builder import AnswerDetail, get_prompt_message, get_prompt_message_with_work_items
 from polragion.infrastructure.errors import ConfigurationError
 from polragion.models.ai_message import CopilotResponseMessage, CopilotSendMessage
 from polragion.models.user import User
-from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
+from polragion.models.work_item import PolarionImportStatus, PolarionWorkItem, WorkItemSearchHit
 from polragion.settings import Settings
+from polragion.utils.general import utc_now
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/work-items", tags=["work-items"], dependencies=[Depends(get_current_user)])
@@ -35,6 +37,8 @@ def ingest_work_items_from_polarion_data_source(
     data_fetcher: Annotated[DataFetcher, Depends(get_data_fetcher)],
     data_worker: Annotated[DataWorker, Depends(get_data_worker)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    import_status_repository: Annotated[ImportStatusRepository, Depends(get_import_status_repository)],
     limit: Annotated[int | None, Query(ge=1)] = None,
 ) -> IngestResponse:
 
@@ -44,6 +48,12 @@ def ingest_work_items_from_polarion_data_source(
         data: Iterable[PolarionWorkItem] = data_fetcher.fetch_data(limit)
         count: int = data_worker.work(data)
         work_item_service.ensure_indexes()
+        if limit is None:
+            import_status_repository.record_success(PolarionImportStatus(
+                collection_name=settings.qdrant_collection_name,
+                completed_at=utc_now(),
+                processed_items=count,
+            ))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ConfigurationError as exc:

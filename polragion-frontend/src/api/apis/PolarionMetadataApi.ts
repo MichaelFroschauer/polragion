@@ -19,6 +19,11 @@ import {
     PolarionImportConfigToJSON,
 } from '../models/PolarionImportConfig';
 import {
+    type PolarionImportStatus,
+    PolarionImportStatusFromJSON,
+    PolarionImportStatusToJSON,
+} from '../models/PolarionImportStatus';
+import {
     type PolarionMetadataResponse,
     PolarionMetadataResponseFromJSON,
     PolarionMetadataResponseToJSON,
@@ -51,6 +56,27 @@ export interface PolarionMetadataApiInterface {
      * Get Polarion Import Config
      */
     getPolarionImportConfig(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PolarionImportConfig>;
+
+    /**
+     * Creates request options for getPolarionImportStatus without sending the request
+     * @throws {RequiredError}
+     * @memberof PolarionMetadataApiInterface
+     */
+    getPolarionImportStatusRequestOpts(): Promise<runtime.RequestOpts>;
+
+    /**
+     * 
+     * @summary Get Polarion Import Status
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof PolarionMetadataApiInterface
+     */
+    getPolarionImportStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PolarionImportStatus>>;
+
+    /**
+     * Get Polarion Import Status
+     */
+    getPolarionImportStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PolarionImportStatus>;
 
     /**
      * Creates request options for getPolarionSearchScopes without sending the request
@@ -135,6 +161,43 @@ export class PolarionMetadataApi extends runtime.BaseAPI implements PolarionMeta
      */
     async getPolarionImportConfig(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PolarionImportConfig> {
         const response = await this.getPolarionImportConfigRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getPolarionImportStatus without sending the request
+     */
+    async getPolarionImportStatusRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/v1/polarion-metadata/import-status`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get Polarion Import Status
+     */
+    async getPolarionImportStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PolarionImportStatus>> {
+        const requestOptions = await this.getPolarionImportStatusRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PolarionImportStatusFromJSON(jsonValue));
+    }
+
+    /**
+     * Get Polarion Import Status
+     */
+    async getPolarionImportStatus(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PolarionImportStatus> {
+        const response = await this.getPolarionImportStatusRaw(initOverrides);
         return await response.value();
     }
 

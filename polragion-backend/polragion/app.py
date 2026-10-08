@@ -19,7 +19,7 @@ from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
 from polragion.database.sqlite_repository import SqliteUserRepository, SqliteGitHubCredentialsRepository, \
-    SqliteSessionRepository, SQLiteDatabase
+    SqliteSessionRepository, SQLiteDatabase, SqliteImportStatusRepository
 from polragion.domain.data_fetcher import DataFetcher
 from polragion.domain.data_worker import DataWorker
 from polragion.domain.vector_store import VectorStore
@@ -89,10 +89,12 @@ def create_app(
         session_repository = SqliteSessionRepository(db)
         user_repository = SqliteUserRepository(db)
         github_credentials_repository = SqliteGitHubCredentialsRepository(db)
+        import_status_repository = SqliteImportStatusRepository(db)
 
         app.state.session_repository = session_repository
         app.state.user_repository = user_repository
         app.state.github_credentials_repository = github_credentials_repository
+        app.state.import_status_repository = import_status_repository
 
         user_request_manager = UserRequestManager(app_settings)
         app.state.user_request_manager = user_request_manager

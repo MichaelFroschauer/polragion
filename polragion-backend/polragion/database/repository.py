@@ -3,6 +3,7 @@ from typing import TypeVar, Generic
 from uuid import UUID
 
 from polragion.models.user import GitHubCredentials, UserSession, User
+from polragion.models.work_item import PolarionImportStatus
 
 EntityT = TypeVar("EntityT")
 EntityIdT = TypeVar("EntityIdT")
@@ -44,4 +45,15 @@ class SessionRepository(Repository[UserSession, UUID], ABC):
 
     @abstractmethod
     async def revoke(self, session_id: UUID) -> None:
+        raise NotImplementedError
+
+
+class ImportStatusRepository(ABC):
+
+    @abstractmethod
+    def get_last_successful(self, collection_name: str) -> PolarionImportStatus | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def record_success(self, status: PolarionImportStatus) -> None:
         raise NotImplementedError

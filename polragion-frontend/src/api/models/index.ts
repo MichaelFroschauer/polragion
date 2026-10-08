@@ -11,6 +11,7 @@ export * from './LinkedWorkItem';
 export * from './LocationInner';
 export * from './PolarionDocumentMetadata';
 export * from './PolarionImportConfig';
+export * from './PolarionImportStatus';
 export * from './PolarionMetadataResponse';
 export * from './PolarionProjectMetadata';
 export * from './PolarionWorkItem';

@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
@@ -10,13 +10,18 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from polragion.api import auth
 from polragion.api.dependencies import (
+    get_data_fetcher,
+    get_data_worker,
     get_github_credentials_repository,
+    get_import_status_repository,
     get_session_service,
     get_settings,
     get_user_repository,
+    get_work_item_service,
 )
 from polragion.api.polarion_metadata import router as metadata_router
-from polragion.api.work_items import router as work_items_router
+from polragion.api.work_items import router as work_items_router, public_router as public_work_items_router
+from polragion.database.sqlite_repository import SQLiteDatabase, SqliteImportStatusRepository
 from polragion.models.user import OAuthToken, User, UserSession
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
@@ -56,6 +61,7 @@ def auth_setup(tmp_path, monkeypatch):
     app.add_middleware(SessionMiddleware, secret_key="test-secret")
     app.include_router(auth.router)
     app.include_router(work_items_router)
+    app.include_router(public_work_items_router)
     app.include_router(metadata_router)
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_user_repository] = lambda: users
@@ -118,12 +124,45 @@ def test_allowed_login_and_removed_user_loses_existing_session(auth_setup):
 
 @pytest.mark.parametrize("path, method", [
     ("/v1/work-items/search?prompt=test", "get"),
-    ("/v1/work-items/ingest/import-polarion", "post"),
     ("/v1/polarion-metadata/get-config", "get"),
+    ("/v1/polarion-metadata/import-status", "get"),
 ])
 def test_business_routes_require_login(auth_setup, path, method):
     response = getattr(auth_setup.client, method)(path)
     assert response.status_code == 401
+
+
+def test_import_status_only_changes_after_successful_full_import(auth_setup, tmp_path):
+    repository = SqliteImportStatusRepository(SQLiteDatabase(Settings(
+        sqlite_file_path=str(tmp_path / "status.db"),
+    )))
+    app = auth_setup.client.app
+    app.dependency_overrides[get_import_status_repository] = lambda: repository
+    app.dependency_overrides[get_data_fetcher] = lambda: SimpleNamespace(fetch_data=Mock(return_value=iter(())))
+    app.dependency_overrides[get_data_worker] = lambda: SimpleNamespace(work=Mock(return_value=3))
+    ensure_indexes = Mock()
+    app.dependency_overrides[get_work_item_service] = lambda: SimpleNamespace(ensure_indexes=ensure_indexes)
+
+    status_path = "/v1/polarion-metadata/import-status"
+    import_path = "/v1/work-items/ingest/import-polarion"
+    assert auth_setup.client.post(import_path, params={"limit": 3}).status_code == 200
+    assert auth_setup.client.get(status_path).status_code == 401
+    assert _callback(auth_setup.client).status_code == 303
+    assert auth_setup.client.get(status_path).json() is None
+
+    assert auth_setup.client.post(import_path, params={"limit": 3}).status_code == 200
+    assert auth_setup.client.get(status_path).json() is None
+
+    assert auth_setup.client.post(import_path).status_code == 200
+    saved = auth_setup.client.get(status_path).json()
+    assert saved["collection_name"] == auth_setup.settings.qdrant_collection_name
+    assert saved["processed_items"] == 3
+    assert saved["completed_at"].endswith("Z")
+
+    ensure_indexes.side_effect = RuntimeError("index failed")
+    with pytest.raises(RuntimeError, match="index failed"):
+        auth_setup.client.post(import_path)
+    assert auth_setup.client.get(status_path).json() == saved
 
 
 @pytest.mark.parametrize("config_path", [None, "missing", "invalid"])

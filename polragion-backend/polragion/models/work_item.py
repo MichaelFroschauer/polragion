@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal, Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,6 +37,14 @@ class PolarionWorkItem(BaseModel):
     linked_work_items: list[LinkedWorkItem] = Field(default_factory=list, max_length=1_000)
 
     additional_fields: dict[str, Any] = Field(default_factory=dict)
+
+
+class PolarionImportStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    collection_name: str
+    completed_at: datetime
+    processed_items: int = Field(ge=0)
 
 
 class ReducedWorkItem(BaseModel):

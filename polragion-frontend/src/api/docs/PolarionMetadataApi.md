@@ -5,6 +5,7 @@ All URIs are relative to *https://localhost:8000/api*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**getPolarionImportConfig**](PolarionMetadataApi.md#getpolarionimportconfig) | **GET** /v1/polarion-metadata/get-config | Get Polarion Import Config |
+| [**getPolarionImportStatus**](PolarionMetadataApi.md#getpolarionimportstatus) | **GET** /v1/polarion-metadata/import-status | Get Polarion Import Status |
 | [**getPolarionSearchScopes**](PolarionMetadataApi.md#getpolarionsearchscopes) | **GET** /v1/polarion-metadata/get-search-scopes | Get Polarion Search Scopes |
 | [**loadPolarionImportConfig**](PolarionMetadataApi.md#loadpolarionimportconfig) | **POST** /v1/polarion-metadata/load-config | Load Polarion Import Config |
 
@@ -48,6 +49,63 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**PolarionImportConfig**](PolarionImportConfig.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Successful Response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getPolarionImportStatus
+
+> PolarionImportStatus getPolarionImportStatus()
+
+Get Polarion Import Status
+
+### Example
+
+```ts
+import {
+  Configuration,
+  PolarionMetadataApi,
+} from '';
+import type { GetPolarionImportStatusRequest } from '';
+
+async function example() {
+  console.log("🚀 Testing  SDK...");
+  const api = new PolarionMetadataApi();
+
+  try {
+    const data = await api.getPolarionImportStatus();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**PolarionImportStatus**](PolarionImportStatus.md)
 
 ### Authorization
 

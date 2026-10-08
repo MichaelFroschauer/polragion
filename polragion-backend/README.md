@@ -49,7 +49,8 @@ Set `GITHUB_USER_CONFIG_PATH` to a readable JSON file with a `whiteList` of
 Usernames are compared without regard to case. An absent or invalid file blocks
 GitHub sign-in (503). Removing a user also revokes their session on their next
 authenticated request. Health checks and GitHub sign-in endpoints stay public;
-work-item, AI-model and Polarion-metadata endpoints require a session.
+work-item, AI-model and Polarion-metadata endpoints require a session, except
+for the existing public `POST /v1/work-items/ingest/import-polarion` endpoint.
 
 Denied sign-ins redirect to `FRONTEND_URL` with `header` and `text` URL query
 parameters. The frontend shows the access-denied view using these values as
@@ -64,6 +65,15 @@ identify the account, but no credentials or session are stored for denied users.
 - `GET /v1/work-items/search`
 
 See `test_main.http` for complete request examples.
+
+## Import status
+
+`GET /v1/polarion-metadata/import-status` requires a session and returns the
+last successful full Polarion import for the active Qdrant collection, or
+`null` before the first one. The response includes the UTC `completed_at`
+timestamp and `processed_items` count. Imports with a `limit` and imports that
+fail before index setup finishes do not change this status. It is stored in
+SQLite at `SQLITE_FILE_PATH`, independently of the Qdrant collection metadata.
 
 ## Collection versioning
 

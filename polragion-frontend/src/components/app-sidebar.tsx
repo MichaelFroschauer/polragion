@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import {polarionMetadataApi} from "@/api/client.ts";
 import {useEffect, useState} from "react";
-import type {PolarionMetadataResponse} from "@/api";
+import type {PolarionImportStatus, PolarionMetadataResponse} from "@/api";
 
 
 const data = {
@@ -114,6 +114,7 @@ const data = {
 export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
 
     const [searchScopes, setSearchScopes] = useState<PolarionMetadataResponse | null>(null)
+    const [importStatus, setImportStatus] = useState<PolarionImportStatus | null | "loading" | "unavailable">("loading")
 
     useEffect(() => {
         const loadSearchScopes = async () => {
@@ -126,6 +127,20 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
         }
 
         void loadSearchScopes()
+    }, [])
+
+    useEffect(() => {
+        const loadImportStatus = async () => {
+            try {
+                const status = await polarionMetadataApi.getPolarionImportStatus()
+                setImportStatus(status)
+            } catch (error) {
+                setImportStatus("unavailable")
+                console.error("Error fetching import status:", error)
+            }
+        }
+
+        void loadImportStatus()
     }, [])
 
     function capitalizeFirstLetter(str: string): string {
@@ -204,6 +219,19 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
                 <NavSecondary items={data.navSecondary} className="mt-auto"/>
             </SidebarContent>
             <SidebarFooter>
+                <div className="px-2 py-1 text-xs text-sidebar-foreground/70">
+                    <span className="block text-sidebar-foreground/50">Last Polarion import</span>
+                    {importStatus === "loading" ? "Loading..." :
+                        importStatus === "unavailable" ? "Status unavailable" :
+                            importStatus === null ? "No completed import yet" : (
+                                <>
+                                    <time dateTime={importStatus.completedAt.toString()} className="block">
+                                        {new Date(importStatus.completedAt).toLocaleString(undefined, {dateStyle: "medium", timeStyle: "short"})}
+                                    </time>
+                                    <span>{importStatus.processedItems} items processed</span>
+                                </>
+                            )}
+                </div>
                 <NavUser/>
             </SidebarFooter>
             {/* <SettingsDialog
