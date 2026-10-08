@@ -293,7 +293,7 @@ wheels = [
 
 [[package]]
 name = "github-copilot-sdk"
-version = "1.0.13"
+version = "1.0.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -301,7 +301,7 @@ dependencies = [
     { name = "python-dateutil" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/6d/4f2e3dddc576ff49739317adba6f9b8c35e93b835ece923e46f1b7fa6028/github_copilot_sdk-1.0.13-py3-none-any.whl", hash = "sha256:941dd5b55cf32ba55c73c651052a4a52b259b470c68bf6a6ac3d240c235402c9", size = 588198, upload-time = "2026-09-04T21:31:02.063Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/49/2fdd58f72e118dd3c7578d4af8b5ba2686709be3878b6c13794676ab6b88/github_copilot_sdk-1.0.18-py3-none-any.whl", hash = "sha256:7c438b060491ce9a96ba1fe9f0951d782d83f510c898556255528e8c6d552565", size = 792636, upload-time = "2026-10-08T20:38:19.641Z" },
 ]
 
 [[package]]
@@ -790,7 +790,7 @@ requires-dist = [
     { name = "cryptography", specifier = "==49.0.0" },
     { name = "fastapi", specifier = ">=0.115,<1.0" },
     { name = "fastembed", specifier = ">=0.5,<1.0" },
-    { name = "github-copilot-sdk", specifier = "==1.0.13" },
+    { name = "github-copilot-sdk", specifier = "==1.0.18" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28,<1.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "markdownify", specifier = "==1.2.3" },
