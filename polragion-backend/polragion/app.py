@@ -11,6 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from polragion.api.exception_middleware import register_exception_handlers
 from polragion.api.health import router as health_router
 from polragion.api.work_items import router as work_item_router
+from polragion.api.work_items import public_router as work_item_public_router
 from polragion.api.auth import router as auth_router
 from polragion.api.ai_models import router as ai_models_router
 from polragion.api.polarion_metadata import router as polarion_metadata_router
@@ -166,6 +167,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(work_item_router)
+    app.include_router(work_item_public_router)
     app.include_router(auth_router)
     app.include_router(ai_models_router)
     app.include_router(polarion_metadata_router)
