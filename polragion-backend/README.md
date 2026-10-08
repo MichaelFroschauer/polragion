@@ -42,6 +42,20 @@ uv run pytest
 
 The unit and API tests do not require Qdrant.
 
+## GitHub access
+
+Set `GITHUB_USER_CONFIG_PATH` to a readable JSON file with a `whiteList` of
+`userName` entries and `userNotAllowedMessage` containing `header` and `text`.
+Usernames are compared without regard to case. An absent or invalid file blocks
+GitHub sign-in (503). Removing a user also revokes their session on their next
+authenticated request. Health checks and GitHub sign-in endpoints stay public;
+work-item, AI-model and Polarion-metadata endpoints require a session.
+
+Denied sign-ins redirect to `FRONTEND_URL` with `header` and `text` URL query
+parameters. The frontend shows the access-denied view using these values as
+untrusted text. GitHub's authorization code must be exchanged to
+identify the account, but no credentials or session are stored for denied users.
+
 ## Endpoints
 
 - `GET /health/live`

@@ -22,7 +22,9 @@ from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/v1/work-items", tags=["work-items"])
+router = APIRouter(
+    prefix="/v1/work-items", tags=["work-items"], dependencies=[Depends(get_current_user)]
+)
 
 
 

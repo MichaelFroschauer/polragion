@@ -1,30 +1,54 @@
 import logging
-from datetime import timedelta, datetime
-from typing import Annotated
-from uuid import UUID
-
-from fastapi import APIRouter, Query, HTTPException, Depends
-
 import secrets
-from urllib.parse import urlencode
+from datetime import timedelta
+from pathlib import Path
+from typing import Annotated
+from urllib.parse import urlencode, urljoin
 
-from fastapi import Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from pydantic import ValidationError
 from starlette import status
 
-from polragion.api.dependencies import get_settings, get_user_repository, get_github_credentials_repository, \
-    get_session_service
-from polragion.api.github_api_utils import get_github_user, get_github_access_token
+from polragion.api.dependencies import (
+    get_github_credentials_repository,
+    get_session_service,
+    get_settings,
+    get_user_repository,
+)
+from polragion.api.github_api_utils import get_github_access_token, get_github_user
 from polragion.application.session_service import SessionService
-from polragion.database.repository import UserRepository, GitHubCredentialsRepository
-from polragion.models.user import OAuthToken, GitHubCredentials, User, UserSession
+from polragion.database.repository import GitHubCredentialsRepository, UserRepository
+from polragion.models.user import GitHubCredentials, GitHubUserConfig, OAuthToken, User, UserSession
 from polragion.settings import Settings
-from polragion.utils.token_cipher import TokenCipher
 from polragion.utils.general import utc_now
+from polragion.utils.token_cipher import TokenCipher
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth/github", tags=["GitHub authentication"])
+
+
+def _load_github_user_config(settings: Settings) -> GitHubUserConfig:
+    if not settings.github_user_config_path:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="GitHub user allowlist is not configured",
+        )
+
+    try:
+        config_text = Path(settings.github_user_config_path).read_text(encoding="utf-8")
+        return GitHubUserConfig.model_validate_json(config_text)
+    except (OSError, ValidationError) as exc:
+        logger.error("Could not load GitHub user allowlist: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="GitHub user allowlist is unavailable",
+        ) from exc
+
+
+def _is_allowed(username: str, config: GitHubUserConfig) -> bool:
+    return username.casefold() in {entry.userName.casefold() for entry in config.whiteList}
 
 
 async def _exchange_code_for_token(code: str, settings: Settings) -> tuple[OAuthToken, OAuthToken]:
@@ -55,6 +79,7 @@ async def get_current_user(
     request: Request,
     user_repository: Annotated[UserRepository, Depends(get_user_repository)],
     session_service: Annotated[SessionService, Depends(get_session_service)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> User:
 
     raw_session_token = request.session.get("sid")
@@ -73,6 +98,12 @@ async def get_current_user(
     if user is None:
         request.session.clear()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+
+    if not _is_allowed(user.username, _load_github_user_config(settings)):
+        await _logout(request, session_service)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="GitHub user is not allowed"
+        )
 
     return user
 
@@ -115,8 +146,18 @@ async def github_callback(
     if not code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="GitHub did not respond with an authorization code")
 
+    config = _load_github_user_config(settings)
     access_token, refresh_token = await _exchange_code_for_token(code, settings)
     github_data = await get_github_user(access_token)
+    if not _is_allowed(github_data["login"], config):
+        await _logout(request, session_service)
+        denied_url = urljoin(settings.frontend_url.rstrip("/") + "/", "" "")
+        message = config.userNotAllowedMessage
+        return RedirectResponse(
+            url=f"{denied_url}?{urlencode({'header': message.header, 'text': message.text})}",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+
     user = await user_repository.upsert_from_github(
         github_user_id=str(github_data["id"]),
         username=github_data["login"],

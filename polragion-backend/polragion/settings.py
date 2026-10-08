@@ -93,6 +93,7 @@ class Settings(BaseSettings):
     github_client_secret: str = ""
     github_fine_grained_token: str = ""
     github_redirect_uri: str = ""
+    github_user_config_path: str | None = None
 
     # =======================================================================
     #   Polarion Config

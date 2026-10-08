@@ -11,4 +11,5 @@
 **/.idea/
 **/*.db
 **/polarion-import-config.json
+**/github-user-config.json
 **/certs/*

@@ -19,8 +19,7 @@ from polragion.utils.general import utc_now
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/ai/github", tags=["GitHub Models"])
-
+router = APIRouter(prefix="/ai/github", tags=["GitHub Models"], dependencies=[Depends(get_current_user)])
 
 class UserGitHubModels(BaseModel):
     user_id: UUID

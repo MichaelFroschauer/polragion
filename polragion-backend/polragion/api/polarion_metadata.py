@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
 
+from polragion.api.auth import get_current_user
 from polragion.api.dependencies import get_settings, get_polarion_descriptor
 from polragion.api.models import PolarionMetadataResponse, PolarionProjectMetadata, PolarionDocumentMetadata
 from polragion.domain.polarion_descriptor import PolarionDescriptor
@@ -12,7 +13,11 @@ from polragion.models.polarion_config import PolarionImportConfig, load_import_c
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/v1/polarion-metadata", tags=["polarion-metadata"])
+router = APIRouter(
+    prefix="/v1/polarion-metadata",
+    tags=["polarion-metadata"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post(

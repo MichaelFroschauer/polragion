@@ -42,3 +42,16 @@ class UserSession(StrictModel):
     expires_at: datetime | None = None
     revoked_at: datetime | None = None
 
+
+class GitHubUser(StrictModel):
+    userName: str
+
+
+class GitHubUserNotAllowedMessage(StrictModel):
+    header: str
+    text: str
+
+
+class GitHubUserConfig(StrictModel):
+    whiteList: list[GitHubUser]
+    userNotAllowedMessage: GitHubUserNotAllowedMessage

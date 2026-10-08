@@ -1,0 +1,11 @@
+{
+    "userNotAllowedMessage": {
+        "header": "Access denied",
+        "text": "PolRAGion is available to approved users only. Contact the project administrator with your GitHub username to request access."
+    },
+    "whiteList": [
+        {
+            "userName": "example-github-user"
+        }
+    ]
+}

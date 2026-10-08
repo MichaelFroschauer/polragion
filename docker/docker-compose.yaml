@@ -46,6 +46,7 @@ services:
       - SQLITE_FILE_PATH=/app/data/polragion.db
       - POLARION_CA_CERT_PATH=/app/certs/polarion-ca.pem
       - POLARION_IMPORT_CONFIG_PATH=/app/data/polarion-import-config.json
+      - GITHUB_USER_CONFIG_PATH=/app/data/github-user-config.json
     volumes:
       - ./backend-data:/app/data:Z
       - ./cache:/app/cache:Z
