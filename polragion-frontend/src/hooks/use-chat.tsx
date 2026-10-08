@@ -10,6 +10,7 @@ import {
     type WorkItemSearchResponse
 } from "@/api";
 import {useSettings} from "@/hooks/use-settings.tsx";
+import {getApiErrorMessage} from "@/lib/api-error.ts";
 
 export type ChatMode = "ask" | "search"
 
@@ -118,7 +119,8 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                     { id: `assistant-${Date.now()}`, role: "assistant", mode: msg_mode, contentType: msg_mode, content: answer },
                 ])
                 setStatus("ready")
-            } catch {
+            } catch (error) {
+                const message = await getApiErrorMessage(error)
                 setEntries(current => [
                     ...current,
                     {
@@ -126,7 +128,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                         role: "assistant",
                         mode: msg_mode,
                         contentType: "string",
-                        content: "Something went wrong while contacting the backend. Please try again.",
+                        content: message,
                     },
                 ])
                 setStatus("error")

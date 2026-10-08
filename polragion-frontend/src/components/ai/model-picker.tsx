@@ -1,4 +1,4 @@
-import {BrainIcon, CheckIcon, ChevronsUpDownIcon, EyeIcon, Layers2, LockIcon} from "lucide-react"
+import {BrainIcon, CheckIcon, ChevronsUpDownIcon, CircleAlertIcon, EyeIcon, Layers2, LockIcon} from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import {AnswerDetail, AnswerDetailToJSON, type CopilotModel, type CopilotModelSelection} from "@/api"
 import { gitHubModelsApi } from "@/api/client"
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useGitHubAuth } from "@/hooks/use-github-auth"
+import { getApiErrorMessage } from "@/lib/api-error"
 import * as React from "react";
 
 const CATEGORY_ORDER = ["powerful", "versatile", "lightweight"] as const
@@ -115,12 +116,15 @@ export function ModelPicker() {
   const [open, setOpen] = useState(false)
   const [models, setModels] = useState<CopilotModel[]>([])
   const [selection, setSelection] = useState<CopilotModelSelection | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [answerDetailSelection, setAnswerDetailSelection] = useState<AnswerDetail | null>(AnswerDetail.Auto)
 
   useEffect(() => {
     if (!isAuthenticated) {
       setModels([])
       setSelection(null)
+      setErrorMessage(null)
       return
     }
 
@@ -137,9 +141,12 @@ export function ModelPicker() {
         }
         setModels(available)
         setSelection(current ?? (available[0] ? { model: available[0] } : null))
-      } catch {
+        setErrorMessage(null)
+      } catch (error) {
+        const message = await getApiErrorMessage(error)
         if (!cancelled) {
           setModels([])
+          setErrorMessage(message)
         }
       }
     })()
@@ -147,7 +154,7 @@ export function ModelPicker() {
     return () => {
       cancelled = true
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, reloadKey])
 
   useEffect(() => {
     localStorage.setItem("answerDetailSelection", AnswerDetailToJSON(answerDetailSelection) ?? "");
@@ -165,8 +172,7 @@ export function ModelPicker() {
         appliedReasoningEffort = model.supportedReasoningEfforts[middleIndex] ?? undefined
       }
 
-      // Optimistic update, the backend response is authoritative.
-      setSelection({ model, reasoningEffort: appliedReasoningEffort })
+      setErrorMessage(null)
       try {
         setSelection(
           await gitHubModelsApi.setUserModel({
@@ -174,8 +180,8 @@ export function ModelPicker() {
             reasoningEffort: appliedReasoningEffort,
           }),
         )
-      } catch {
-        // Keep the optimistic value when the backend rejects it.
+      } catch (error) {
+        setErrorMessage(await getApiErrorMessage(error))
       }
     },
     [],
@@ -207,6 +213,16 @@ export function ModelPicker() {
 
   return (
     <div className="flex items-center gap-2">
+      {errorMessage && (
+        <Tooltip>
+          <TooltipTrigger render={<Button aria-label="Model error" size="icon-xs" variant="ghost" className="text-destructive" />}>
+            <Button variant="ghost" size="icon-xs" className="text-destructive" onClick={() => { setErrorMessage(""); setReloadKey(reloadKey + 1); }}>
+              <CircleAlertIcon className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent role="alert" className="max-w-64">{errorMessage}</TooltipContent>
+        </Tooltip>
+      )}
 
       {isAuthenticated &&
         <Select

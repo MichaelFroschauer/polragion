@@ -117,6 +117,9 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
                 return
 
             await self.client.start()
+            status = await self.client.get_status()
+            logger.info("Copilot runtime: version=%s, protocol=%s", status.version, status.protocol_version)
+
             self._initialized = True
             logger.info("Copilot client started")
 
