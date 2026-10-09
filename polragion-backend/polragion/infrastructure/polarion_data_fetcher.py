@@ -1,14 +1,18 @@
 import logging
 import os
+import random
 import tempfile
-from collections.abc import Iterable
+import time
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 
 import certifi
 from polarion import polarion
 from polarion.polarion import Polarion
-from polarion.project import Project
+from requests.exceptions import ConnectionError as RequestConnectionError
+from requests.exceptions import SSLError as RequestSSLError
+from requests.exceptions import Timeout as RequestTimeout
 
 from polragion.infrastructure.errors import PolarionDataFetcherError
 from polragion.models.polarion_config import PolarionImportConfig, WorkItemImportConfig, ProjectImportConfig, \
@@ -18,6 +22,7 @@ from polragion.settings import Settings
 from urllib.parse import unquote
 
 logger = logging.getLogger(__name__)
+T = TypeVar("T")
 
 def create_ca_bundle(company_ca_path: Path, output_path: Path) -> Path:
 
@@ -97,20 +102,47 @@ class PolarionDataFetcher:
         """Ensures that polarion client and the tracker service is set before accessing it.
         This method must be called in every method where the polarion client is used.
         """
-        if self._client is not None:
+        if self._client is not None and self._tracker_service is not None:
             return
 
         try:
-            self._client = polarion.Polarion(
+            client = polarion.Polarion(
                 polarion_url=self._settings.polarion_host,
                 user=self._settings.polarion_user,
                 password=self._settings.polarion_password,
                 verify_certificate=self._verify_certificate,
             )
-
-            self._tracker_service = self._client.getService("Tracker")
+            tracker_service = client.getService("Tracker")
+        except (RequestConnectionError, RequestTimeout):
+            raise
         except Exception as exc:
             raise PolarionDataFetcherError("Connecting to Polarion failed") from exc
+
+        self._client = client
+        self._tracker_service = tracker_service
+
+
+    def _with_retry(self, operation: Callable[[], T], context: str, max_attempts: int = 6) -> T:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                self._ensure_client()
+                return operation()
+            except RequestSSLError:
+                raise
+            except (RequestConnectionError, RequestTimeout) as exc:
+                self._client = None
+                self._tracker_service = None
+                if attempt == max_attempts:
+                    raise PolarionDataFetcherError(f"Polarion operation failed after {max_attempts} attempts: {context}") from exc
+
+                delay = min(2 ** (attempt - 1), 30) + random.uniform(0, 0.5)
+                logger.warning("Polarion connection failed | %s | Attempt %d/%d | Retrying in %.1fs | %s", context, attempt, max_attempts, delay, exc)
+                time.sleep(delay)
+
+        raise RuntimeError("Unexpected retry state")
 
 
     def fetch_data(self, limit: int | None = None) -> Iterable[PolarionWorkItem]:
@@ -131,16 +163,12 @@ class PolarionDataFetcher:
 
         _import_config: PolarionImportConfig = load_import_config(self._settings.polarion_import_config_path)
 
-        self._ensure_client()
-
         for project_config in _import_config.projects:
             if not project_config.enabled:
                 continue
 
             if limit is not None and fetched >= limit:
                 break
-
-            polarion_project: Project = self._client.getProject(project_config.project_id)
 
             for document in project_config.documents:
 
@@ -158,10 +186,18 @@ class PolarionDataFetcher:
                 # These fields cannot be requested because they are contained anyway.
                 requested_work_item_field_keys.remove("uri")
 
-                raw_work_items = polarion_project.searchWorkitem(
-                    query=query,
-                    field_list=requested_work_item_field_keys,
-                    limit=remaining,
+                def search_work_items():
+                    project = self._client.getProject(project_config.project_id)
+                    work_items = project.searchWorkitem(
+                        query=query,
+                        field_list=requested_work_item_field_keys,
+                        limit=remaining,
+                    )
+                    return project.name, work_items
+
+                project_name, raw_work_items = self._with_retry(
+                    operation=search_work_items,
+                    context=f"Search work items: {project_config.project_id}/{document_name}",
                 )
 
                 if len(raw_work_items) <= 0:
@@ -172,13 +208,16 @@ class PolarionDataFetcher:
                 batch: list[PolarionWorkItem] = []
 
                 for raw_work_item in raw_work_items:
-                    converted = self._convert_work_item(
-                        raw_work_item=raw_work_item,
-                        project_id=project_config.project_id,
-                        project_name=polarion_project.name,
-                        project_context=project_config.project_context,
-                        document_category=document_category,
-                        project_config=project_config,
+                    converted = self._with_retry(
+                        operation=lambda: self._convert_work_item(
+                            raw_work_item=raw_work_item,
+                            project_id=project_config.project_id,
+                            project_name=project_name,
+                            project_context=project_config.project_context,
+                            document_category=document_category,
+                            project_config=project_config,
+                        ),
+                        context=f"Convert work item: {getattr(raw_work_item, 'id', None)}",
                     )
                     batch.append(converted)
                     fetched += 1
@@ -251,6 +290,8 @@ class PolarionDataFetcher:
 
         try:
             revisions = self._tracker_service.getRevisions(uri)
+        except (RequestConnectionError, RequestTimeout):
+            raise
         except Exception as exc:
             raise ValueError(f"Could not load revisions for work item {work_item_id!r}") from exc
 
