@@ -124,7 +124,7 @@ async def ask_work_item_with_initial_search(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
-    prompt: Annotated[str, Query(min_length=1, max_length=10_000)],
+    prompt: Annotated[str, Body(embed=True, min_length=1, max_length=10_000)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
@@ -132,7 +132,7 @@ async def ask_work_item_with_initial_search(
     limit_ai_model_work_items: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     do_reranking: bool | None = None,
-    user_defined_system_prompt: str | None = None,
+    user_defined_system_prompt: Annotated[str | None, Body()] = None,
     answer_detail: Annotated[AnswerDetail, Query()] = AnswerDetail.AUTO,
 ) -> WorkItemAskResponse:
 
@@ -171,7 +171,7 @@ async def ask_work_item_with_initial_search(
             seen_point_ids.add(hit.point_id)
             combined_work_items.append(hit)
 
-    return WorkItemAskResponse(answer=response.text, tokens_spent=0, work_items=combined_work_items)
+    return WorkItemAskResponse(answer=response.text, credits_spent=response.metrics.credits_for_message, work_items=combined_work_items)
 
 
 @router.post(
@@ -183,7 +183,7 @@ async def ask_work_item_with_initial_search(
 async def ask_work_item(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
-    prompt: Annotated[str, Query(min_length=1, max_length=100_000)],
+    prompt: Annotated[str, Body(embed=True, min_length=1, max_length=100_000)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
     user_request_manager: Annotated[UserRequestManager, Depends(get_user_request_manager)],
     project_ids: Annotated[list[str] | None, Query()] = None,
@@ -192,7 +192,7 @@ async def ask_work_item(
     limit_work_item_search: Annotated[int | None, Query(ge=1)] = None,
     score_threshold: Annotated[float | None, Query(ge=0.0, le=1.0)] = None,
     do_reranking: bool | None = None,
-    user_defined_system_prompt: str | None = None,
+    user_defined_system_prompt: Annotated[str | None, Body()] = None,
     answer_detail: Annotated[AnswerDetail, Query()] = AnswerDetail.AUTO,
 ) -> WorkItemAskResponse:
 

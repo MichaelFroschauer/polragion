@@ -206,7 +206,7 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
                                 <MessageSquareTextIcon className="size-4"/>
                             </div>
                             <div className="grid flex-1 text-left text-sm leading-tight">
-                                <span className="truncate font-medium">Polragion</span>
+                                <span className="truncate font-medium">PolRAGion</span>
                                 <span className="truncate text-xs">Ask your work items</span>
                             </div>
                         </SidebarMenuButton>
