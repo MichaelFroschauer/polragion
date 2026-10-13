@@ -19,6 +19,16 @@ import {
     AnswerDetailToJSON,
 } from '../models/AnswerDetail';
 import {
+    type BodyAskWorkItem,
+    BodyAskWorkItemFromJSON,
+    BodyAskWorkItemToJSON,
+} from '../models/BodyAskWorkItem';
+import {
+    type BodyAskWorkItemWithInitialSearch,
+    BodyAskWorkItemWithInitialSearchFromJSON,
+    BodyAskWorkItemWithInitialSearchToJSON,
+} from '../models/BodyAskWorkItemWithInitialSearch';
+import {
     type ChatHistoryMessage,
     ChatHistoryMessageFromJSON,
     ChatHistoryMessageToJSON,
@@ -50,25 +60,23 @@ import {
 } from '../models/WorkItemSearchResponse';
 
 export interface AskWorkItemRequest {
-    prompt: string;
+    bodyAskWorkItem: BodyAskWorkItem;
     projectIds?: Array<string> | null;
     projectContexts?: Array<string> | null;
     documentCategories?: Array<string> | null;
     limitWorkItemSearch?: number | null;
     scoreThreshold?: number | null;
     doReranking?: boolean | null;
-    userDefinedSystemPrompt?: string | null;
     answerDetail?: AnswerDetail;
 }
 
 export interface AskWorkItemWithInitialSearchRequest {
-    prompt: string;
+    bodyAskWorkItemWithInitialSearch: BodyAskWorkItemWithInitialSearch;
     projectId?: string | null;
     limitWorkItemSearch?: number | null;
     limitAiModelWorkItems?: number | null;
     scoreThreshold?: number | null;
     doReranking?: boolean | null;
-    userDefinedSystemPrompt?: string | null;
     answerDetail?: AnswerDetail;
 }
 
@@ -101,14 +109,13 @@ export interface SearchWorkItemsRequest {
 export interface WorkItemsApiInterface {
     /**
      * Creates request options for askWorkItem without sending the request
-     * @param {string} prompt 
+     * @param {BodyAskWorkItem} bodyAskWorkItem 
      * @param {Array<string>} [projectIds] 
      * @param {Array<string>} [projectContexts] 
      * @param {Array<string>} [documentCategories] 
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
-     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -118,14 +125,13 @@ export interface WorkItemsApiInterface {
     /**
      * 
      * @summary Ask Work Item
-     * @param {string} prompt 
+     * @param {BodyAskWorkItem} bodyAskWorkItem 
      * @param {Array<string>} [projectIds] 
      * @param {Array<string>} [projectContexts] 
      * @param {Array<string>} [documentCategories] 
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
-     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -140,13 +146,12 @@ export interface WorkItemsApiInterface {
 
     /**
      * Creates request options for askWorkItemWithInitialSearch without sending the request
-     * @param {string} prompt 
+     * @param {BodyAskWorkItemWithInitialSearch} bodyAskWorkItemWithInitialSearch 
      * @param {string} [projectId] 
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
-     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -156,13 +161,12 @@ export interface WorkItemsApiInterface {
     /**
      * 
      * @summary Ask Work Item With Initial Search
-     * @param {string} prompt 
+     * @param {BodyAskWorkItemWithInitialSearch} bodyAskWorkItemWithInitialSearch 
      * @param {string} [projectId] 
      * @param {number} [limitWorkItemSearch] 
      * @param {number} [limitAiModelWorkItems] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
-     * @param {string} [userDefinedSystemPrompt] 
      * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -328,18 +332,14 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
      * Creates request options for askWorkItem without sending the request
      */
     async askWorkItemRequestOpts(requestParameters: AskWorkItemRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['prompt'] == null) {
+        if (requestParameters['bodyAskWorkItem'] == null) {
             throw new runtime.RequiredError(
-                'prompt',
-                'Required parameter "prompt" was null or undefined when calling askWorkItem().'
+                'bodyAskWorkItem',
+                'Required parameter "bodyAskWorkItem" was null or undefined when calling askWorkItem().'
             );
         }
 
         const queryParameters: any = {};
-
-        if (requestParameters['prompt'] != null) {
-            queryParameters['prompt'] = requestParameters['prompt'];
-        }
 
         if (requestParameters['projectIds'] != null) {
             queryParameters['project_ids'] = requestParameters['projectIds'];
@@ -365,15 +365,13 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
             queryParameters['do_reranking'] = requestParameters['doReranking'];
         }
 
-        if (requestParameters['userDefinedSystemPrompt'] != null) {
-            queryParameters['user_defined_system_prompt'] = requestParameters['userDefinedSystemPrompt'];
-        }
-
         if (requestParameters['answerDetail'] != null) {
             queryParameters['answer_detail'] = requestParameters['answerDetail'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
 
 
         let urlPath = `/v1/work-items/ask`;
@@ -383,6 +381,7 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: BodyAskWorkItemToJSON(requestParameters['bodyAskWorkItem']),
         };
     }
 
@@ -408,18 +407,14 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
      * Creates request options for askWorkItemWithInitialSearch without sending the request
      */
     async askWorkItemWithInitialSearchRequestOpts(requestParameters: AskWorkItemWithInitialSearchRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['prompt'] == null) {
+        if (requestParameters['bodyAskWorkItemWithInitialSearch'] == null) {
             throw new runtime.RequiredError(
-                'prompt',
-                'Required parameter "prompt" was null or undefined when calling askWorkItemWithInitialSearch().'
+                'bodyAskWorkItemWithInitialSearch',
+                'Required parameter "bodyAskWorkItemWithInitialSearch" was null or undefined when calling askWorkItemWithInitialSearch().'
             );
         }
 
         const queryParameters: any = {};
-
-        if (requestParameters['prompt'] != null) {
-            queryParameters['prompt'] = requestParameters['prompt'];
-        }
 
         if (requestParameters['projectId'] != null) {
             queryParameters['project_id'] = requestParameters['projectId'];
@@ -441,15 +436,13 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
             queryParameters['do_reranking'] = requestParameters['doReranking'];
         }
 
-        if (requestParameters['userDefinedSystemPrompt'] != null) {
-            queryParameters['user_defined_system_prompt'] = requestParameters['userDefinedSystemPrompt'];
-        }
-
         if (requestParameters['answerDetail'] != null) {
             queryParameters['answer_detail'] = requestParameters['answerDetail'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
 
 
         let urlPath = `/v1/work-items/ask-with-search`;
@@ -459,6 +452,7 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: BodyAskWorkItemWithInitialSearchToJSON(requestParameters['bodyAskWorkItemWithInitialSearch']),
         };
     }
 

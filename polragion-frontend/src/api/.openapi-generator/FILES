@@ -5,6 +5,8 @@ apis/PolarionMetadataApi.ts
 apis/WorkItemsApi.ts
 apis/index.ts
 docs/AnswerDetail.md
+docs/BodyAskWorkItem.md
+docs/BodyAskWorkItemWithInitialSearch.md
 docs/ChatHistoryMessage.md
 docs/CopilotModel.md
 docs/CopilotModelSelection.md
@@ -35,6 +37,8 @@ docs/WorkItemSearchResponse.md
 docs/WorkItemsApi.md
 index.ts
 models/AnswerDetail.ts
+models/BodyAskWorkItem.ts
+models/BodyAskWorkItemWithInitialSearch.ts
 models/ChatHistoryMessage.ts
 models/CopilotModel.ts
 models/CopilotModelSelection.ts

@@ -17,7 +17,7 @@ All URIs are relative to *https://localhost:8000/api*
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(prompt, projectIds, projectContexts, documentCategories, limitWorkItemSearch, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
+> WorkItemAskResponse askWorkItem(bodyAskWorkItem, projectIds, projectContexts, documentCategories, limitWorkItemSearch, scoreThreshold, doReranking, answerDetail)
 
 Ask Work Item
 
@@ -35,8 +35,8 @@ async function example() {
   const api = new WorkItemsApi();
 
   const body = {
-    // string
-    prompt: prompt_example,
+    // BodyAskWorkItem
+    bodyAskWorkItem: ...,
     // Array<string> (optional)
     projectIds: ...,
     // Array<string> (optional)
@@ -49,8 +49,6 @@ async function example() {
     scoreThreshold: 8.14,
     // boolean (optional)
     doReranking: true,
-    // string (optional)
-    userDefinedSystemPrompt: userDefinedSystemPrompt_example,
     // AnswerDetail (optional)
     answerDetail: ...,
   } satisfies AskWorkItemRequest;
@@ -72,14 +70,13 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **prompt** | `string` |  | [Defaults to `undefined`] |
+| **bodyAskWorkItem** | [BodyAskWorkItem](BodyAskWorkItem.md) |  | |
 | **projectIds** | `Array<string>` |  | [Optional] |
 | **projectContexts** | `Array<string>` |  | [Optional] |
 | **documentCategories** | `Array<string>` |  | [Optional] |
 | **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
-| **userDefinedSystemPrompt** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
@@ -92,7 +89,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
 
@@ -107,7 +104,7 @@ No authorization required
 
 ## askWorkItemWithInitialSearch
 
-> WorkItemAskResponse askWorkItemWithInitialSearch(prompt, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, userDefinedSystemPrompt, answerDetail)
+> WorkItemAskResponse askWorkItemWithInitialSearch(bodyAskWorkItemWithInitialSearch, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, answerDetail)
 
 Ask Work Item With Initial Search
 
@@ -125,8 +122,8 @@ async function example() {
   const api = new WorkItemsApi();
 
   const body = {
-    // string
-    prompt: prompt_example,
+    // BodyAskWorkItemWithInitialSearch
+    bodyAskWorkItemWithInitialSearch: ...,
     // string (optional)
     projectId: projectId_example,
     // number (optional)
@@ -137,8 +134,6 @@ async function example() {
     scoreThreshold: 8.14,
     // boolean (optional)
     doReranking: true,
-    // string (optional)
-    userDefinedSystemPrompt: userDefinedSystemPrompt_example,
     // AnswerDetail (optional)
     answerDetail: ...,
   } satisfies AskWorkItemWithInitialSearchRequest;
@@ -160,13 +155,12 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **prompt** | `string` |  | [Defaults to `undefined`] |
+| **bodyAskWorkItemWithInitialSearch** | [BodyAskWorkItemWithInitialSearch](BodyAskWorkItemWithInitialSearch.md) |  | |
 | **projectId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **limitAiModelWorkItems** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
-| **userDefinedSystemPrompt** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
@@ -179,7 +173,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
 

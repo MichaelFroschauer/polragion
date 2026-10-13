@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export * from './AnswerDetail';
+export * from './BodyAskWorkItem';
+export * from './BodyAskWorkItemWithInitialSearch';
 export * from './ChatHistoryMessage';
 export * from './CopilotModel';
 export * from './CopilotModelSelection';
