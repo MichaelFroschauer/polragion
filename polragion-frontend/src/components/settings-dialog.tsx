@@ -1,7 +1,7 @@
 "use client"
 
 import {type ComponentProps, type ReactElement, useMemo, useState} from "react"
-import {InfoIcon, MessageSquareTextIcon, RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
+import {InfoIcon, KeyRoundIcon, MessageSquareTextIcon, RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
 
 import {Button} from "@/components/ui/button.tsx"
 import {
@@ -29,6 +29,7 @@ import {
     SliderSetting, SwitchSetting,
     TextareaSetting,
 } from "@/components/settings/setting-fields.tsx"
+import {McpServerSettings} from "@/components/settings/mcp-server-settings"
 import {APP_INFO, copyrightNotice} from "@/lib/app-info.ts"
 
 type SettingsDialogProps = ComponentProps<typeof Dialog> & {
@@ -61,6 +62,7 @@ const CATEGORIES = [
         icon: SparklesIcon,
         paths: ["aiSearch.", "customUserSystemPrompt"],
     },
+    {id: "mcp", label: "MCP Server", icon: KeyRoundIcon, paths: []},
     {
         id: "about",
         label: "About",
@@ -275,6 +277,10 @@ export function SettingsDialog({
                             </SettingsSection>
                         </TabsContent>
 
+                        <TabsContent value="mcp">
+                            {open && activeCategory === "mcp" && <McpServerSettings/>}
+                        </TabsContent>
+
                         <TabsContent value="about">
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
@@ -335,7 +341,7 @@ export function SettingsDialog({
                 </Tabs>
 
                 <DialogFooter className="mx-0 mb-0 items-center rounded-b-xl px-6 py-4 sm:justify-between">
-                    {activeCategory === "about" ? (
+                    {(activeCategory === "about" || activeCategory === "mcp") ? (
                         <span className="sm:mr-auto"/>
                     ) : (
                         <Button
@@ -362,10 +368,10 @@ export function SettingsDialog({
                         )}
 
                         <DialogClose render={<Button type="button" variant="outline"/>}>
-                            Cancel
+                            {activeCategory === "mcp" ? "Close" : "Cancel"}
                         </DialogClose>
 
-                        <DialogClose
+                        {activeCategory !== "mcp" && <DialogClose
                             render={
                                 <Button
                                     disabled={!isValid || !isDirty}
@@ -375,7 +381,7 @@ export function SettingsDialog({
                             }
                         >
                             Save changes
-                        </DialogClose>
+                        </DialogClose>}
                     </div>
                 </DialogFooter>
             </DialogContent>

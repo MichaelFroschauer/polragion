@@ -96,6 +96,12 @@ class Settings(BaseSettings):
     github_user_config_path: str | None = None
 
     # =======================================================================
+    #   MCP Config (personal bearer tokens)
+    mcp_enabled: bool = True
+    mcp_public_url: str = ""  # Public backend base URL, e.g. https://localhost/api
+    mcp_token_lifetime_days: int = Field(default=365, ge=1, le=365)
+
+    # =======================================================================
     #   Polarion Config
     polarion_host: str = ""
     polarion_user: str = ""
