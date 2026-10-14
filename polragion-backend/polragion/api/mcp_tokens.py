@@ -34,9 +34,7 @@ def require_management_header(
         raise HTTPException(403, "Origin is not allowed")
 
 class CreateToken(StrictModel):
-    name: str = Field(
-        default="PolRAGion MCP Server", min_length=1, max_length=100, pattern=r".*\S.*"
-    )
+    name: str | None = Field(default="PolRAGion MCP Server", min_length=1, max_length=100, pattern=r".*\S.*")
 
 class IssuedToken(StrictModel):
     token: str
@@ -45,7 +43,6 @@ class IssuedToken(StrictModel):
 class TokenOverview(StrictModel):
     enabled: bool
     lifetime_days: int
-    server_url: str | None
     tokens: list[McpTokenInfo]
 
 def metadata(token) -> McpTokenInfo:
@@ -62,9 +59,6 @@ async def list_mcp_tokens(
     return TokenOverview(
         enabled=settings.mcp_enabled,
         lifetime_days=settings.mcp_token_lifetime_days,
-        server_url=settings.mcp_public_url.rstrip("/") + "/mcp/"
-        if settings.mcp_public_url
-        else None,
         tokens=[metadata(t) for t in await service.list_tokens(user.id)],
     )
 
@@ -84,7 +78,7 @@ async def create_mcp_token(
 ) -> IssuedToken:
     if not settings.mcp_enabled:
         raise HTTPException(503, "MCP server is disabled")
-    raw, token = await service.create_token(user.id, body.name.strip())
+    raw, token = await service.create_token(user.id, (body.name or "PolRAGion MCP Server").strip())
     response.headers["Cache-Control"] = "no-store"
     return IssuedToken(token=raw, info=metadata(token))
 

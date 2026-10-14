@@ -5,18 +5,13 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx"
-import {BookOpenIcon, Info, Settings2Icon, SquarePen} from "lucide-react"
-import {
-    AlertDialog, AlertDialogAction, AlertDialogContent,
-    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
-} from "@/components/ui/alert-dialog.tsx";
-import {useState} from "react";
+import {BookOpenIcon, Settings2Icon, SquarePen} from "lucide-react"
+import {DocumentationDialog} from "@/components/documentation-dialog";
 import {useChat} from "@/hooks/use-chat.tsx";
 import {SettingsDialog} from "@/components/settings-dialog.tsx";
 
 
 export function NavMain() {
-    const [open, setOpen] = useState(false)
     const { resetSession: newChat } = useChat()
 
     return (
@@ -29,7 +24,7 @@ export function NavMain() {
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
-                    <SidebarMenuButton onClick={() => setOpen(true)}><BookOpenIcon />Documentation</SidebarMenuButton>
+                    <DocumentationDialog trigger={<SidebarMenuButton><BookOpenIcon />Documentation</SidebarMenuButton>}/>
                 </SidebarMenuItem>
 
                 <SidebarMenuItem>
@@ -39,22 +34,7 @@ export function NavMain() {
                 </SidebarMenuItem>
             </SidebarMenu>
 
-            <AlertDialog open={open} onOpenChange={setOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <div className="flex items-center gap-2">
-                            <Info className="size-5 text-blue-500" />
-                            <AlertDialogTitle>Work in Progress...</AlertDialogTitle>
-                        </div>
-                        <AlertDialogDescription>
-                            This action is currently unfinished and will be available in a future release.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogAction onClick={() => setOpen(false)}>Ok</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+
         </SidebarGroup>
     )
 }

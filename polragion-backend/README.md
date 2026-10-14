@@ -24,16 +24,15 @@ Set backend environment variables as needed:
 
 ```dotenv
 MCP_ENABLED=true
-MCP_PUBLIC_URL=https://localhost/api
 MCP_TOKEN_LIFETIME_DAYS=30
 ```
 
 MCP is enabled by default. The token lifetime defaults to 30 days and can be
 configured from 1 to 365 days; changes apply only to newly created tokens.
-`MCP_PUBLIC_URL` is the externally reachable backend base URL without `/mcp/`.
-If omitted, the website derives the MCP address from its configured API URL.
-For local HTTP Uvicorn use `http://localhost:8000`; for the Docker nginx proxy
-use `https://<host>/api`. No additional GitHub OAuth App or MCP login is needed.
+The website derives the MCP address from its existing `VITE_API_URL` (via
+`apiBasePath`), appending `/mcp/`. Relative API paths such as `/api` are resolved
+against the website origin. There is no separate backend setting for the public
+MCP URL. No additional GitHub OAuth App or MCP login is needed.
 The website still uses its existing GitHub authentication.
 
 ### VS Code
