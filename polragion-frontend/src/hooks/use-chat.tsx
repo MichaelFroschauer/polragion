@@ -11,6 +11,7 @@ import {
 } from "@/api";
 import {useSettings} from "@/hooks/use-settings.tsx";
 import {getApiErrorMessage} from "@/lib/api-error.ts";
+import type {ChatHistoryMessage} from "@/api";
 
 export type ChatMode = "ask" | "search"
 
@@ -35,6 +36,26 @@ interface ChatContextValue {
 
 const ChatContext = createContext<ChatContextValue | null>(null);
 
+function getChatHistoryEntries(history: ChatHistoryMessage[]): ChatEntry[] {
+    return history.flatMap((message, index) => {
+        // Tool calls can produce assistant events without visible text. Rendering
+        // those as messages would still add the chat list's gap for every event.
+        if (!message.content.trim()) {
+            return []
+        }
+
+        const role = message.role === "user" ? "user" : "assistant"
+        return [{
+            id: message.messageId ?? `history-${index}`,
+            role,
+            mode: "ask",
+            contentType: "string",
+            // Active submissions trim user input; preserve assistant Markdown.
+            content: role === "user" ? message.content.trim() : message.content,
+        }]
+    })
+}
+
 export function ChatContextProvider({ children }: PropsWithChildren) {
     const { isAuthenticated } = useGitHubAuth()
     const { settings } = useSettings()
@@ -57,15 +78,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                 if (cancelled) {
                     return
                 }
-                setEntries(
-                    history.map((message, index) => ({
-                        id: message.messageId ?? `history-${index}`,
-                        role: message.role === "user" ? "user" : "assistant",
-                        mode: "ask",
-                        contentType: "string",
-                        content: message.content,
-                    })),
-                )
+                setEntries(getChatHistoryEntries(history))
             } catch {
                 // No history available yet.
             }
