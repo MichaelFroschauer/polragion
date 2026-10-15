@@ -1,13 +1,11 @@
 import logging
 import secrets
 from datetime import timedelta
-from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlencode, urljoin
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
-from pydantic import ValidationError
 from starlette import status
 
 from polragion.api.dependencies import (
@@ -17,6 +15,7 @@ from polragion.api.dependencies import (
     get_user_repository,
 )
 from polragion.api.github_api_utils import get_github_access_token, get_github_user
+from polragion.application.access_policy import AccessPolicy, PolicyUnavailable
 from polragion.application.session_service import SessionService
 from polragion.database.repository import GitHubCredentialsRepository, UserRepository
 from polragion.models.user import GitHubCredentials, GitHubUserConfig, OAuthToken, User, UserSession
@@ -30,25 +29,14 @@ router = APIRouter(prefix="/auth/github", tags=["GitHub authentication"])
 
 
 def _load_github_user_config(settings: Settings) -> GitHubUserConfig:
-    if not settings.github_user_config_path:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GitHub user allowlist is not configured",
-        )
-
     try:
-        config_text = Path(settings.github_user_config_path).read_text(encoding="utf-8")
-        return GitHubUserConfig.model_validate_json(config_text)
-    except (OSError, ValidationError) as exc:
-        logger.error("Could not load GitHub user allowlist: %s", exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GitHub user allowlist is unavailable",
-        ) from exc
+        return AccessPolicy(settings).load()
+    except PolicyUnavailable as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 def _is_allowed(username: str, config: GitHubUserConfig) -> bool:
-    return username.casefold() in {entry.userName.casefold() for entry in config.whiteList}
+    return AccessPolicy.is_allowed(username, config)
 
 
 async def _exchange_code_for_token(code: str, settings: Settings) -> tuple[OAuthToken, OAuthToken]:

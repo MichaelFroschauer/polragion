@@ -1,7 +1,7 @@
 "use client"
 
 import {type ComponentProps, type ReactElement, useMemo, useState} from "react"
-import {InfoIcon, MessageSquareTextIcon, RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
+import {InfoIcon, KeyRoundIcon, MessageSquareTextIcon, RotateCcwIcon, SearchIcon, SparklesIcon} from "lucide-react"
 
 import {Button} from "@/components/ui/button.tsx"
 import {
@@ -29,6 +29,7 @@ import {
     SliderSetting, SwitchSetting,
     TextareaSetting,
 } from "@/components/settings/setting-fields.tsx"
+import {McpServerSettings} from "@/components/settings/mcp-server-settings"
 import {APP_INFO, copyrightNotice} from "@/lib/app-info.ts"
 
 type SettingsDialogProps = ComponentProps<typeof Dialog> & {
@@ -61,6 +62,7 @@ const CATEGORIES = [
         icon: SparklesIcon,
         paths: ["aiSearch.", "customUserSystemPrompt"],
     },
+    {id: "mcp", label: "MCP Server", icon: KeyRoundIcon, paths: []},
     {
         id: "about",
         label: "About",
@@ -137,8 +139,8 @@ export function SettingsDialog({
     return (
         <Dialog onOpenChange={handleOpenChange} open={open} {...props}>
             {trigger && <DialogTrigger render={trigger}/>}
-            <DialogContent className="gap-0 p-0 sm:max-w-3xl">
-                <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogContent className="flex h-[min(48rem,calc(100svh-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+                <DialogHeader className="shrink-0 px-6 pt-6 pb-4">
                     <DialogTitle>Settings</DialogTitle>
                     <DialogDescription>
                         Adjust how Polragion searches and answers.
@@ -146,13 +148,13 @@ export function SettingsDialog({
                 </DialogHeader>
 
                 <Tabs
-                    className="min-h-0 flex-1 gap-0 border-t"
+                    className="min-h-0 flex-1 gap-0 overflow-hidden border-t"
                     onValueChange={(value) => setActiveCategory(String(value))}
                     orientation="vertical"
                     value={activeCategory}
                 >
                     <TabsList
-                        className="h-auto w-52 shrink-0 gap-1 rounded-none border-r bg-transparent p-3"
+                        className="h-auto w-12 shrink-0 gap-1 rounded-none border-r bg-transparent p-1 sm:w-52 sm:p-3"
                         variant="line"
                     >
                         {CATEGORIES.map((category) => {
@@ -163,12 +165,13 @@ export function SettingsDialog({
 
                             return (
                                 <TabsTrigger
-                                    className="h-8 w-full justify-start gap-2 rounded-md px-2 data-active:bg-muted"
+                                    className="h-9 w-full justify-center gap-2 rounded-md px-2 data-active:bg-muted sm:justify-start"
+                                    aria-label={category.label}
                                     key={category.id}
                                     value={category.id}
                                 >
                                     <Icon/>
-                                    <span className="truncate">{category.label}</span>
+                                    <span className="hidden truncate sm:inline">{category.label}</span>
                                     {hasError && (
                                         <span
                                             aria-label="This section contains invalid values"
@@ -180,7 +183,7 @@ export function SettingsDialog({
                         })}
                     </TabsList>
 
-                    <div className="max-h-[60vh] min-h-[22rem] flex-1 overflow-y-auto px-6 py-5">
+                    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
                         <TabsContent value="work-items">
                             <SettingsSection
                                 title="Work Item Search"
@@ -216,7 +219,7 @@ export function SettingsDialog({
                                 />
 
                                 <SwitchSetting
-                                    hint="If enabled, the search results are reranked using a hybrid approach that combines vector similarity and keyword matching. This can improve the relevance of the results, especially for queries that contain specific terms. But it also increases the search time and cost drastically, so use it only if necessary."
+                                    hint="If enabled, the search results are reranked using a hybrid approach that combines vector similarity and keyword matching. This can improve the relevance of the results, especially for queries that contain specific terms. But it also increases the search time drastically."
                                     id="work-item-do-reranking"
                                     label="Hybrid search reranking"
                                     onChange={function (checked: boolean): void {
@@ -273,6 +276,10 @@ export function SettingsDialog({
                                     value={draft.customUserSystemPrompt ?? ""}
                                 />
                             </SettingsSection>
+                        </TabsContent>
+
+                        <TabsContent value="mcp">
+                            {open && activeCategory === "mcp" && <McpServerSettings/>}
                         </TabsContent>
 
                         <TabsContent value="about">
@@ -334,8 +341,8 @@ export function SettingsDialog({
                     </div>
                 </Tabs>
 
-                <DialogFooter className="mx-0 mb-0 items-center rounded-b-xl px-6 py-4 sm:justify-between">
-                    {activeCategory === "about" ? (
+                <DialogFooter className="mx-0 mb-0 shrink-0 items-center rounded-b-xl px-6 py-4 sm:justify-between">
+                    {(activeCategory === "about" || activeCategory === "mcp") ? (
                         <span className="sm:mr-auto"/>
                     ) : (
                         <Button
@@ -362,10 +369,10 @@ export function SettingsDialog({
                         )}
 
                         <DialogClose render={<Button type="button" variant="outline"/>}>
-                            Cancel
+                            {activeCategory === "mcp" ? "Close" : "Cancel"}
                         </DialogClose>
 
-                        <DialogClose
+                        {activeCategory !== "mcp" && <DialogClose
                             render={
                                 <Button
                                     disabled={!isValid || !isDirty}
@@ -375,7 +382,7 @@ export function SettingsDialog({
                             }
                         >
                             Save changes
-                        </DialogClose>
+                        </DialogClose>}
                     </div>
                 </DialogFooter>
             </DialogContent>

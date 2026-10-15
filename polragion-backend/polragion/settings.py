@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     # =======================================================================
     #   Copilot CLI Config
     copilot_url: str = "localhost:4321"
-    max_allowed_tool_calls: int = Field(default=20, ge=0, le=100)
+    max_allowed_tool_calls: int = Field(default=50, ge=0, le=100)
 
     # =======================================================================
     #   Sqlite Config
@@ -94,6 +94,11 @@ class Settings(BaseSettings):
     github_fine_grained_token: str = ""
     github_redirect_uri: str = ""
     github_user_config_path: str | None = None
+
+    # =======================================================================
+    #   MCP Config (personal bearer tokens)
+    mcp_enabled: bool = True
+    mcp_token_lifetime_days: int = Field(default=365, ge=1, le=365)
 
     # =======================================================================
     #   Polarion Config

@@ -5,6 +5,8 @@ from datetime import timedelta
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+from fastmcp.utilities.lifespan import combine_lifespans
+
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -15,6 +17,7 @@ from polragion.api.work_items import public_router as work_item_public_router
 from polragion.api.auth import router as auth_router
 from polragion.api.ai_models import router as ai_models_router
 from polragion.api.polarion_metadata import router as polarion_metadata_router
+from polragion.application.work_item_tools_service import WorkItemToolsService
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
 from polragion.application.work_item_service import WorkItemService
@@ -31,6 +34,11 @@ from polragion.infrastructure.polarion_data_fetcher import PolarionDataFetcher
 from polragion.infrastructure.polarion_import_config_descriptor import PolarionImportConfigDescriptor
 from polragion.infrastructure.qdrant_data_worker import QdrantDataWorker
 from polragion.infrastructure.qdrant_hybrid_vector_store import QdrantHybridVectorStore
+from polragion.mcp.server import create_mcp_server
+from polragion.infrastructure.mcp_auth import BackendTokenVerifier
+from polragion.application.mcp_token_service import McpTokenService
+from polragion.database.sqlite_repository import SqliteMcpTokenRepository
+from polragion.api.mcp_tokens import router as mcp_tokens_router
 from polragion.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -86,6 +94,7 @@ def create_app(
         #user_repository = InMemoryUserRepository()
         #github_credentials_repository = InMemoryGitHubCredentialsRepository()
         db = SQLiteDatabase(settings=app_settings)
+        app.state.mcp_token_service = McpTokenService(SqliteMcpTokenRepository(db), timedelta(days=app_settings.mcp_token_lifetime_days))
         session_repository = SqliteSessionRepository(db)
         user_repository = SqliteUserRepository(db)
         github_credentials_repository = SqliteGitHubCredentialsRepository(db)
@@ -98,15 +107,12 @@ def create_app(
 
         user_request_manager = UserRequestManager(app_settings)
         app.state.user_request_manager = user_request_manager
-        app.state.ai_tools = CopilotTools(
-            settings=app_settings,
-            work_item_service=work_item_service,
-            user_request_manager=user_request_manager,
-            vector_store=vector_store,
-            polarion_descriptor=polarion_descriptor
-        )
+        work_item_tools_service = WorkItemToolsService(app_settings, work_item_service, polarion_descriptor)
+        app.state.work_item_tools_service = work_item_tools_service
+        ai_tools = CopilotTools(tools_service=work_item_tools_service, user_request_manager=user_request_manager)
+        app.state.ai_tools = ai_tools
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
-        app.state.ai_service = CopilotService(app_settings, app.state.ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
+        app.state.ai_service = CopilotService(app_settings, ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
 
         # TODO Message response handler for streaming
         # def ai_message_event(event: AiMessageEventT) -> None:
@@ -171,8 +177,16 @@ def create_app(
     app.include_router(work_item_router)
     app.include_router(work_item_public_router)
     app.include_router(auth_router)
+    app.include_router(mcp_tokens_router)
     app.include_router(ai_models_router)
     app.include_router(polarion_metadata_router)
+
+    if app_settings.mcp_enabled:
+        auth = BackendTokenVerifier(app.state)
+        mcp = create_mcp_server(app.state, auth)
+        mcp_app = mcp.http_app(path="/mcp/", stateless_http=True, json_response=True)
+        app.router.lifespan_context = combine_lifespans(app.router.lifespan_context, mcp_app.lifespan)
+        app.mount("/", mcp_app)
 
     return app
 

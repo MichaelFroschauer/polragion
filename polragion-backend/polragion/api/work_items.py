@@ -124,7 +124,7 @@ async def ask_work_item_with_initial_search(
     request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
-    prompt: Annotated[str, Body(embed=True, min_length=1, max_length=10_000)],
+    prompt: Annotated[str, Body(embed=True, min_length=1, max_length=50_000)],
     work_item_service: Annotated[WorkItemService, Depends(get_work_item_service)],
     ai_service: Annotated[AiService, Depends(get_ai_service)],
     project_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,

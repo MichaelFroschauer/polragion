@@ -2,7 +2,7 @@ import {
   Configuration,
   GitHubAuthenticationApi,
   GitHubModelsApi,
-  HealthApi,
+  HealthApi, MCPCredentialsApi,
   PolarionMetadataApi,
   WorkItemsApi,
 } from "./index";
@@ -19,3 +19,15 @@ export const healthApi = new HealthApi(config);
 export const gitHubAuthApi = new GitHubAuthenticationApi(config);
 export const gitHubModelsApi = new GitHubModelsApi(config);
 export const polarionMetadataApi = new PolarionMetadataApi(config);
+
+
+const mcpConfig = new Configuration({
+  basePath: config.basePath,
+  credentials: config.credentials,
+  headers: {
+    "Content-Type": "application/json",
+    "X-MCP-Token-Management": "true",
+  },
+});
+
+export const mcpTokensApi = new MCPCredentialsApi(mcpConfig);

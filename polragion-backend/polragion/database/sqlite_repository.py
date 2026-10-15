@@ -10,6 +10,8 @@ from polragion.models.user import User, GitHubCredentials, UserSession
 from polragion.models.work_item import PolarionImportStatus
 from polragion.settings import Settings
 from polragion.utils.general import utc_now
+from polragion.models.mcp_token import McpToken
+from polragion.database.repository import McpTokenRepository
 
 
 class SQLiteDatabase:
@@ -65,7 +67,19 @@ class SQLiteDatabase:
             );
                 
             CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id
-            ON user_sessions (user_id);
+                ON user_sessions (user_id);
+
+            CREATE TABLE IF NOT EXISTS mcp_tokens (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                revoked_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user_id
+                ON mcp_tokens(user_id);
 
             CREATE TABLE IF NOT EXISTS import_status (
                 source TEXT NOT NULL,
@@ -355,3 +369,48 @@ class SqliteSessionRepository(SessionRepository):
                     str(session_id)
                 )
             )
+
+
+class SqliteMcpTokenRepository(McpTokenRepository):
+    def __init__(self, db: SQLiteDatabase):
+        self._db = db
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row | None) -> McpToken | None:
+        return McpToken.model_validate(dict(row)) if row is not None else None
+
+    async def create(self, token: McpToken) -> McpToken:
+        with self._db.transaction() as conn:
+            conn.execute(
+                "INSERT INTO mcp_tokens "
+                "(id, user_id, name, token_hash, created_at, expires_at, revoked_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, NULL)",
+                (str(token.id), str(token.user_id), token.name, token.token_hash,
+                 token.created_at.isoformat(), token.expires_at.isoformat()),
+            )
+        return token
+
+    async def get_by_id(self, token_id: UUID) -> McpToken | None:
+        with self._db.transaction() as conn:
+            row = conn.execute("SELECT * FROM mcp_tokens WHERE id = ?", (str(token_id),)).fetchone()
+        return self._from_row(row)
+
+    async def get_by_token_hash(self, token_hash: str) -> McpToken | None:
+        with self._db.transaction() as conn:
+            row = conn.execute("SELECT * FROM mcp_tokens WHERE token_hash = ?", (token_hash,)).fetchone()
+        return self._from_row(row)
+
+    async def list_for_user(self, user_id: UUID) -> list[McpToken]:
+        with self._db.transaction() as conn:
+            rows = conn.execute("SELECT * FROM mcp_tokens WHERE user_id = ? ORDER BY created_at DESC",
+                                (str(user_id),)).fetchall()
+        return [McpToken.model_validate(dict(row)) for row in rows]
+
+    async def revoke(self, token_id: UUID, user_id: UUID) -> bool:
+        with self._db.transaction() as conn:
+            cursor = conn.execute(
+                "UPDATE mcp_tokens SET revoked_at = COALESCE(revoked_at, ?) "
+                "WHERE id = ? AND user_id = ?",
+                (utc_now().isoformat(), str(token_id), str(user_id)),
+            )
+        return cursor.rowcount == 1

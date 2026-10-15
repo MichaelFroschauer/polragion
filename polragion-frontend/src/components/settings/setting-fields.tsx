@@ -86,7 +86,11 @@ export function SettingRow({
     controlClassName,
 }: SettingRowProps) {
     return (
-        <Field data-invalid={Boolean(error)} orientation="responsive">
+        <Field
+            data-invalid={Boolean(error)}
+            orientation="responsive"
+            className="@md/field-group:grid @md/field-group:max-w-lg @md/field-group:grid-cols-[minmax(0,1fr)_14rem] @md/field-group:gap-x-6"
+        >
             <FieldContent>
                 <FieldLabel htmlFor={id} className="font-normal">
                     {label}

@@ -1,6 +1,7 @@
 from fastapi import Request
 
 from polragion.application.ai_service import AiService
+from polragion.application.mcp_token_service import McpTokenService
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_service import WorkItemService
 from polragion.database.repository import UserRepository, GitHubCredentialsRepository, ImportStatusRepository
@@ -57,3 +58,7 @@ def get_ai_service(request: Request) -> AiService:
 
 def get_user_request_manager(request: Request) -> AiService:
     return request.app.state.user_request_manager
+
+
+def get_mcp_token_service(request: Request) -> McpTokenService:
+    return request.app.state.mcp_token_service

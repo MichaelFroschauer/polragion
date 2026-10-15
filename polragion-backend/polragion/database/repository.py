@@ -4,6 +4,7 @@ from uuid import UUID
 
 from polragion.models.user import GitHubCredentials, UserSession, User
 from polragion.models.work_item import PolarionImportStatus
+from polragion.models.mcp_token import McpToken
 
 EntityT = TypeVar("EntityT")
 EntityIdT = TypeVar("EntityIdT")
@@ -56,4 +57,18 @@ class ImportStatusRepository(ABC):
 
     @abstractmethod
     def record_success(self, status: PolarionImportStatus) -> None:
+        raise NotImplementedError
+
+
+class McpTokenRepository(Repository[McpToken, UUID], ABC):
+    @abstractmethod
+    async def get_by_token_hash(self, token_hash: str) -> McpToken | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_for_user(self, user_id: UUID) -> list[McpToken]:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def revoke(self, token_id: UUID, user_id: UUID) -> bool:
         raise NotImplementedError
