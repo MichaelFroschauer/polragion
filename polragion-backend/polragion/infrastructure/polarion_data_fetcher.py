@@ -122,7 +122,7 @@ class PolarionDataFetcher:
         self._tracker_service = tracker_service
 
 
-    def _with_retry(self, operation: Callable[[], T], context: str, max_attempts: int = 6) -> T:
+    def _with_retry(self, operation: Callable[[], T], context: str, max_attempts: int = 12) -> T:
         if max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
 
