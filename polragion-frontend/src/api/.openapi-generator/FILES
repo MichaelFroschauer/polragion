@@ -2,6 +2,7 @@ apis/GitHubAuthenticationApi.ts
 apis/GitHubModelsApi.ts
 apis/HealthApi.ts
 apis/MCPCredentialsApi.ts
+apis/NotificationsApi.ts
 apis/PolarionMetadataApi.ts
 apis/WorkItemsApi.ts
 apis/index.ts
@@ -23,6 +24,7 @@ docs/LinkedWorkItem.md
 docs/LocationInner.md
 docs/MCPCredentialsApi.md
 docs/McpTokenInfo.md
+docs/NotificationsApi.md
 docs/PolarionDocumentMetadata.md
 docs/PolarionImportConfig.md
 docs/PolarionImportStatus.md
@@ -35,6 +37,8 @@ docs/ProjectImportConfig.md
 docs/RelationsConfig.md
 docs/TokenOverview.md
 docs/User.md
+docs/UserNotification.md
+docs/UserNotificationsResponse.md
 docs/ValidationError.md
 docs/WorkItemAskResponse.md
 docs/WorkItemImportConfig.md
@@ -67,6 +71,8 @@ models/ProjectImportConfig.ts
 models/RelationsConfig.ts
 models/TokenOverview.ts
 models/User.ts
+models/UserNotification.ts
+models/UserNotificationsResponse.ts
 models/ValidationError.ts
 models/WorkItemAskResponse.ts
 models/WorkItemImportConfig.ts

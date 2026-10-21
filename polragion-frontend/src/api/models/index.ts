@@ -25,6 +25,8 @@ export * from './ProjectImportConfig';
 export * from './RelationsConfig';
 export * from './TokenOverview';
 export * from './User';
+export * from './UserNotification';
+export * from './UserNotificationsResponse';
 export * from './ValidationError';
 export * from './WorkItemAskResponse';
 export * from './WorkItemImportConfig';

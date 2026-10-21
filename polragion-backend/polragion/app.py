@@ -17,6 +17,7 @@ from polragion.api.work_items import public_router as work_item_public_router
 from polragion.api.auth import router as auth_router
 from polragion.api.ai_models import router as ai_models_router
 from polragion.api.polarion_metadata import router as polarion_metadata_router
+from polragion.api.user_notifications import router as user_notifications_router
 from polragion.application.work_item_tools_service import WorkItemToolsService
 from polragion.application.session_service import SessionService
 from polragion.application.work_item_mapper import WorkItemIndexMapper
@@ -180,6 +181,7 @@ def create_app(
     app.include_router(mcp_tokens_router)
     app.include_router(ai_models_router)
     app.include_router(polarion_metadata_router)
+    app.include_router(user_notifications_router)
 
     if app_settings.mcp_enabled:
         auth = BackendTokenVerifier(app.state)

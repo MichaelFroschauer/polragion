@@ -9,6 +9,7 @@ import {ChatContextProvider} from "@/hooks/use-chat.tsx";
 import {SettingsProvider} from "@/hooks/use-settings.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { LoaderCircleIcon, LogInIcon } from "lucide-react";
+import {Toaster} from "@/components/ui/toast.tsx";
 
 function AuthenticatedApp() {
     const [showIntro, setShowIntro] = useState(() => {
@@ -94,6 +95,7 @@ function App() {
         <TooltipProvider>
         <GitHubAuthProvider>
             <AuthGate />
+            <Toaster />
         </GitHubAuthProvider>
         </TooltipProvider>
     )

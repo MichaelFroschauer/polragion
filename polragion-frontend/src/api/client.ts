@@ -2,7 +2,9 @@ import {
   Configuration,
   GitHubAuthenticationApi,
   GitHubModelsApi,
-  HealthApi, MCPCredentialsApi,
+  HealthApi,
+  MCPCredentialsApi,
+  NotificationsApi,
   PolarionMetadataApi,
   WorkItemsApi,
 } from "./index";
@@ -19,6 +21,7 @@ export const healthApi = new HealthApi(config);
 export const gitHubAuthApi = new GitHubAuthenticationApi(config);
 export const gitHubModelsApi = new GitHubModelsApi(config);
 export const polarionMetadataApi = new PolarionMetadataApi(config);
+export const notificationsApi = new NotificationsApi(config);
 
 
 const mcpConfig = new Configuration({

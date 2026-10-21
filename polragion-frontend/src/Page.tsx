@@ -1,14 +1,22 @@
-import type { ReactNode } from "react"
+import {type ReactNode, useEffect} from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { GitHubAuthButton } from "@/components/ai/github-auth-button"
 import { ModelPicker } from "@/components/ai/model-picker"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import {loadAndDisplayNotifications} from "@/lib/user-notifications.ts";
 
 interface PageProps {
     children: ReactNode
 }
 
 export default function Page({ children }: PageProps) {
+
+    useEffect(() => {
+        let ignore = false; // Ensure notifications are unique per session and not duplicated on re-render
+        void loadAndDisplayNotifications(() => ignore);
+        return () => { ignore = true; };
+    }, []);
+
     return (
         <SidebarProvider className="h-svh overflow-hidden">
             <AppSidebar />
