@@ -113,7 +113,7 @@ def create_app(
         ai_tools = CopilotTools(tools_service=work_item_tools_service, user_request_manager=user_request_manager)
         app.state.ai_tools = ai_tools
         app.state.session_service = SessionService(session_repository, session_lifetime=timedelta(days=7))
-        app.state.ai_service = CopilotService(app_settings, ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url)
+        app.state.ai_service = CopilotService(app_settings, ai_tools, github_credentials_repository, user_request_manager, runtime_url=app_settings.copilot_url, runtime_connection_token=app_settings.copilot_connection_token)
 
         # TODO Message response handler for streaming
         # def ai_message_event(event: AiMessageEventT) -> None:
@@ -165,6 +165,7 @@ def create_app(
         "https://192.168.178.51:5173",
         "https://192.168.178.124:5173",
         "https://10.150.5.129",
+        "https://10.150.21.61",
     ]
     app.add_middleware(
         CORSMiddleware,
