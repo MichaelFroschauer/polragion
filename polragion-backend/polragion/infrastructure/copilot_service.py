@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta
@@ -382,6 +383,8 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
     async def send_message(self, message: CopilotSendMessage) -> CopilotResponseMessage:
         if not message.text.strip():
             raise ValueError("message.text must not be empty")
+        if message.request_context is not None and message.request_context.user_id != message.user_id:
+            raise ValueError("request_context.user_id must match message.user_id")
 
         await self.initialize()
 
@@ -392,14 +395,34 @@ class CopilotService(AiService[CopilotSendMessage, CopilotResponseMessage, Copil
             if session is None:
                 session = await self._create_user_session(message.user_id)
 
-            request_context = message.request_context or self._user_request_manager.start_request(message.user_id)
+            request_context = message.request_context or self._user_request_manager.create_request(
+                message.user_id
+            )
+            self._user_request_manager.start_request(request_context)
             request_credits: float = None
 
             try:
                 metrics_before = await session.rpc.usage.get_metrics()
 
+                scope = request_context.search_scope
+                scope_description = {
+                    "project_ids": scope.project_ids or None,
+                    "project_contexts": scope.project_contexts or None,
+                    "document_categories": scope.document_categories or None,
+                    "documents": [doc.model_dump() for doc in scope.documents] or None,
+                    "matches_nothing": scope.match_none,
+                }
+                request_prompt = (
+                    message.text + "\n\n<current_request_filters>\n"
+                    + json.dumps(scope_description)
+                    + "\nThese filters apply only to this request. Null means unrestricted. "
+                    "All tools enforce these filters; your own filters can only narrow them. "
+                    "Do not reuse filter settings from earlier turns. For claims within a restricted "
+                    "scope, retrieve fresh evidence rather than relying on earlier tool results."
+                    "\n</current_request_filters>"
+                )
                 response_event = await session.send_and_wait(
-                    prompt=message.text,
+                    prompt=request_prompt,
                     display_prompt=message.display_text,
                     timeout=self.REQUEST_TIMEOUT_SECONDS
                 )

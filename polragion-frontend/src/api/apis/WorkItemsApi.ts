@@ -24,10 +24,10 @@ import {
     BodyAskWorkItemToJSON,
 } from '../models/BodyAskWorkItem';
 import {
-    type BodyAskWorkItemWithInitialSearch,
-    BodyAskWorkItemWithInitialSearchFromJSON,
-    BodyAskWorkItemWithInitialSearchToJSON,
-} from '../models/BodyAskWorkItemWithInitialSearch';
+    type BodySearchWorkItems,
+    BodySearchWorkItemsFromJSON,
+    BodySearchWorkItemsToJSON,
+} from '../models/BodySearchWorkItems';
 import {
     type ChatHistoryMessage,
     ChatHistoryMessageFromJSON,
@@ -61,22 +61,6 @@ import {
 
 export interface AskWorkItemRequest {
     bodyAskWorkItem: BodyAskWorkItem;
-    projectIds?: Array<string> | null;
-    projectContexts?: Array<string> | null;
-    documentCategories?: Array<string> | null;
-    limitWorkItemSearch?: number | null;
-    scoreThreshold?: number | null;
-    doReranking?: boolean | null;
-    answerDetail?: AnswerDetail;
-}
-
-export interface AskWorkItemWithInitialSearchRequest {
-    bodyAskWorkItemWithInitialSearch: BodyAskWorkItemWithInitialSearch;
-    projectId?: string | null;
-    limitWorkItemSearch?: number | null;
-    limitAiModelWorkItems?: number | null;
-    scoreThreshold?: number | null;
-    doReranking?: boolean | null;
     answerDetail?: AnswerDetail;
 }
 
@@ -93,8 +77,7 @@ export interface IngestWorkItemsFromPolarionDataSourceRequest {
 }
 
 export interface SearchWorkItemsRequest {
-    prompt: string;
-    projectId?: string | null;
+    bodySearchWorkItems: BodySearchWorkItems;
     limit?: number | null;
     scoreThreshold?: number | null;
     doReranking?: boolean | null;
@@ -110,12 +93,6 @@ export interface WorkItemsApiInterface {
     /**
      * Creates request options for askWorkItem without sending the request
      * @param {BodyAskWorkItem} bodyAskWorkItem 
-     * @param {Array<string>} [projectIds] 
-     * @param {Array<string>} [projectContexts] 
-     * @param {Array<string>} [documentCategories] 
-     * @param {number} [limitWorkItemSearch] 
-     * @param {number} [scoreThreshold] 
-     * @param {boolean} [doReranking] 
      * @param {AnswerDetail} [answerDetail] 
      * @throws {RequiredError}
      * @memberof WorkItemsApiInterface
@@ -126,12 +103,6 @@ export interface WorkItemsApiInterface {
      * 
      * @summary Ask Work Item
      * @param {BodyAskWorkItem} bodyAskWorkItem 
-     * @param {Array<string>} [projectIds] 
-     * @param {Array<string>} [projectContexts] 
-     * @param {Array<string>} [documentCategories] 
-     * @param {number} [limitWorkItemSearch] 
-     * @param {number} [scoreThreshold] 
-     * @param {boolean} [doReranking] 
      * @param {AnswerDetail} [answerDetail] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -143,41 +114,6 @@ export interface WorkItemsApiInterface {
      * Ask Work Item
      */
     askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse>;
-
-    /**
-     * Creates request options for askWorkItemWithInitialSearch without sending the request
-     * @param {BodyAskWorkItemWithInitialSearch} bodyAskWorkItemWithInitialSearch 
-     * @param {string} [projectId] 
-     * @param {number} [limitWorkItemSearch] 
-     * @param {number} [limitAiModelWorkItems] 
-     * @param {number} [scoreThreshold] 
-     * @param {boolean} [doReranking] 
-     * @param {AnswerDetail} [answerDetail] 
-     * @throws {RequiredError}
-     * @memberof WorkItemsApiInterface
-     */
-    askWorkItemWithInitialSearchRequestOpts(requestParameters: AskWorkItemWithInitialSearchRequest): Promise<runtime.RequestOpts>;
-
-    /**
-     * 
-     * @summary Ask Work Item With Initial Search
-     * @param {BodyAskWorkItemWithInitialSearch} bodyAskWorkItemWithInitialSearch 
-     * @param {string} [projectId] 
-     * @param {number} [limitWorkItemSearch] 
-     * @param {number} [limitAiModelWorkItems] 
-     * @param {number} [scoreThreshold] 
-     * @param {boolean} [doReranking] 
-     * @param {AnswerDetail} [answerDetail] 
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof WorkItemsApiInterface
-     */
-    askWorkItemWithInitialSearchRaw(requestParameters: AskWorkItemWithInitialSearchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemAskResponse>>;
-
-    /**
-     * Ask Work Item With Initial Search
-     */
-    askWorkItemWithInitialSearch(requestParameters: AskWorkItemWithInitialSearchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse>;
 
     /**
      * Creates request options for getChatHistory without sending the request
@@ -292,8 +228,7 @@ export interface WorkItemsApiInterface {
 
     /**
      * Creates request options for searchWorkItems without sending the request
-     * @param {string} prompt 
-     * @param {string} [projectId] 
+     * @param {BodySearchWorkItems} bodySearchWorkItems 
      * @param {number} [limit] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
@@ -305,8 +240,7 @@ export interface WorkItemsApiInterface {
     /**
      * 
      * @summary Search Work Items
-     * @param {string} prompt 
-     * @param {string} [projectId] 
+     * @param {BodySearchWorkItems} bodySearchWorkItems 
      * @param {number} [limit] 
      * @param {number} [scoreThreshold] 
      * @param {boolean} [doReranking] 
@@ -340,30 +274,6 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
         }
 
         const queryParameters: any = {};
-
-        if (requestParameters['projectIds'] != null) {
-            queryParameters['project_ids'] = requestParameters['projectIds'];
-        }
-
-        if (requestParameters['projectContexts'] != null) {
-            queryParameters['project_contexts'] = requestParameters['projectContexts'];
-        }
-
-        if (requestParameters['documentCategories'] != null) {
-            queryParameters['document_categories'] = requestParameters['documentCategories'];
-        }
-
-        if (requestParameters['limitWorkItemSearch'] != null) {
-            queryParameters['limit_work_item_search'] = requestParameters['limitWorkItemSearch'];
-        }
-
-        if (requestParameters['scoreThreshold'] != null) {
-            queryParameters['score_threshold'] = requestParameters['scoreThreshold'];
-        }
-
-        if (requestParameters['doReranking'] != null) {
-            queryParameters['do_reranking'] = requestParameters['doReranking'];
-        }
 
         if (requestParameters['answerDetail'] != null) {
             queryParameters['answer_detail'] = requestParameters['answerDetail'];
@@ -400,77 +310,6 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
      */
     async askWorkItem(requestParameters: AskWorkItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse> {
         const response = await this.askWorkItemRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for askWorkItemWithInitialSearch without sending the request
-     */
-    async askWorkItemWithInitialSearchRequestOpts(requestParameters: AskWorkItemWithInitialSearchRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['bodyAskWorkItemWithInitialSearch'] == null) {
-            throw new runtime.RequiredError(
-                'bodyAskWorkItemWithInitialSearch',
-                'Required parameter "bodyAskWorkItemWithInitialSearch" was null or undefined when calling askWorkItemWithInitialSearch().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        if (requestParameters['projectId'] != null) {
-            queryParameters['project_id'] = requestParameters['projectId'];
-        }
-
-        if (requestParameters['limitWorkItemSearch'] != null) {
-            queryParameters['limit_work_item_search'] = requestParameters['limitWorkItemSearch'];
-        }
-
-        if (requestParameters['limitAiModelWorkItems'] != null) {
-            queryParameters['limit_ai_model_work_items'] = requestParameters['limitAiModelWorkItems'];
-        }
-
-        if (requestParameters['scoreThreshold'] != null) {
-            queryParameters['score_threshold'] = requestParameters['scoreThreshold'];
-        }
-
-        if (requestParameters['doReranking'] != null) {
-            queryParameters['do_reranking'] = requestParameters['doReranking'];
-        }
-
-        if (requestParameters['answerDetail'] != null) {
-            queryParameters['answer_detail'] = requestParameters['answerDetail'];
-        }
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-
-        let urlPath = `/v1/work-items/ask-with-search`;
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: BodyAskWorkItemWithInitialSearchToJSON(requestParameters['bodyAskWorkItemWithInitialSearch']),
-        };
-    }
-
-    /**
-     * Ask Work Item With Initial Search
-     */
-    async askWorkItemWithInitialSearchRaw(requestParameters: AskWorkItemWithInitialSearchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkItemAskResponse>> {
-        const requestOptions = await this.askWorkItemWithInitialSearchRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkItemAskResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * Ask Work Item With Initial Search
-     */
-    async askWorkItemWithInitialSearch(requestParameters: AskWorkItemWithInitialSearchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkItemAskResponse> {
-        const response = await this.askWorkItemWithInitialSearchRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -685,22 +524,14 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
      * Creates request options for searchWorkItems without sending the request
      */
     async searchWorkItemsRequestOpts(requestParameters: SearchWorkItemsRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['prompt'] == null) {
+        if (requestParameters['bodySearchWorkItems'] == null) {
             throw new runtime.RequiredError(
-                'prompt',
-                'Required parameter "prompt" was null or undefined when calling searchWorkItems().'
+                'bodySearchWorkItems',
+                'Required parameter "bodySearchWorkItems" was null or undefined when calling searchWorkItems().'
             );
         }
 
         const queryParameters: any = {};
-
-        if (requestParameters['prompt'] != null) {
-            queryParameters['prompt'] = requestParameters['prompt'];
-        }
-
-        if (requestParameters['projectId'] != null) {
-            queryParameters['project_id'] = requestParameters['projectId'];
-        }
 
         if (requestParameters['limit'] != null) {
             queryParameters['limit'] = requestParameters['limit'];
@@ -716,14 +547,17 @@ export class WorkItemsApi extends runtime.BaseAPI implements WorkItemsApiInterfa
 
         const headerParameters: runtime.HTTPHeaders = {};
 
+        headerParameters['Content-Type'] = 'application/json';
+
 
         let urlPath = `/v1/work-items/search`;
 
         return {
             path: urlPath,
-            method: 'GET',
+            method: 'POST',
             headers: headerParameters,
             query: queryParameters,
+            body: BodySearchWorkItemsToJSON(requestParameters['bodySearchWorkItems']),
         };
     }
 

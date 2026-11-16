@@ -5,19 +5,18 @@ All URIs are relative to *https://localhost:8000/api*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**askWorkItem**](WorkItemsApi.md#askworkitem) | **POST** /v1/work-items/ask | Ask Work Item |
-| [**askWorkItemWithInitialSearch**](WorkItemsApi.md#askworkitemwithinitialsearch) | **POST** /v1/work-items/ask-with-search | Ask Work Item With Initial Search |
 | [**getChatHistory**](WorkItemsApi.md#getchathistory) | **GET** /v1/work-items/ask/history | Get Chat History |
 | [**ingestWorkItems**](WorkItemsApi.md#ingestworkitems) | **POST** /v1/work-items/ingest | Ingest Work Items |
 | [**ingestWorkItemsFromJsonDataSource**](WorkItemsApi.md#ingestworkitemsfromjsondatasource) | **POST** /v1/work-items/ingest/import-json | Ingest Work Items From Json Data Source |
 | [**ingestWorkItemsFromPolarionDataSource**](WorkItemsApi.md#ingestworkitemsfrompolariondatasource) | **POST** /v1/work-items/ingest/import-polarion | Ingest Work Items From Polarion Data Source |
 | [**resetUserSession**](WorkItemsApi.md#resetusersession) | **GET** /v1/work-items/reset | Reset User Session |
-| [**searchWorkItems**](WorkItemsApi.md#searchworkitems) | **GET** /v1/work-items/search | Search Work Items |
+| [**searchWorkItems**](WorkItemsApi.md#searchworkitems) | **POST** /v1/work-items/search | Search Work Items |
 
 
 
 ## askWorkItem
 
-> WorkItemAskResponse askWorkItem(bodyAskWorkItem, projectIds, projectContexts, documentCategories, limitWorkItemSearch, scoreThreshold, doReranking, answerDetail)
+> WorkItemAskResponse askWorkItem(bodyAskWorkItem, answerDetail)
 
 Ask Work Item
 
@@ -37,18 +36,6 @@ async function example() {
   const body = {
     // BodyAskWorkItem
     bodyAskWorkItem: ...,
-    // Array<string> (optional)
-    projectIds: ...,
-    // Array<string> (optional)
-    projectContexts: ...,
-    // Array<string> (optional)
-    documentCategories: ...,
-    // number (optional)
-    limitWorkItemSearch: 56,
-    // number (optional)
-    scoreThreshold: 8.14,
-    // boolean (optional)
-    doReranking: true,
     // AnswerDetail (optional)
     answerDetail: ...,
   } satisfies AskWorkItemRequest;
@@ -71,96 +58,6 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **bodyAskWorkItem** | [BodyAskWorkItem](BodyAskWorkItem.md) |  | |
-| **projectIds** | `Array<string>` |  | [Optional] |
-| **projectContexts** | `Array<string>` |  | [Optional] |
-| **documentCategories** | `Array<string>` |  | [Optional] |
-| **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
-| **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
-
-### Return type
-
-[**WorkItemAskResponse**](WorkItemAskResponse.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Successful Response |  -  |
-| **422** | Validation Error |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## askWorkItemWithInitialSearch
-
-> WorkItemAskResponse askWorkItemWithInitialSearch(bodyAskWorkItemWithInitialSearch, projectId, limitWorkItemSearch, limitAiModelWorkItems, scoreThreshold, doReranking, answerDetail)
-
-Ask Work Item With Initial Search
-
-### Example
-
-```ts
-import {
-  Configuration,
-  WorkItemsApi,
-} from '';
-import type { AskWorkItemWithInitialSearchRequest } from '';
-
-async function example() {
-  console.log("🚀 Testing  SDK...");
-  const api = new WorkItemsApi();
-
-  const body = {
-    // BodyAskWorkItemWithInitialSearch
-    bodyAskWorkItemWithInitialSearch: ...,
-    // string (optional)
-    projectId: projectId_example,
-    // number (optional)
-    limitWorkItemSearch: 56,
-    // number (optional)
-    limitAiModelWorkItems: 56,
-    // number (optional)
-    scoreThreshold: 8.14,
-    // boolean (optional)
-    doReranking: true,
-    // AnswerDetail (optional)
-    answerDetail: ...,
-  } satisfies AskWorkItemWithInitialSearchRequest;
-
-  try {
-    const data = await api.askWorkItemWithInitialSearch(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **bodyAskWorkItemWithInitialSearch** | [BodyAskWorkItemWithInitialSearch](BodyAskWorkItemWithInitialSearch.md) |  | |
-| **projectId** | `string` |  | [Optional] [Defaults to `undefined`] |
-| **limitWorkItemSearch** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **limitAiModelWorkItems** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **answerDetail** | `AnswerDetail` |  | [Optional] [Defaults to `undefined`] [Enum: auto, short, standard, detailed] |
 
 ### Return type
@@ -500,7 +397,7 @@ No authorization required
 
 ## searchWorkItems
 
-> WorkItemSearchResponse searchWorkItems(prompt, projectId, limit, scoreThreshold, doReranking)
+> WorkItemSearchResponse searchWorkItems(bodySearchWorkItems, limit, scoreThreshold, doReranking)
 
 Search Work Items
 
@@ -518,10 +415,8 @@ async function example() {
   const api = new WorkItemsApi();
 
   const body = {
-    // string
-    prompt: prompt_example,
-    // string (optional)
-    projectId: projectId_example,
+    // BodySearchWorkItems
+    bodySearchWorkItems: ...,
     // number (optional)
     limit: 56,
     // number (optional)
@@ -547,8 +442,7 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **prompt** | `string` |  | [Defaults to `undefined`] |
-| **projectId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **bodySearchWorkItems** | [BodySearchWorkItems](BodySearchWorkItems.md) |  | |
 | **limit** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **scoreThreshold** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **doReranking** | `boolean` |  | [Optional] [Defaults to `undefined`] |
@@ -563,7 +457,7 @@ No authorization required
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: `application/json`
 - **Accept**: `application/json`
 
 

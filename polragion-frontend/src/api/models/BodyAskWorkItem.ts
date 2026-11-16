@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { WorkItemFilters } from './WorkItemFilters';
+import {
+    WorkItemFiltersFromJSON,
+    WorkItemFiltersFromJSONTyped,
+    WorkItemFiltersToJSON,
+    WorkItemFiltersToJSONTyped,
+} from './WorkItemFilters';
+
 /**
  * 
  * @export
@@ -25,6 +33,12 @@ export interface BodyAskWorkItem {
      * @memberof BodyAskWorkItem
      */
     prompt: string;
+    /**
+     * 
+     * @type {WorkItemFilters}
+     * @memberof BodyAskWorkItem
+     */
+    filters?: WorkItemFilters | null;
     /**
      * 
      * @type {string}
@@ -52,6 +66,7 @@ export function BodyAskWorkItemFromJSONTyped(json: any, ignoreDiscriminator: boo
     return {
         
         'prompt': json['prompt'],
+        'filters': json['filters'] === undefined ? undefined : json['filters'] === null ? null : WorkItemFiltersFromJSON(json['filters']),
         'userDefinedSystemPrompt': json['user_defined_system_prompt'] === undefined ? undefined : json['user_defined_system_prompt'] === null ? null : json['user_defined_system_prompt'],
     };
 }
@@ -68,6 +83,7 @@ export function BodyAskWorkItemToJSONTyped(value?: BodyAskWorkItem | null, ignor
     return {
         
         'prompt': value['prompt'],
+        'filters': WorkItemFiltersToJSON(value['filters']),
         'user_defined_system_prompt': value['userDefinedSystemPrompt'],
     };
 }

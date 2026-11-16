@@ -21,13 +21,7 @@ def _validation_message(exc: RequestValidationError) -> str:
     query_fields = {
         "prompt": "Prompt",
         "limit": "Result limit",
-        "project_id": "Project ID",
         "score_threshold": "Score threshold",
-        "limit_work_item_search": "Work item limit",
-        "limit_ai_model_work_items": "AI work item limit",
-        "project_ids": "Project IDs",
-        "project_contexts": "Project contexts",
-        "document_categories": "Document categories",
         "do_reranking": "Reranking",
         "answer_detail": "Answer detail",
         "model_id": "Model ID",

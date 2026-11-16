@@ -12,7 +12,7 @@ from qdrant_client.http.models import CollectionInfo, Filter
 
 from polragion.application.work_item_mapper import work_item_payload_to_reranker_text
 from polragion.domain.vector_store import JsonValue, VectorDocument, VectorSearchHit
-from polragion.infrastructure.db_filter import DbFilter, FilterType
+from polragion.infrastructure.db_filter import DbFilter, DbFilterAny, FilterType
 from polragion.infrastructure.errors import (
     VectorStoreConfigurationError,
     VectorStoreUnavailableError,
@@ -37,7 +37,7 @@ _BM25_MODEL_NAME: Final = "Qdrant/bm25"
 _LENGTH_SORT_WINDOW_BATCHES: Final = 16
 
 
-def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter:
+def _get_qdrant_filter(db_filters: Collection[DbFilter | DbFilterAny] | None) -> models.Filter:
 
     if db_filters is None or len(db_filters) <= 0:
         return models.Filter()
@@ -68,7 +68,8 @@ def _get_qdrant_filter(db_filters: Collection[DbFilter] | None) -> models.Filter
 
     return models.Filter(
         must=[
-            _get_condition(db_filter)
+            models.Filter(should=[_get_qdrant_filter(branch) for branch in db_filter.branches])
+            if isinstance(db_filter, DbFilterAny) else _get_condition(db_filter)
             for db_filter in db_filters
         ]
     )
@@ -267,7 +268,7 @@ class QdrantHybridVectorStore:
         query: str,
         *,
         limit: int,
-        db_filters: Collection[DbFilter] | None = None,
+        db_filters: Collection[DbFilter | DbFilterAny] | None = None,
         exact_search: bool = False,
         score_threshold: float | None = None,
         **kwargs
@@ -295,11 +296,13 @@ class QdrantHybridVectorStore:
                         query=dense_query,
                         using=_DENSE_VECTOR_NAME,
                         limit=candidate_limit,
+                        filter=db_filter,
                     ),
                     models.Prefetch(
                         query=sparse_query,
                         using=_SPARSE_VECTOR_NAME,
                         limit=candidate_limit,
+                        filter=db_filter,
                     ),
                 ],
                 query=models.FusionQuery(fusion=models.Fusion.RRF),

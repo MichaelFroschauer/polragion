@@ -53,14 +53,22 @@ class UserRequestManager:
         self._settings = settings
         self._active: dict[UUID, RequestContext] = {}
 
-    def start_request(self, user_id: UUID, search_scope: SearchScope | None = None) -> RequestContext:
-        context = RequestContext(
+    def create_request(
+        self, user_id: UUID, search_scope: SearchScope | None = None
+    ) -> RequestContext:
+        """Prepare a context without replacing the currently active request."""
+        return RequestContext(
             request_id=uuid4(),
             user_id=user_id,
             tool_call_budget=ToolCallBudget(max_calls=self._settings.max_allowed_tool_calls),
             search_scope=search_scope or SearchScope(),
         )
-        self._active[user_id] = context
+
+    def start_request(self, context: RequestContext) -> RequestContext:
+        """Activate a prepared context while holding the service's per-user lock."""
+        if context.user_id in self._active:
+            raise RuntimeError("A request is already active for this user")
+        self._active[context.user_id] = context
         return context
 
     def get_active(self, user_id: UUID) -> RequestContext | None:

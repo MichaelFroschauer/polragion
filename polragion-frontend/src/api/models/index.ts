@@ -2,11 +2,12 @@
 /* eslint-disable */
 export * from './AnswerDetail';
 export * from './BodyAskWorkItem';
-export * from './BodyAskWorkItemWithInitialSearch';
+export * from './BodySearchWorkItems';
 export * from './ChatHistoryMessage';
 export * from './CopilotModel';
 export * from './CopilotModelSelection';
 export * from './CreateToken';
+export * from './DocumentSelection';
 export * from './HTTPValidationError';
 export * from './HealthResponse';
 export * from './IngestResponse';
@@ -29,6 +30,7 @@ export * from './UserNotification';
 export * from './UserNotificationsResponse';
 export * from './ValidationError';
 export * from './WorkItemAskResponse';
+export * from './WorkItemFilters';
 export * from './WorkItemImportConfig';
 export * from './WorkItemSearchHit';
 export * from './WorkItemSearchResponse';

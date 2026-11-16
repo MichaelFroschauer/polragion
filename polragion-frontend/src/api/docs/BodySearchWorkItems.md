@@ -1,5 +1,5 @@
 
-# BodyAskWorkItemWithInitialSearch
+# BodySearchWorkItems
 
 
 ## Properties
@@ -7,18 +7,18 @@
 Name | Type
 ------------ | -------------
 `prompt` | string
-`userDefinedSystemPrompt` | string
+`filters` | [WorkItemFilters](WorkItemFilters.md)
 
 ## Example
 
 ```typescript
-import type { BodyAskWorkItemWithInitialSearch } from ''
+import type { BodySearchWorkItems } from ''
 
 // TODO: Update the object below with actual values
 const example = {
   "prompt": null,
-  "userDefinedSystemPrompt": null,
-} satisfies BodyAskWorkItemWithInitialSearch
+  "filters": null,
+} satisfies BodySearchWorkItems
 
 console.log(example)
 
@@ -27,7 +27,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as BodyAskWorkItemWithInitialSearch
+const exampleParsed = JSON.parse(exampleJSON) as BodySearchWorkItems
 console.log(exampleParsed)
 ```
 

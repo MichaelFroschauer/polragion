@@ -23,6 +23,7 @@ class WorkItemIndexMapper:
             field_name(PolarionWorkItem, "project_id"),
             field_name(PolarionWorkItem, "project_context"),
             field_name(PolarionWorkItem, "document_category"),
+            field_name(PolarionWorkItem, "document_name"),
             field_name(PolarionWorkItem, "work_item_id"),
         )
 

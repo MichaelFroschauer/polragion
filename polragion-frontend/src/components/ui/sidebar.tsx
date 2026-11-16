@@ -38,6 +38,11 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  resizable: boolean
+  width: number
+  setWidth: (width: number) => void
+  resizing: boolean
+  setResizing: (resizing: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -53,6 +58,7 @@ function useSidebar() {
 
 function SidebarProvider({
   defaultOpen = true,
+  resizable = false,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -61,11 +67,26 @@ function SidebarProvider({
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean
+  resizable?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [width, updateWidth] = React.useState(() =>
+    typeof window === "undefined" ? 288 : parseFloat(getComputedStyle(document.documentElement).fontSize) * 16
+  )
+  const [resizing, setResizing] = React.useState(false)
+  const setWidth = React.useCallback((value: number) => {
+    updateWidth(Math.max(240, Math.min(value, 560, window.innerWidth / 2)))
+  }, [])
+
+  React.useEffect(() => {
+    if (!resizable) return
+    const handleResize = () => setWidth(width)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [resizable, setWidth, width])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -120,8 +141,13 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      resizable,
+      width,
+      setWidth,
+      resizing,
+      setResizing,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, resizable, width, setWidth, resizing]
   )
 
   return (
@@ -130,7 +156,7 @@ function SidebarProvider({
         data-slot="sidebar-wrapper"
         style={
           {
-            "--sidebar-width": SIDEBAR_WIDTH,
+            "--sidebar-width": resizable ? `${width}px` : SIDEBAR_WIDTH,
             "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
             ...style,
           } as React.CSSProperties
@@ -160,7 +186,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, resizable, resizing } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -217,6 +243,7 @@ function Sidebar({
         data-slot="sidebar-gap"
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
+          resizing && "transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -233,7 +260,8 @@ function Sidebar({
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          className
+          className,
+          resizing && "transition-none"
         )}
         {...props}
       >
@@ -244,8 +272,62 @@ function Sidebar({
         >
           {children}
         </div>
+        {resizable && state === "expanded" && <SidebarResizeHandle side={side} />}
       </div>
     </div>
+  )
+}
+
+function SidebarResizeHandle({side}: {side: "left" | "right"}) {
+  const {width, setWidth, resizing, setResizing} = useSidebar()
+  const drag = React.useRef<{x: number; width: number} | null>(null)
+  const direction = side === "left" ? 1 : -1
+
+  return (
+    <div
+      role="separator"
+      aria-label="Resize sidebar"
+      aria-orientation="vertical"
+      aria-valuemin={240}
+      aria-valuemax={Math.min(560, window.innerWidth / 2)}
+      aria-valuenow={Math.round(width)}
+      tabIndex={0}
+      title="Drag to resize · Arrow keys to adjust"
+      className={cn(
+        "absolute inset-y-2 z-20 w-2 cursor-col-resize rounded-sm outline-none after:absolute after:inset-y-2 after:left-1/2 after:w-px after:bg-transparent hover:after:bg-sidebar-ring focus-visible:after:bg-sidebar-ring focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        side === "left" ? "right-0" : "left-0",
+        resizing && "after:bg-sidebar-ring"
+      )}
+      onPointerDown={event => {
+        if (event.button !== 0) return
+        event.preventDefault()
+        event.currentTarget.focus()
+        event.currentTarget.setPointerCapture(event.pointerId)
+        drag.current = {x: event.clientX, width}
+        setResizing(true)
+      }}
+      onPointerMove={event => {
+        if (drag.current) setWidth(drag.current.width + (event.clientX - drag.current.x) * direction)
+      }}
+      onPointerUp={event => {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+        drag.current = null
+        setResizing(false)
+      }}
+      onLostPointerCapture={() => {
+        drag.current = null
+        setResizing(false)
+      }}
+      onKeyDown={event => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault()
+          setWidth(width + (event.key === "ArrowRight" ? 16 : -16) * direction)
+        } else if (event.key === "Home" || event.key === "End") {
+          event.preventDefault()
+          setWidth(event.key === "Home" ? 240 : 560)
+        }
+      }}
+    />
   )
 }
 

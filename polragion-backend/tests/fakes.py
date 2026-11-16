@@ -31,12 +31,14 @@ class FakeVectorStore:
         limit: int,
         project_id: str | None = None,
         score_threshold: float | None = None,
+        **kwargs,
     ) -> list[VectorSearchHit]:
         self.last_search = {
             "query": query,
             "limit": limit,
             "project_id": project_id,
             "score_threshold": score_threshold,
+            **kwargs,
         }
         return self.search_results[:limit]
 

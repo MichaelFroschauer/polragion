@@ -1,17 +1,11 @@
 from collections.abc import Iterable
 
+from polragion.application.search_scope import SearchScope
 from polragion.application.work_item_mapper import WorkItemIndexMapper
-from polragion.domain.vector_store import VectorStore, VectorDocument
-from polragion.infrastructure.db_filter import DbFilter, FilterType
+from polragion.domain.vector_store import VectorDocument, VectorStore
+from polragion.infrastructure.db_filter import DbFilter, DbFilterAny, FilterType
 from polragion.models.work_item import PolarionWorkItem, WorkItemSearchHit
 from polragion.utils.general import field_name
-
-
-def _clean_filter_values(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-
-    return list(dict.fromkeys(value.strip() for value in values if value and value.strip()))
 
 
 class WorkItemService:
@@ -38,48 +32,70 @@ class WorkItemService:
         limit: int,
         project_id: str | None = None,
         work_item_id: str | None = None,
-        project_ids: list[str] | None = None,
-        project_contexts: list[str] | None = None,
-        document_categories: list[str] | None = None,
         score_threshold: float | None = None,
-        **kwargs
+        scope: SearchScope | None = None,
+        **kwargs,
     ) -> list[WorkItemSearchHit]:
 
+        scope = scope or SearchScope()
+        if scope.match_none:
+            return []
         exact_search = False
-        db_filters: list[DbFilter] = []
+        db_filters: list[DbFilter | DbFilterAny] = []
 
         project_id = project_id.strip() if project_id else None
         work_item_id = work_item_id.strip() if work_item_id else None
 
-        scope_values = {
-            field_name(PolarionWorkItem, "project_id"): _clean_filter_values(project_ids),
-            field_name(PolarionWorkItem, "project_context"): _clean_filter_values(project_contexts),
-            field_name(PolarionWorkItem, "document_category"): _clean_filter_values(document_categories),
-        }
-
-        if (project_id or work_item_id) and any(scope_values.values()):
-            raise ValueError(
-                "project_id and work_item_id address a concrete work item and cannot be combined "
-                "with project_ids, project_contexts or document_categories"
-            )
-
         if project_id and work_item_id:
-            db_filters.append(DbFilter(key="_polragion_document_id", value=f"{project_id}:{work_item_id}", filter_type=FilterType.MUST_MATCH))
+            db_filters.append(
+                DbFilter(
+                    key="_polragion_document_id",
+                    value=f"{project_id}:{work_item_id}",
+                    filter_type=FilterType.MUST_MATCH,
+                )
+            )
             query = "Query will be ignored..."
             exact_search = True
         elif project_id:
-            db_filters.append(DbFilter(key=field_name(PolarionWorkItem, "project_id"), value=project_id, filter_type=FilterType.MUST_MATCH))
+            db_filters.append(
+                DbFilter(
+                    key=field_name(PolarionWorkItem, "project_id"),
+                    value=project_id,
+                    filter_type=FilterType.MUST_MATCH,
+                )
+            )
             exact_search = False
         elif work_item_id:
-            db_filters.append(DbFilter(key=field_name(PolarionWorkItem, "work_item_id"), value=work_item_id, filter_type=FilterType.MUST_MATCH))
+            db_filters.append(
+                DbFilter(
+                    key=field_name(PolarionWorkItem, "work_item_id"),
+                    value=work_item_id,
+                    filter_type=FilterType.MUST_MATCH,
+                )
+            )
             query = "Query will be ignored..."
             exact_search = True
-        else:
-            # Each scope narrows the result set further, the database combines the conditions with AND.
-            db_filters.extend(
-                DbFilter(key=key, value=values, filter_type=FilterType.MUST_MATCH_ANY)
-                for key, values in scope_values.items()
-                if values
+        # User scope and tool-supplied restrictions are independent AND conditions.
+        for key, values in (
+            ("project_id", scope.project_ids),
+            ("project_context", scope.project_contexts),
+            ("document_category", scope.document_categories),
+        ):
+            if values:
+                db_filters.append(
+                    DbFilter(key=key, value=list(values), filter_type=FilterType.MUST_MATCH_ANY)
+                )
+        if scope.documents:
+            db_filters.append(
+                DbFilterAny(
+                    branches=[
+                        [
+                            DbFilter(key="project_id", value=doc.project_id),
+                            DbFilter(key="document_name", value=doc.document_name),
+                        ]
+                        for doc in scope.documents
+                    ]
+                )
             )
 
         hits = self._vector_store.search(
@@ -88,7 +104,7 @@ class WorkItemService:
             db_filters=db_filters,
             exact_search=exact_search,
             score_threshold=score_threshold,
-            **kwargs
+            **kwargs,
         )
 
         return [

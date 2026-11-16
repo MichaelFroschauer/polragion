@@ -9,6 +9,7 @@ import {
     type WorkItemAskResponse,
     type WorkItemSearchResponse
 } from "@/api";
+import {useSearchFilters} from "@/hooks/use-search-filters";
 import {useSettings} from "@/hooks/use-settings.tsx";
 import {getApiErrorMessage} from "@/lib/api-error.ts";
 import type {ChatHistoryMessage} from "@/api";
@@ -59,6 +60,7 @@ function getChatHistoryEntries(history: ChatHistoryMessage[]): ChatEntry[] {
 export function ChatContextProvider({ children }: PropsWithChildren) {
     const { isAuthenticated } = useGitHubAuth()
     const { settings } = useSettings()
+    const { requestFilters } = useSearchFilters()
 
     const [mode, setMode] = useState<ChatMode>("ask")
     const [entries, setEntries] = useState<ChatEntry[]>([])
@@ -109,25 +111,17 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                         ? await workItemsApi.askWorkItem({
                             bodyAskWorkItem: {
                                 prompt,
+                                filters: requestFilters,
                                 userDefinedSystemPrompt: settings.customUserSystemPrompt,
                             },
-                            projectIds: null, // TODO: support project id filter
-                            projectContexts: null, // TODO: support project context filter
-                            documentCategories: null, // TODO: support project categories filter
-                            // limitWorkItemSearch: settings.workItemSearch.maxResults, // TODO: not used anymore
-                            // limitAiModelWorkItems: settings.aiSearch.maxResultsForAi, // TODO: not used anymore
-                            // scoreThreshold: settings.workItemSearch.minScore, // TODO: not used anymore
-                            // doReranking: settings.workItemSearch.doReranking,  // TODO: not used anymore
                             answerDetail: AnswerDetailFromJSON(localStorage.getItem("answerDetailSelection")) ?? AnswerDetail.Auto,
                         })
                         : await workItemsApi.searchWorkItems({
-                            prompt,
-                            projectId: null,
+                            bodySearchWorkItems: {prompt, filters: requestFilters},
                             limit: settings.workItemSearch.maxResults,
                             scoreThreshold: settings.workItemSearch.minScore,
                             doReranking: settings.workItemSearch.doReranking,
                         })
-                        // : formatSearchHits(await workItemsApi.searchWorkItems({ prompt }))
 
                 setEntries(current => [
                     ...current,
@@ -150,7 +144,7 @@ export function ChatContextProvider({ children }: PropsWithChildren) {
                 setTimeout(() => setStatus("ready"), 1500)
             }
         },
-        [isAuthenticated, mode, status, settings],
+        [isAuthenticated, mode, status, settings, requestFilters],
     )
 
     const resetSession = useCallback(async () => {

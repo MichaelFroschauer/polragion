@@ -6,6 +6,7 @@ import { Chat } from "@/components/ai/chat.tsx";
 import { GitHubAuthProvider, useGitHubAuth } from "@/hooks/use-github-auth.tsx";
 import {TooltipProvider} from "@/components/ui/tooltip.tsx";
 import {ChatContextProvider} from "@/hooks/use-chat.tsx";
+import {SearchFiltersProvider} from "@/components/search-filters-provider";
 import {SettingsProvider} from "@/hooks/use-settings.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import { LoaderCircleIcon, LogInIcon } from "lucide-react";
@@ -23,6 +24,7 @@ function AuthenticatedApp() {
 
     return (
         <SettingsProvider>
+        <SearchFiltersProvider>
         <ChatContextProvider>
             {/* Is rendered directly without delay */}
             <Page>
@@ -44,6 +46,7 @@ function AuthenticatedApp() {
                 </div>
             )}
         </ChatContextProvider>
+        </SearchFiltersProvider>
         </SettingsProvider>
     )
 }

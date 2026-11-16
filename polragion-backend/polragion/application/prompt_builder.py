@@ -1,9 +1,6 @@
 from enum import StrEnum
 from textwrap import dedent
-from typing import Collection
 
-from polragion.application.work_item_mapper import work_item_search_hit_to_json_str
-from polragion.models.work_item import WorkItemSearchHit
 
 
 def get_initial_system_prompt() -> str:
@@ -182,28 +179,6 @@ def get_prompt_message(user_prompt: str, user_system_prompt: str | None, answer_
         </user_request>
         """
     ).strip()
-
-
-def get_prompt_message_with_work_items(user_prompt: str, user_system_prompt: str | None, answer_detail: AnswerDetail, work_items: Collection[WorkItemSearchHit]) -> str:
-    work_item_json = work_item_search_hit_to_json_str(work_items)
-    return dedent(
-        f"""
-        {get_prompt_message(user_prompt, answer_detail)}
-        
-        <retrieved_work_items format="application/json">
-        {work_item_json}
-        </retrieved_work_items>
-        """
-        # +
-        # """
-        # <final_instruction>
-        # Answer the user request now. Use only supported work-item evidence for
-        # project-specific claims and include source citations.
-        # </final_instruction>
-        # """
-    ).strip()
-
-
 
 
 class AnswerDetail(StrEnum):

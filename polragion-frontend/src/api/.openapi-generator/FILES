@@ -8,11 +8,12 @@ apis/WorkItemsApi.ts
 apis/index.ts
 docs/AnswerDetail.md
 docs/BodyAskWorkItem.md
-docs/BodyAskWorkItemWithInitialSearch.md
+docs/BodySearchWorkItems.md
 docs/ChatHistoryMessage.md
 docs/CopilotModel.md
 docs/CopilotModelSelection.md
 docs/CreateToken.md
+docs/DocumentSelection.md
 docs/GitHubAuthenticationApi.md
 docs/GitHubModelsApi.md
 docs/HTTPValidationError.md
@@ -41,6 +42,7 @@ docs/UserNotification.md
 docs/UserNotificationsResponse.md
 docs/ValidationError.md
 docs/WorkItemAskResponse.md
+docs/WorkItemFilters.md
 docs/WorkItemImportConfig.md
 docs/WorkItemSearchHit.md
 docs/WorkItemSearchResponse.md
@@ -48,11 +50,12 @@ docs/WorkItemsApi.md
 index.ts
 models/AnswerDetail.ts
 models/BodyAskWorkItem.ts
-models/BodyAskWorkItemWithInitialSearch.ts
+models/BodySearchWorkItems.ts
 models/ChatHistoryMessage.ts
 models/CopilotModel.ts
 models/CopilotModelSelection.ts
 models/CreateToken.ts
+models/DocumentSelection.ts
 models/HTTPValidationError.ts
 models/HealthResponse.ts
 models/IngestResponse.ts
@@ -75,6 +78,7 @@ models/UserNotification.ts
 models/UserNotificationsResponse.ts
 models/ValidationError.ts
 models/WorkItemAskResponse.ts
+models/WorkItemFilters.ts
 models/WorkItemImportConfig.ts
 models/WorkItemSearchHit.ts
 models/WorkItemSearchResponse.ts

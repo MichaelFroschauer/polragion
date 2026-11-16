@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `prompt` | string
+`filters` | [WorkItemFilters](WorkItemFilters.md)
 `userDefinedSystemPrompt` | string
 
 ## Example
@@ -17,6 +18,7 @@ import type { BodyAskWorkItem } from ''
 // TODO: Update the object below with actual values
 const example = {
   "prompt": null,
+  "filters": null,
   "userDefinedSystemPrompt": null,
 } satisfies BodyAskWorkItem
 

@@ -28,5 +28,10 @@ Content-Type: application/json
 ]
 
 ### Semantic search, restricted to one project
-GET http://127.0.0.1:8000/v1/work-items/search?prompt=authentication&project_id=DEMO&limit=5
-Accept: application/json
+POST http://127.0.0.1:8000/v1/work-items/search?limit=5
+Content-Type: application/json
+
+{
+  "prompt": "authentication",
+  "filters": {"project_ids": ["DEMO"]}
+}

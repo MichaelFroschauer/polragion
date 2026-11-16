@@ -15,3 +15,10 @@ class DbFilter:
     key: str
     value: str | list[str]
     filter_type: FilterType = field(default=FilterType.MUST_MATCH)
+
+
+@dataclass
+class DbFilterAny:
+    """OR of branches; conditions within each branch are combined with AND."""
+
+    branches: list[list[DbFilter]]

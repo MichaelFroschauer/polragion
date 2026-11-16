@@ -2,7 +2,7 @@ from collections.abc import Mapping, Iterable
 from dataclasses import dataclass
 from typing import Protocol, Collection
 
-from polragion.infrastructure.db_filter import DbFilter
+from polragion.infrastructure.db_filter import DbFilter, DbFilterAny
 
 JsonValue = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 Metadata = dict[str, JsonValue]
@@ -49,7 +49,7 @@ class VectorStore(Protocol):
         query: str,
         *,
         limit: int,
-        db_filters: Collection[DbFilter] | None = None,
+        db_filters: Collection[DbFilter | DbFilterAny] | None = None,
         exact_search: bool = False,
         score_threshold: float | None = None,
         **kwargs

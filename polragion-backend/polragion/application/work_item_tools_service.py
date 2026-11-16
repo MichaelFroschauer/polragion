@@ -29,8 +29,9 @@ class WorkItemToolsService:
         if not params.search_text.strip():
             raise ValueError("Search text must not be blank")
         project_id = params.polarion_project_id
-        if project_id and not project_id.strip():
+        if project_id is not None and not project_id.strip():
             raise ValueError("Project ID must not be blank")
+        project_id = project_id.strip() if project_id else None
         if project_id and scope.project_ids and project_id not in scope.project_ids:
             raise ValueError(f"Project '{project_id}' is not available in this request.")
         threshold = params.search_score_threshold
@@ -43,13 +44,14 @@ class WorkItemToolsService:
                 self.settings.search_max_limit,
             ),
             score_threshold=threshold if threshold is not None else 0.0,
-            project_ids=[project_id] if project_id else list(scope.project_ids),
-            project_contexts=list(scope.project_contexts),
-            document_categories=list(scope.document_categories),
+            project_id=project_id,
+            scope=scope,
             do_reranking=False,
         )
 
-    def lookup(self, params: LookupWorkItemsParams) -> list[WorkItemSearchHit]:
+    def lookup(
+        self, params: LookupWorkItemsParams, scope: SearchScope | None = None
+    ) -> list[WorkItemSearchHit]:
         if not params.polarion_work_item_id.strip():
             raise ValueError("Work item ID must not be blank")
         if params.polarion_project_id is not None and not params.polarion_project_id.strip():
@@ -60,14 +62,16 @@ class WorkItemToolsService:
             score_threshold=0.0,
             project_id=params.polarion_project_id,
             work_item_id=params.polarion_work_item_id,
+            scope=scope,
         )
 
     @staticmethod
     def format_results(results: list[WorkItemSearchHit], reduced: bool) -> str:
         return work_item_search_hit_to_json_str(results, reduced_information=reduced)
 
-    def projects(self) -> str:
+    def projects(self, scope: SearchScope | None = None) -> str:
         descriptor = self.polarion_descriptor
+        scope = scope or SearchScope()
         return json.dumps(
             [
                 {
@@ -76,21 +80,53 @@ class WorkItemToolsService:
                     "project_context": descriptor.get_project_context(project_id),
                 }
                 for project_id in descriptor.get_project_ids()
+                if self._project_available(project_id, scope)
             ]
         )
 
-    def documents(self, project_id: str | None) -> str:
+    def documents(self, project_id: str | None, scope: SearchScope | None = None) -> str:
         descriptor = self.polarion_descriptor
         if project_id is not None and not project_id.strip():
             raise ValueError("Project ID must not be blank")
+        scope = scope or SearchScope()
         project_ids = [project_id] if project_id else descriptor.get_project_ids()
         return json.dumps(
             [
                 {
                     "project_id": pid,
                     "project_context": descriptor.get_project_context(pid),
-                    "documents": descriptor.get_documents(pid),
+                    "documents": [
+                        name
+                        for name in descriptor.get_documents(pid)
+                        if self._document_available(pid, name, scope)
+                    ],
                 }
                 for pid in project_ids
+                if self._project_available(pid, scope)
             ]
+        )
+
+    def _project_available(self, project_id: str, scope: SearchScope) -> bool:
+        if scope.match_none or (scope.project_ids and project_id not in scope.project_ids):
+            return False
+        if scope.project_contexts and not set(scope.project_contexts).intersection(
+            self.polarion_descriptor.get_project_context(project_id)
+        ):
+            return False
+        if scope.documents or scope.document_categories:
+            return any(
+                self._document_available(project_id, name, scope)
+                for name in self.polarion_descriptor.get_documents(project_id)
+            )
+        return True
+
+    def _document_available(self, project_id: str, name: str, scope: SearchScope) -> bool:
+        if scope.documents and not any(
+            doc.project_id == project_id and doc.document_name == name for doc in scope.documents
+        ):
+            return False
+        return (
+            not scope.document_categories
+            or self.polarion_descriptor.get_document_category(project_id, name)
+            in scope.document_categories
         )

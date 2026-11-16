@@ -24,6 +24,7 @@ def test_service_reconstructs_typed_search_result() -> None:
             document_id="DEMO:REQ-123",
             point_id="point-1",
             score=0.91,
+            reranker_score=None,
             metadata=item.model_dump(mode="json"),
         )
     ]

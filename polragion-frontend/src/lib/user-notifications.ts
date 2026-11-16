@@ -7,6 +7,7 @@ export async function loadAndDisplayNotifications(shouldIgnore: () => boolean): 
     const { notifications } = await notificationsApi.getUserNotifications();
     if (shouldIgnore()) return;
 
+    // TODO: Consider using a more robust storage mechanism (like IndexedDB) for larger datasets
     const storageKey = "hidden-notifications";
     const hiddenIds = new Set<string>(JSON.parse(localStorage.getItem(storageKey) ?? "[]"));
 

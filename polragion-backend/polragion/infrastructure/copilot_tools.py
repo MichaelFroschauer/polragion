@@ -35,8 +35,8 @@ class CopilotTools:
         return [
             self._create_work_item_vector_search_tool(user_id),
             self._create_work_item_id_search_tool(user_id),
-            self._create_project_fetcher_tool(),
-            self._create_document_fetcher_tool(),
+            self._create_project_fetcher_tool(user_id),
+            self._create_document_fetcher_tool(user_id),
         ]
 
     def _create_work_item_vector_search_tool(self, user_id: UUID) -> Tool:
@@ -56,7 +56,8 @@ class CopilotTools:
         @define_tool(description=LOOKUP_DESCRIPTION)
         async def find_work_item_by_id(params: LookupWorkItemsParams) -> str:
             try:
-                results = await run_in_threadpool(self.tools_service.lookup, params)
+                scope = self.user_request_manager.active_search_scope(user_id)
+                results = await run_in_threadpool(self.tools_service.lookup, params, scope)
             except ValueError as exc:
                 return str(exc)
             if not results:
@@ -69,17 +70,19 @@ class CopilotTools:
 
         return find_work_item_by_id
 
-    def _create_project_fetcher_tool(self) -> Tool:
+    def _create_project_fetcher_tool(self, user_id: UUID) -> Tool:
         @define_tool(description=PROJECTS_DESCRIPTION)
         async def get_polarion_projects() -> str:
-            return await run_in_threadpool(self.tools_service.projects)
+            scope = self.user_request_manager.active_search_scope(user_id)
+            return await run_in_threadpool(self.tools_service.projects, scope)
 
         return get_polarion_projects
 
-    def _create_document_fetcher_tool(self) -> Tool:
+    def _create_document_fetcher_tool(self, user_id: UUID) -> Tool:
         @define_tool(description=DOCUMENTS_DESCRIPTION)
         async def get_polarion_documents(params: LookupDocumentsParams) -> str:
-            return await run_in_threadpool(self.tools_service.documents, params.polarion_project_id)
+            scope = self.user_request_manager.active_search_scope(user_id)
+            return await run_in_threadpool(self.tools_service.documents, params.polarion_project_id, scope)
 
         return get_polarion_documents
 

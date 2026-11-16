@@ -3,7 +3,7 @@
 import * as React from "react"
 
 import {NavMain} from "@/components/nav-main"
-import {NavFilter} from "@/components/nav-filter.tsx"
+import {NavFilter, type FilterSection} from "@/components/nav-filter.tsx"
 import {NavSecondary} from "@/components/nav-secondary"
 import {NavUser} from "@/components/nav-user"
 
@@ -19,9 +19,11 @@ import {
 import {
     MessageSquareTextIcon,  Book, BookCopy, FileText, TableProperties,
 } from "lucide-react"
+import {useSearchFilters} from "@/hooks/use-search-filters";
+import {formatCategoryName} from "@/lib/search-filters";
 import {polarionMetadataApi} from "@/api/client.ts";
 import {useEffect, useState} from "react";
-import type {PolarionImportStatus, PolarionMetadataResponse} from "@/api";
+import type {PolarionImportStatus} from "@/api";
 
 
 const data = {
@@ -41,93 +43,13 @@ const data = {
         //   ),
         // },
     ],
-    filter: [
-        {
-            id: "project-contexts",
-            title: "Project Contexts",
-            icon: (
-                <BookCopy />
-            ),
-            isActive: false,
-            items: [
-                {
-                    title: "Work in Progress",
-                },
-            ],
-        },
-        {
-            id: "polarion-projects",
-            title: "Polarion Projects",
-            icon: (
-                <Book />
-            ),
-            isActive: false,
-            items: [
-                {
-                    title: "Work in Progress",
-                },
-            ],
-        },
-        {
-            id: "documents",
-            title: "Documents",
-            icon: (
-                <FileText />
-            ),
-            isActive: false,
-            items: [
-                {
-                    title: "Work in Progress",
-                },
-            ],
-        },
-        {
-            id: "category",
-            title: "Category",
-            icon: (
-                <TableProperties />
-            ),
-            isActive: false,
-            items: [
-                {
-                    title: "Work in Progress",
-                },
-            ],
-        },
-        // {
-        //     title: "Properties",
-        //     url: "#",
-        //     icon: (
-        //         <ListTodo/>
-        //     ),
-        //     isActive: false,
-        //     items: [
-        //         {
-        //             title: "Work in Progress",
-        //             url: "#",
-        //         },
-        //     ],
-        // },
-    ],
+
 }
 
 export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
 
-    const [searchScopes, setSearchScopes] = useState<PolarionMetadataResponse | null>(null)
+    const {searchScopes, filterStatus, retry} = useSearchFilters()
     const [importStatus, setImportStatus] = useState<PolarionImportStatus | null | "loading" | "unavailable">("loading")
-
-    useEffect(() => {
-        const loadSearchScopes = async () => {
-            try {
-                const scopes = await polarionMetadataApi.getPolarionSearchScopes()
-                setSearchScopes(scopes)
-            } catch (error) {
-                console.error("Error fetching search scopes:", error)
-            }
-        }
-
-        void loadSearchScopes()
-    }, [])
 
     useEffect(() => {
         const loadImportStatus = async () => {
@@ -143,56 +65,61 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
         void loadImportStatus()
     }, [])
 
-    function capitalizeFirstLetter(str: string): string {
-        if (str.length === 0) {
-            return str;
-        }
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    }
-
-    function formatCategoryName(category: string): string {
-        // Remove the specified pre- and postfixes
-        const cleanedCategory = category.replace(/-specification|system-|product-|software-/g, "");
-        return capitalizeFirstLetter(cleanedCategory) + "s";
-    }
-
-    const filters = data.filter.map(filter => {
-        switch (filter.id) {
-            case "project-contexts":
-                return {
-                    ...filter,
-                    items: searchScopes?.projectContexts.map(context => ({
-                        title: context,
-                    })) ?? [],
-                }
-
-            case "polarion-projects":
-                return {
-                    ...filter,
-                    items: searchScopes?.projectIds.map(projectId => ({
-                        title: projectId,
-                    })) ?? [],
-                }
-
-            case "category": {
-                const uniqueCategories = [
-                    ...new Set(
-                        searchScopes?.projectCategories.map(formatCategoryName) ?? []
-                    ),
-                ]
-
-                return {
-                    ...filter,
-                    items: uniqueCategories.map(category => ({
-                        title: category,
-                    })),
-                }
-            }
-
-            default:
-                return filter
-        }
-    })
+    const filters: FilterSection[] = [
+        {
+            id: "project-contexts",
+            title: "Project Contexts",
+            icon: <BookCopy />,
+            emptyMessage: "No project contexts available.",
+            items: (searchScopes?.projectContexts ?? []).map(context => ({
+                id: JSON.stringify(["context", context]),
+                title: context,
+                projects: (searchScopes?.projects ?? [])
+                    .filter(project => project.contexts.includes(context))
+                    .map(project => project.id),
+            })),
+        },
+        {
+            id: "polarion-projects",
+            title: "Polarion Projects",
+            icon: <Book />,
+            emptyMessage: "No projects available.",
+            items: (searchScopes?.projectIds ?? []).map(id => ({
+                id: JSON.stringify(["project", id]), title: id,
+            })),
+        },
+        {
+            id: "documents",
+            title: "Documents",
+            icon: <FileText />,
+            emptyMessage: "No documents configured for the available projects.",
+            items: [],
+            groups: (searchScopes?.projects ?? [])
+                .filter(project => project.documents.length > 0)
+                .map(project => ({
+                    id: project.id,
+                    title: project.id,
+                    items: project.documents.map(document => {
+                        // The API provides a configured document path, not a separate display name.
+                        const parts = document.name.split(/[/\\]/).filter(Boolean)
+                        const title = parts.at(-1) || document.name
+                        return {
+                            id: JSON.stringify(["document", project.id, document.name]),
+                            title,
+                            path: document.name !== title ? document.name : undefined,
+                        }
+                    }),
+                })),
+        },
+        {
+            id: "category",
+            title: "Category",
+            icon: <TableProperties />,
+            emptyMessage: "No categories available.",
+            items: [...new Set(searchScopes?.projectCategories.map(formatCategoryName) ?? [])]
+                .map(category => ({id: JSON.stringify(["category", category]), title: category})),
+        },
+    ]
 
 
     return (
@@ -213,9 +140,9 @@ export function AppSidebar({...props}: React.ComponentProps<typeof Sidebar>) {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
-            <SidebarContent>
+            <SidebarContent className="overflow-x-hidden">
                 <NavMain />
-                <NavFilter items={filters}/>
+                <NavFilter items={filters} status={filterStatus} onRetry={retry}/>
                 <NavSecondary items={data.navSecondary} className="mt-auto"/>
             </SidebarContent>
             <SidebarFooter>
