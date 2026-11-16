@@ -1,5 +1,5 @@
 import {Fragment, useEffect, useRef, useState} from "react"
-import {Check, Copy, LogInIcon, Minus, Plus} from "lucide-react"
+import {Check, Copy, ListFilterIcon, LogInIcon, Minus, Plus} from "lucide-react"
 import {
     Message,
     MessageContent,
@@ -16,6 +16,7 @@ import {
 import {Button} from "@/components/ui/button"
 import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {useGitHubAuth} from "@/hooks/use-github-auth"
+import {useSearchFilters} from "@/hooks/use-search-filters"
 import {type ChatContentType, type ChatMode, useChat} from "@/hooks/use-chat.tsx";
 import {Marker, MarkerContent} from "@/components/ui/marker.tsx"
 import type {WorkItemAskResponse, WorkItemSearchResponse} from "@/api";
@@ -204,6 +205,8 @@ export function Chat() {
     const lastEntryRef = useRef<HTMLDivElement | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement | null>(null)
     const {entries, status, mode, setMode, handleSubmit} = useChat()
+    const {requestFilters} = useSearchFilters()
+    const filtersActive = Object.values(requestFilters).some(value => value != null)
 
     const [loadingQuote, setLoadingQuote] = useState(
         () => loadingQuotes[Math.floor(Math.random() * loadingQuotes.length)],
@@ -333,6 +336,12 @@ export function Chat() {
                                         <TabsTrigger value="ask">Ask</TabsTrigger>
                                         <TabsTrigger value="search">Search</TabsTrigger>
                                     </TabsList>
+                                    {filtersActive && (
+                                        <span role="status" className="flex items-center gap-1.5 px-1 text-xs text-primary">
+                                            <ListFilterIcon aria-hidden="true" className="size-3.5" />
+                                            Filters active
+                                        </span>
+                                    )}
                                 </PromptInputTools>
                                 <PromptInputSubmit
                                     disabled={(!isAuthenticated && mode === "ask") || status !== "ready"}
