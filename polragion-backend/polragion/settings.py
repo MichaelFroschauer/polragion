@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     #   Copilot CLI Config
     copilot_url: str = "localhost:4321"
     copilot_connection_token: str | None = None
-    max_allowed_tool_calls: int = Field(default=50, ge=0, le=100)
+    max_allowed_tool_calls: int = Field(default=100, ge=0, le=200)
 
     # =======================================================================
     #   Sqlite Config

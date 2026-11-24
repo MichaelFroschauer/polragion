@@ -20,6 +20,8 @@ services:
     build:
       context: .
       dockerfile: ./copilot.Dockerfile
+    environment:
+      - COPILOT_CONNECTION_TOKEN=${COPILOT_CONNECTION_TOKEN:?Token must be set}
     restart: unless-stopped
     command: ["--headless", "--host", "0.0.0.0", "--port", "4321"]
     ports:

@@ -49,7 +49,7 @@ export const SETTINGS_LIMITS = {
     aiSearch: {
         maxResultsForAi: {min: 1, max: 200, step: 1, integer: true},
     },
-    customUserSystemPrompt: {maxLength: 500},
+    customUserSystemPrompt: {maxLength: 5000},
 } as const
 
 /** Dot-paths of all validatable settings. */
